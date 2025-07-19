@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2020 Facebook */
-
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -79,10 +76,10 @@ static struct class timecard_class = {
 };
 
 #define CSR_BASE 0x0L
-/* msi_base */
-#define CSR_PCIE_MSI_BASE (CSR_BASE + 0x1800L)
-/* ptm_requester */
-#define CSR_PTM_REQUESTER_BASE (CSR_BASE + 0x3000L)
+	/* база msi */
+	#define CSR_PCIE_MSI_BASE (CSR_BASE + 0x1800L)
+	/* запросчик ptm */
+	#define CSR_PTM_REQUESTER_BASE (CSR_BASE + 0x3000L)
 #define CSR_PTM_REQUESTER_CONTROL_ENABLE_OFFSET 0
 #define CSR_PTM_REQUESTER_CONTROL_TRIGGER_OFFSET 1
 #define CSR_PTM_REQUESTER_STATUS_VALID_OFFSET 0
@@ -439,7 +436,7 @@ struct ptp_ocp {
 	int			n_irqs;
 	struct ptp_ocp_serial_port	gnss_port;
 	struct ptp_ocp_serial_port	gnss2_port;
-	struct ptp_ocp_serial_port	mac_port;	/* miniature atomic clock */
+	struct ptp_ocp_serial_port	mac_port;	/* миниатюрные атомные часы */
 	struct ptp_ocp_serial_port	nmea_port;
 	bool			fw_loader;
 	u8			fw_tag;
@@ -634,7 +631,7 @@ static struct ocp_resource ocp_fb_resource_rev1[] = {
 			.enable = ptp_ocp_ts_enable,
 		},
 	},
-	/* Timestamp for PHC and/or PPS generator */
+	/* Временная метка для PHC и/или генератора PPS */
 	{
 		OCP_EXT_RESOURCE(pps),
 		.offset = 0x010C0000, .size = 0x10000, .irq_vec = 0,
@@ -870,7 +867,7 @@ static struct ocp_resource ocp_fb_resource_rev2[] = {
 			.enable = ptp_ocp_ts_enable,
 		},
 	},
-	/* Timestamp for PHC and/or PPS generator */
+	/* Временная метка для PHC и/или генератора PPS */
 	{
 		OCP_EXT_RESOURCE(pps),
 		.offset = 0x030C0000, .size = 0x10000, .irq_vec = 32,
@@ -1087,18 +1084,18 @@ struct ocp_art_osc_reg {
 #define OCP_ART_CONFIG_SIZE		144
 #define OCP_ART_TEMP_TABLE_SIZE	368
 
-/* PTM */
+	/* PTM (Precision Time Measurement) */
 #define PTM_CONTROL_ENABLE  (1 << CSR_PTM_REQUESTER_CONTROL_ENABLE_OFFSET)
 #define PTM_CONTROL_TRIGGER (1 << CSR_PTM_REQUESTER_CONTROL_TRIGGER_OFFSET)
 #define PTM_STATUS_VALID    (1 << CSR_PTM_REQUESTER_STATUS_VALID_OFFSET)
 #define PTM_STATUS_BUSY     (1 << CSR_PTM_REQUESTER_STATUS_BUSY_OFFSET)
-/* t1 */
+/* t1 - время отправки запроса */
 #define PTM_T1_TIME_L       (CSR_PTM_REQUESTER_T1_TIME_ADDR + (4))
 #define PTM_T1_TIME_H       (CSR_PTM_REQUESTER_T1_TIME_ADDR + (0))
-/* t2 */
+/* t2 - время получения запроса */
 #define PTM_MASTER_TIME_L   (CSR_PTM_REQUESTER_MASTER_TIME_ADDR + (4))
 #define PTM_MASTER_TIME_H   (CSR_PTM_REQUESTER_MASTER_TIME_ADDR + (0))
-/* t4 */
+/* t4 - время получения ответа */
 #define PTM_T4_TIME_L       (CSR_PTM_REQUESTER_T4_TIME_ADDR + (4))
 #define PTM_T4_TIME_H       (CSR_PTM_REQUESTER_T4_TIME_ADDR + (0))
 
@@ -1122,7 +1119,7 @@ static struct ocp_resource ocp_art_resource[] = {
 		OCP_MEM_RESOURCE(art_sma),
 		.offset = 0x003C0000, .size = 0x1000,
 	},
-	/* Timestamp associated with GNSS1 receiver PPS */
+	/* Временная метка, связанная с PPS приемника GNSS1 */
 	{
 		OCP_EXT_RESOURCE(ts0),
 		.offset = 0x360000, .size = 0x20, .irq_vec = 12,
@@ -1168,7 +1165,7 @@ static struct ocp_resource ocp_art_resource[] = {
 			.enable = ptp_ocp_ts_enable,
 		},
 	},
-	/* Timestamp associated with Internal PPS of the card */
+	/* Временная метка, связанная с внутренним PPS карты */
 	{
 		OCP_EXT_RESOURCE(pps),
 		.offset = 0x00330000, .size = 0x20, .irq_vec = 11,
@@ -1484,7 +1481,7 @@ __ptp_ocp_settime_locked(struct ptp_ocp *bp, const struct timespec64 *ts)
 	ctrl = OCP_CTRL_ADJUST_TIME | OCP_CTRL_ENABLE;
 	iowrite32(ctrl, &bp->reg->ctrl);
 
-	/* restore clock selection */
+	/* восстановить выбор часов */
 	iowrite32(select >> 16, &bp->reg->select);
 }
 
@@ -1515,7 +1512,7 @@ __ptp_ocp_adjtime_locked(struct ptp_ocp *bp, u32 adj_val)
 	ctrl = OCP_CTRL_ADJUST_OFFSET | OCP_CTRL_ENABLE;
 	iowrite32(ctrl, &bp->reg->ctrl);
 
-	/* restore clock selection */
+	/* восстановить выбор часов */
 	iowrite32(select >> 16, &bp->reg->select);
 }
 
@@ -1564,16 +1561,16 @@ __ptp_ocp_adjfine_locked(struct ptp_ocp *bp, long scaled_ppm)
 	u32 select;
 	s32 delta;
 
-	// ppbs
+	// частей на миллиард
 	delta = 1000 * (abs(scaled_ppm) >> 16);
 
-	// if there are fractions
+	// если есть дробная часть
     if ((abs(scaled_ppm) & 0xFFFF) != 0)
     {
-        delta += 1000 / (0x10000 / (abs(scaled_ppm) & 0xFFFF)); // fractional ppms rounded to 1ns
+        		delta += 1000 / (0x10000 / (abs(scaled_ppm) & 0xFFFF)); // дробные ppm округленные до 1нс
     }
 
-    // recover sign
+    	// восстановить знак
     if (scaled_ppm < 0)
     {
         delta = -1 * delta;
@@ -1596,7 +1593,7 @@ __ptp_ocp_adjfine_locked(struct ptp_ocp *bp, long scaled_ppm)
 	ctrl = OCP_CTRL_ADJUST_DRIFT | OCP_CTRL_ENABLE;
 	iowrite32(ctrl, &bp->reg->ctrl);
 
-	/* restore clock selection */
+	/* восстановить выбор часов */
 	iowrite32(select >> 16, &bp->reg->select);
 }
 
@@ -1635,13 +1632,13 @@ ptp_ocp_syncdevicetime(ktime_t *device_time,
 	ktime_t t1, t2_curr;
 	int count;
 
-	/* Get a snapshot of system clocks to use as historic value. */
+	/* Получить снимок системных часов для использования как историческое значение. */
 	ktime_get_snapshot(&bp->snapshot);
 
-	/* request */
+	/* запрос */
 	iowrite32(PTM_CONTROL_ENABLE | PTM_CONTROL_TRIGGER, &reg->ctrl);
 
-	/* wait until valid */
+	/* ждать пока станет валидным */
 	count = 100;
 	do {
 		count--;
@@ -1663,9 +1660,9 @@ ptp_ocp_syncdevicetime(ktime_t *device_time,
 	t2_curr_h = ioread32(&reg->master_time[0]);
 	t2_curr = ((u64)t2_curr_h << 32 | t2_curr_l);
 
-	/* t3-t2 from downstream port */
+	/* t3-t2 с нижестоящего порта */
 	prop_delay = ioread32(&reg->link_delay);
-	/* PTM Master Time formula */
+	/* Формула PTM Master Time */
 	ptm_master_time = t2_curr - (((bp->ptm_t4_prev - bp->ptm_t1_prev) - prop_delay) >> 1);
 
 	*device_time = t1;
@@ -1676,7 +1673,7 @@ ptp_ocp_syncdevicetime(ktime_t *device_time,
 	*system_counterval = (struct system_counterval_t) { };
 #endif
 
-	/* store T4 & T1 for next request */
+	/* сохранить T4 и T1 для следующего запроса */
 	bp->ptm_t4_prev = (((u64) ioread32(&reg->t4_time[0]) << 32) |
 		(ioread32(&reg->t4_time[1]) & 0xffffffff));
 
@@ -1787,7 +1784,7 @@ ptp_ocp_verify(struct ptp_clock_info *ptp_info, unsigned pin,
 		snprintf(buf, sizeof(buf), "IN: None");
 		break;
 	case PTP_PF_EXTTS:
-		/* Allow timestamps, but require sysfs configuration. */
+		/* Разрешить временные метки, но требовать настройку через sysfs. */
 		return 0;
 	case PTP_PF_PEROUT:
 		/* channel 0 is 1PPS from PHC.
@@ -1835,7 +1832,7 @@ __ptp_ocp_clear_drift_locked(struct ptp_ocp *bp)
 	ctrl = OCP_CTRL_ADJUST_DRIFT | OCP_CTRL_ENABLE;
 	iowrite32(ctrl, &bp->reg->ctrl);
 
-	/* restore clock selection */
+	/* восстановить выбор часов */
 	iowrite32(select >> 16, &bp->reg->select);
 }
 
@@ -1926,19 +1923,19 @@ ptp_ocp_init_clock(struct ptp_ocp *bp)
 	ctrl = OCP_CTRL_ENABLE;
 	iowrite32(ctrl, &bp->reg->ctrl);
 
-	/* NO DRIFT Correction */
+	/* БЕЗ коррекции дрейфа */
 	/* offset_p:i 1/8, offset_i: 1/16, drift_p: 0, drift_i: 0 */
 	iowrite32(0x2000, &bp->reg->servo_offset_p);
 	iowrite32(0x1000, &bp->reg->servo_offset_i);
 	iowrite32(0,	  &bp->reg->servo_drift_p);
 	iowrite32(0,	  &bp->reg->servo_drift_i);
 
-	/* latch servo values */
+	/* защелкнуть значения сервопривода */
 	ctrl |= OCP_CTRL_ADJUST_SERVO;
 	iowrite32(ctrl, &bp->reg->ctrl);
 
 	if ((ioread32(&bp->reg->ctrl) & OCP_CTRL_ENABLE) == 0) {
-		dev_err(&bp->pdev->dev, "clock not enabled\n");
+		dev_err(&bp->pdev->dev, "часы не включены\n");
 		return -ENODEV;
 	}
 
@@ -1950,7 +1947,7 @@ ptp_ocp_init_clock(struct ptp_ocp *bp)
 		ptp_ocp_settime(&bp->ptp_info, &ts);
 	}
 
-	/* If there is a clock supervisor, then enable the watchdog */
+	/* Если есть супервизор часов, то включить сторожевой таймер */
 	if (bp->pps_to_clk) {
 		timer_setup(&bp->watchdog, ptp_ocp_watchdog, 0);
 		mod_timer(&bp->watchdog, jiffies + HZ);
@@ -2124,7 +2121,7 @@ out:
 	return;
 
 fail:
-	dev_err(&bp->pdev->dev, "could not read eeprom: %d\n", ret);
+			dev_err(&bp->pdev->dev, "не удалось прочитать eeprom: %d\n", ret);
 	goto out;
 }
 
@@ -2167,34 +2164,34 @@ ptp_ocp_devlink_flash_check(struct devlink *devlink, const struct firmware *fw,
 
 	hdr = (const struct ptp_ocp_firmware_header *)fw->data;
 	if (memcmp(hdr->magic, OCP_FIRMWARE_MAGIC_HEADER, 4)) {
-		dev_err(&pdev->dev, "No image header found, fallback to raw data flashing\n");
+		dev_err(&pdev->dev, "Заголовок образа не найден, переход к прошивке сырыми данными\n");
 		*image_size = fw->size;
 		return 0;
 	}
 
-	// here we have header, have to check everything to confirm that image is correct
+	// здесь у нас есть заголовок, нужно проверить все, чтобы подтвердить, что образ правильный
 	if (be16_to_cpu(hdr->pci_vendor_id) != pdev->vendor ||
 		be16_to_cpu(hdr->pci_device_id) != pdev->device) {
-		dev_err(&pdev->dev, "The image is for different hardware\n");
+		dev_err(&pdev->dev, "Образ предназначен для другого оборудования\n");
 		return -EINVAL;
 	}
 
-	/* Disable it while we don't have resources to read revision from */
+	/* Отключить, пока у нас нет ресурсов для чтения ревизии */
 #if 0
 	if (__be16_to_cpu(hdr->hw_revision) != bp->vendor)
-		dev_err(&pdev->dev, "The image is for different hardware revision\n");
+		dev_err(&pdev->dev, "Образ предназначен для другой ревизии оборудования\n");
 		return -EINVAL;
 	}
 #endif
 	*image_size = be32_to_cpu(hdr->image_size);
 	if (*image_size != (fw->size - sizeof(*hdr))) {
-		dev_err(&pdev->dev, "The image size is not correct\n");
+		dev_err(&pdev->dev, "Размер образа неправильный\n");
 		return -EINVAL;
 	}
 
 	crc = crc16(0xFFFF, &fw->data[sizeof(*hdr)], *image_size);
 	if (be16_to_cpu(hdr->crc) != crc) {
-		dev_err(&pdev->dev, "The image CRC is not correct\n");
+		dev_err(&pdev->dev, "CRC образа неправильный\n");
 		return -EINVAL;
 	}
 
@@ -2257,7 +2254,7 @@ ptp_ocp_devlink_flash_update(struct devlink *devlink,
 
 	dev = ptp_ocp_find_flash(bp);
 	if (!dev) {
-		dev_err(&bp->pdev->dev, "Can't find Flash SPI adapter\n");
+		dev_err(&bp->pdev->dev, "Не удается найти Flash SPI адаптер\n");
 		return -ENODEV;
 	}
 
@@ -2432,7 +2429,7 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *r)
 	return 0;
 }
 
-/* The expectation is that this is triggered only on error. */
+/* Ожидается, что это срабатывает только при ошибке. */
 static irqreturn_t
 ptp_ocp_signal_irq(int irq, void *priv)
 {
@@ -2447,14 +2444,14 @@ ptp_ocp_signal_irq(int irq, void *priv)
 	enable = ioread32(&reg->enable);
 	status = ioread32(&reg->status);
 
-	/* disable generator on error */
+			/* отключить генератор при ошибке */
 	if (status || !enable) {
 		iowrite32(0, &reg->intr_mask);
 		iowrite32(0, &reg->enable);
 		bp->signal[gen].running = false;
 	}
 
-	iowrite32(0, &reg->intr);	/* ack interrupt */
+	iowrite32(0, &reg->intr);	/* подтвердить прерывание */
 
 	return IRQ_HANDLED;
 }
@@ -2479,7 +2476,7 @@ ptp_ocp_signal_set(struct ptp_ocp *bp, int gen, struct ptp_ocp_signal *s)
 
 	start_ns = ktime_set(ts.tv_sec, ts.tv_nsec) + NSEC_PER_MSEC;
 	if (!s->start) {
-		/* roundup() does not work on 32-bit systems */
+		/* roundup() не работает на 32-битных системах */
 		s->start = DIV_ROUND_UP_ULL(start_ns, s->period);
 		s->start = ktime_add(s->start, s->phase);
 	}
@@ -2555,9 +2552,9 @@ ptp_ocp_signal_enable(void *priv, struct ptp_clock_request *rq,
 	iowrite32(bp->signal[gen].polarity, &reg->polarity);
 	iowrite32(0, &reg->repeat_count);
 
-	iowrite32(0, &reg->intr);		/* clear interrupt state */
-	iowrite32(1, &reg->intr_mask);		/* enable interrupt */
-	iowrite32(3, &reg->enable);		/* valid & enable */
+	iowrite32(0, &reg->intr);		/* очистить состояние прерывания */
+	iowrite32(1, &reg->intr_mask);		/* включить прерывание */
+	iowrite32(3, &reg->enable);		/* валидный и включить */
 
 	bp->signal[gen].running = true;
 
@@ -2582,7 +2579,7 @@ ptp_ocp_ts_irq(int irq, void *priv)
 			goto out;
 	}
 
-	/* XXX should fix API - this converts s/ns -> ts -> s/ns */
+	/* XXX нужно исправить API - это преобразует с/нс -> ts -> с/нс */
 	sec = ioread32(&reg->time_sec);
 	nsec = ioread32(&reg->time_ns);
 
@@ -2593,7 +2590,7 @@ ptp_ocp_ts_irq(int irq, void *priv)
 	ptp_clock_event(ext->bp->ptp, &ev);
 
 out:
-	iowrite32(1, &reg->intr);	/* write 1 to ack */
+	iowrite32(1, &reg->intr);	/* записать 1 для подтверждения */
 
 	return IRQ_HANDLED;
 }
@@ -2615,7 +2612,7 @@ ptp_ocp_ts_enable(void *priv, struct ptp_clock_request *rq,
 		else
 			bp->pps_req_map &= ~req;
 
-		/* if no state change, just return */
+		/* если нет изменения состояния, просто вернуться */
 		if ((!!old_map ^ !!bp->pps_req_map) == 0)
 			return 0;
 	}
@@ -2666,7 +2663,7 @@ ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r)
 	err = pci_request_irq(pdev, r->irq_vec, ext->info->irq_fcn, NULL,
 			      ext, "ocp%d.%s", bp->id, r->name);
 	if (err) {
-		dev_err(&pdev->dev, "Could not get irq %d\n", r->irq_vec);
+					dev_err(&pdev->dev, "Не удалось получить прерывание %d\n", r->irq_vec);
 		goto out;
 	}
 
@@ -2739,9 +2736,9 @@ ptp_ocp_nmea_out_init(struct ptp_ocp *bp)
 	if (!bp->nmea_out)
 		return;
 
-	iowrite32(0, &bp->nmea_out->ctrl);		/* disable */
+	iowrite32(0, &bp->nmea_out->ctrl);		/* отключить */
 	iowrite32(3, &bp->nmea_out->uart_baud);		/* 9600 */
-	iowrite32(1, &bp->nmea_out->ctrl);		/* enable */
+	iowrite32(1, &bp->nmea_out->ctrl);		/* включить */
 }
 
 static void
@@ -2749,7 +2746,7 @@ _ptp_ocp_signal_init(struct ptp_ocp_signal *s, struct signal_reg __iomem *reg)
 {
 	u32 val;
 
-	iowrite32(0, &reg->enable);		/* disable */
+	iowrite32(0, &reg->enable);		/* отключить */
 
 	val = ioread32(&reg->polarity);
 	s->polarity = val ? true : false;
@@ -2796,7 +2793,7 @@ ptp_ocp_fb_set_version(struct ptp_ocp *bp)
 
 	version = ioread32(&bp->image->version);
 
-	/* if lower 16 bits are empty, this is the fw loader. */
+	/* если младшие 16 бит пусты, это загрузчик прошивки. */
 	if ((version & 0xffff) == 0) {
 		version = version >> 16;
 		bp->fw_loader = true;
@@ -2806,11 +2803,11 @@ ptp_ocp_fb_set_version(struct ptp_ocp *bp)
 	bp->fw_version = version & 0x7fff;
 
 	if (bp->fw_tag) {
-		/* FPGA firmware */
+		/* Прошивка FPGA */
 		if (version >= 5)
 			cap |= OCP_CAP_SIGNAL | OCP_CAP_FREQ;
 	} else {
-		/* SOM firmware */
+		/* Прошивка SOM */
 		if (version >= 19)
 			cap |= OCP_CAP_SIGNAL;
 		if (version >= 20)
@@ -2820,7 +2817,7 @@ ptp_ocp_fb_set_version(struct ptp_ocp *bp)
 	bp->fw_cap = cap;
 }
 
-/* FB specific board initializers; last "resource" registered. */
+/* Специфичные для FB инициализаторы платы; последний зарегистрированный "ресурс". */
 static int
 ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 {
@@ -3068,7 +3065,7 @@ out:
 	return err;
 }
 
-/* ART specific board initializers; last "resource" registered. */
+/* Специфичные для ART инициализаторы платы; последний зарегистрированный "ресурс". */
 static int
 ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 {
@@ -3098,7 +3095,7 @@ ptp_ocp_allow_irq(struct ptp_ocp *bp, struct ocp_resource *r)
 	bool allow = !r->irq_vec || r->irq_vec < bp->n_irqs;
 
 	if (!allow)
-		dev_err(&bp->pdev->dev, "irq %d out of range, skipping %s\n",
+					dev_err(&bp->pdev->dev, "прерывание %d вне диапазона, пропускаем %s\n",
 			r->irq_vec, r->name);
 	return allow;
 }
@@ -3122,7 +3119,7 @@ ptp_ocp_register_resources(struct ptp_ocp *bp, kernel_ulong_t driver_data)
 	struct ocp_resource *r, *table;
 	int err;
 
-	/* Get driver resources matching device revision */
+	/* Получить ресурсы драйвера, соответствующие ревизии устройства */
 	table = ptp_ocp_get_resources(bp, driver_data);
 
 	for (r = table; r->setup; r++) {
@@ -3202,7 +3199,7 @@ ptp_ocp_sma_fb_init(struct ptp_ocp *bp)
 	u32 reg;
 	int i;
 
-	/* defaults */
+	/* значения по умолчанию */
 	bp->sma[0].mode = SMA_MODE_IN;
 	bp->sma[1].mode = SMA_MODE_IN;
 	bp->sma[2].mode = SMA_MODE_OUT;
@@ -3210,7 +3207,7 @@ ptp_ocp_sma_fb_init(struct ptp_ocp *bp)
 	for (i = 0; i < 4; i++)
 		bp->sma[i].default_fcn = i & 1;
 
-	/* If no SMA1 map, the pin functions and directions are fixed. */
+	/* Если нет карты SMA1, функции и направления пинов фиксированы. */
 	if (!bp->sma_map1) {
 		for (i = 0; i < 4; i++) {
 			bp->sma[i].fixed_fcn = true;
@@ -3321,18 +3318,18 @@ ptp_ocp_art_sma_init(struct ptp_ocp *bp)
 	u32 reg;
 	int i;
 
-	/* defaults */
+	/* значения по умолчанию */
 	bp->sma[0].mode = SMA_MODE_IN;
 	bp->sma[1].mode = SMA_MODE_IN;
 	bp->sma[2].mode = SMA_MODE_OUT;
 	bp->sma[3].mode = SMA_MODE_OUT;
 
-	bp->sma[0].default_fcn = 0x08;	/* IN: 10Mhz */
-	bp->sma[1].default_fcn = 0x01;	/* IN: PPS1 */
-	bp->sma[2].default_fcn = 0x10;	/* OUT: 10Mhz */
-	bp->sma[3].default_fcn = 0x02;	/* OUT: PHC */
+	bp->sma[0].default_fcn = 0x08;	/* ВХОД: 10МГц */
+	bp->sma[1].default_fcn = 0x01;	/* ВХОД: PPS1 */
+	bp->sma[2].default_fcn = 0x10;	/* ВЫХОД: 10МГц */
+	bp->sma[3].default_fcn = 0x02;	/* ВЫХОД: PHC */
 
-	/* If no SMA map, the pin functions and directions are fixed. */
+	/* Если нет карты SMA, функции и направления пинов фиксированы. */
 	if (!bp->art_sma) {
 		for (i = 0; i < 4; i++) {
 			bp->sma[i].fixed_fcn = true;
@@ -3369,7 +3366,7 @@ ptp_ocp_art_sma_get(struct ptp_ocp *bp, int sma_nr)
 	return ioread32(&bp->art_sma->map[sma_nr - 1].gpio) & 0xff;
 }
 
-/* note: store 0 is considered invalid. */
+	/* примечание: значение 0 считается недействительным. */
 static int
 ptp_ocp_art_sma_set(struct ptp_ocp *bp, int sma_nr, u32 val)
 {
@@ -3563,7 +3560,7 @@ ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr)
 	}
 
 	if (!sma->fixed_dir)
-		val |= SMA_ENABLE;		/* add enable bit */
+		val |= SMA_ENABLE;		/* добавить бит разрешения */
 
 	if (sma->disabled)
 		val = 0;
@@ -3652,7 +3649,7 @@ static DEVICE_ATTR_RO(available_sma_outputs);
 		{ __ATTR_RW(_name), (void *)_val }
 #define to_ext_attr(x) container_of(x, struct dev_ext_attribute, attr)
 
-/* period [duty [phase [polarity]]] */
+	/* период [скважность [фаза [полярность]]] */
 static ssize_t
 signal_store(struct device *dev, struct device_attribute *attr,
 	     const char *buf, size_t count)
@@ -4076,7 +4073,7 @@ static struct ocp_resource ocp_mac_resource[] = {
 	},
 };
 
-/* change selection */
+	/* изменить выбор */
 static int
 mac_mode_select(struct ptp_ocp *bp, bool use_i2c)
 {
@@ -4151,11 +4148,11 @@ mac_i2c_store(struct device *dev, struct device_attribute *attr,
 	if (err)
 		return err;
 
-	/* already selected this mode */
+			/* уже выбран этот режим */
 	if (mac_mode_selected(bp, use_i2c))
 		goto out;
 
-	/* select correct mode */
+	/* выбрать правильный режим */
 	spin_lock_irqsave(&bp->lock, flags);
 	reg = ioread32(&bp->ext_ctrl->gpio2);
 	reg = (reg &~ BIT(31)) | (use_i2c ? BIT(31) : 0);
@@ -4230,8 +4227,8 @@ irig_b_mode_store(struct device *dev,
 	reg = ((val & 0x7) << 16);
 
 	spin_lock_irqsave(&bp->lock, flags);
-	iowrite32(0, &bp->irig_out->ctrl);		/* disable */
-	iowrite32(reg, &bp->irig_out->ctrl);		/* change mode */
+			iowrite32(0, &bp->irig_out->ctrl);		/* отключить */
+		iowrite32(reg, &bp->irig_out->ctrl);		/* изменить режим */
 	iowrite32(reg | IRIG_M_CTRL_ENABLE, &bp->irig_out->ctrl);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
@@ -4385,7 +4382,7 @@ tod_baud_rate_store(struct device *dev, struct device_attribute *attr,
 	if (val < 0)
 		return val;
 
-	// When overwriting the UART baud rate the TOD Slave must get restarted
+	// При перезаписи скорости UART ведомый TOD должен быть перезапущен
 	ctrl_reg = ioread32(&bp->tod->ctrl);
 	ctrl_reg &= ~TOD_CTRL_ENABLE;
 	
@@ -4521,7 +4518,7 @@ config_flash_rw(struct ptp_ocp *bp, bool write, char *buf,
 
 	dev = ptp_ocp_find_flash(bp);
 	if (!dev) {
-		dev_err(&bp->pdev->dev, "Can't find Flash SPI adapter\n");
+		dev_err(&bp->pdev->dev, "Не удается найти Flash SPI адаптер\n");
 		return -ENODEV;
 	}
 	mtd = dev_get_drvdata(dev);
@@ -4621,7 +4618,7 @@ disciplining_config_read(struct file *filp, struct kobject *kobj,
 	if (off + count > size)
 		count = size - off;
 
-	// the configuration is in the very beginning of the EEPROM
+	// конфигурация находится в самом начале EEPROM
 	err = nvmem_device_read(nvmem, off, count, buf);
 	if (err != count) {
 		err = -EFAULT;
@@ -4643,7 +4640,7 @@ disciplining_config_write(struct file *filp, struct kobject *kobj,
 	struct nvmem_device *nvmem;
 	ssize_t err;
 
-	/* Allow write of the whole area only */
+	/* Разрешить запись только всей области */
 	if (off || count != OCP_ART_CONFIG_SIZE)
 		return -EFAULT;
 
@@ -4684,7 +4681,7 @@ temperature_table_read(struct file *filp, struct kobject *kobj,
 	if (off + count > size)
 		count = size - off;
 
-	// the configuration is in the very beginning of the EEPROM
+	// конфигурация находится в самом начале EEPROM
 	err = nvmem_device_read(nvmem, 0x90 + off, count, buf);
 	if (err != count) {
 		err = -EFAULT;
@@ -4706,7 +4703,7 @@ temperature_table_write(struct file *filp, struct kobject *kobj,
 	struct nvmem_device *nvmem;
 	ssize_t err;
 
-	/* Allow write of the whole area only */
+	/* Разрешить запись только всей области */
 	if (off || count != OCP_ART_TEMP_TABLE_SIZE)
 		return -EFAULT;
 
@@ -5071,7 +5068,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 			   on ? " ON" : "OFF", val);
 	}
 
-	/* compute src for PPS1, used below. */
+	/* вычислить источник для PPS1, используется ниже. */
 	if (bp->pps_select) {
 		src = &buf[80];
 		mac_src = "GNSS1";
@@ -5102,7 +5099,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	gpio_input_map(buf, bp, sma_val, 1, "GNSS2");
 	seq_printf(s, "MAC PPS2 src: %s\n", buf);
 
-	/* assumes automatic switchover/selection */
+			/* предполагает автоматическое переключение/выбор */
 	val = ioread32(&bp->reg->select);
 	switch (val >> 16) {
 	case 0:
@@ -5292,7 +5289,7 @@ ptp_ocp_device_init(struct ptp_ocp *bp, struct pci_dev *pdev)
 	err = idr_alloc(&ptp_ocp_idr, bp, 0, 0, GFP_KERNEL);
 	mutex_unlock(&ptp_ocp_lock);
 	if (err < 0) {
-		dev_err(&pdev->dev, "idr_alloc failed: %d\n", err);
+		dev_err(&pdev->dev, "idr_alloc не удался: %d\n", err);
 		return err;
 	}
 	bp->id = err;
@@ -5315,7 +5312,7 @@ ptp_ocp_device_init(struct ptp_ocp *bp, struct pci_dev *pdev)
 
 	err = device_add(&bp->dev);
 	if (err) {
-		dev_err(&bp->dev, "device add failed: %d\n", err);
+		dev_err(&bp->dev, "добавление устройства не удалось: %d\n", err);
 		goto out;
 	}
 
@@ -5335,7 +5332,7 @@ ptp_ocp_symlink(struct ptp_ocp *bp, struct device *child, const char *link)
 	struct device *dev = &bp->dev;
 
 	if (sysfs_create_link(&dev->kobj, &child->kobj, link))
-		dev_err(dev, "%s symlink failed\n", link);
+		dev_err(dev, "символическая ссылка %s не удалась\n", link);
 }
 
 static void
@@ -5347,7 +5344,7 @@ ptp_ocp_link_child(struct ptp_ocp *bp, const char *name, const char *link)
 
 	child = device_find_child_by_name(dev, name);
 	if (!child) {
-		dev_err(dev, "Could not find device %s\n", name);
+		dev_err(dev, "Не удалось найти устройство %s\n", name);
 		return;
 	}
 
@@ -5410,14 +5407,14 @@ ptp_ocp_phc_info(struct ptp_ocp *bp)
 
 	version = ioread32(&bp->reg->version);
 	select = ioread32(&bp->reg->select);
-	dev_info(&bp->pdev->dev, "Version %d.%d.%d, clock %s, device ptp%d\n",
+	dev_info(&bp->pdev->dev, "Версия %d.%d.%d, часы %s, устройство ptp%d\n",
 		 version >> 24, (version >> 16) & 0xff, version & 0xffff,
 		 ptp_ocp_select_name_from_val(ptp_ocp_clock, select >> 16),
 		 ptp_clock_index(bp->ptp));
 
 	sync = ioread32(&bp->reg->status) & OCP_STATUS_IN_SYNC;
 	if (!ptp_ocp_gettimex(&bp->ptp_info, &ts, NULL))
-		dev_info(&bp->pdev->dev, "Time: %lld.%ld, %s\n",
+		dev_info(&bp->pdev->dev, "Время: %lld.%ld, %s\n",
 			 ts.tv_sec, ts.tv_nsec,
 			 sync ? "in-sync" : "UNSYNCED");
 }
@@ -5436,7 +5433,7 @@ ptp_ocp_disable_ptm(struct ptp_ocp *bp)
 	u32 status;
 	int count;
 
-	/* disable PTM control*/
+	/* отключить управление PTM */
 	iowrite32(0, &reg->ctrl);
 	count = 100;
 	do {
@@ -5447,7 +5444,7 @@ ptp_ocp_disable_ptm(struct ptp_ocp *bp)
 	} while (count > 0);
 
 	if (!count) {
-		dev_err(&bp->pdev->dev, "PTM not disabled: Status = 0x%X \n", status);
+		dev_err(&bp->pdev->dev, "PTM не отключен: Статус = 0x%X \n", status);
 	}
 }
 
@@ -5458,8 +5455,8 @@ ptp_ocp_enable_ptm(struct ptp_ocp *bp)
 	u32 status;
 	int count, try = 2;
 
-	/* enable PTM control and start first request */
-	/* prepare T1 & T4 for next request */
+	/* включить управление PTM и начать первый запрос */
+	/* подготовить T1 и T4 для следующего запроса */
 
 	while (try--) {
 		iowrite32(PTM_CONTROL_ENABLE | PTM_CONTROL_TRIGGER, &reg->ctrl);
@@ -5474,7 +5471,7 @@ ptp_ocp_enable_ptm(struct ptp_ocp *bp)
 		if (count)
 			continue;
 
-		dev_err(&bp->pdev->dev, "Enable and trigger PTM failed: Status = 0x%X, try: %d\n", status, 2 - try);
+		dev_err(&bp->pdev->dev, "Включение и запуск PTM не удались: Статус = 0x%X, попытка: %d\n", status, 2 - try);
   	}
 	bp->ptm_t4_prev = (((u64) ioread32(&reg->t4_time[0]) << 32) |
 		(ioread32(&reg->t4_time[1]) & 0xffffffff));
@@ -5580,7 +5577,7 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 	device_unregister(&bp->dev);
 }
 
-/* XXX out of tree hack - if this symbol is defined, kernel is using new API */
+/* XXX хак вне дерева - если этот символ определен, ядро использует новый API */
 #ifdef DEVLINK_PARAM_GENERIC_ENABLE_ETH_NAME
 #define DEVLINK_NEW_API 1
 #endif
@@ -5616,13 +5613,13 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	devlink = ptp_ocp_devlink_alloc(&ptp_ocp_devlink_ops, sizeof(*bp),
 					&pdev->dev);
 	if (!devlink) {
-		dev_err(&pdev->dev, "devlink_alloc failed\n");
+		dev_err(&pdev->dev, "devlink_alloc не удался\n");
 		return -ENOMEM;
 	}
 
 	err = pci_enable_device(pdev);
 	if (err) {
-		dev_err(&pdev->dev, "pci_enable_device\n");
+		dev_err(&pdev->dev, "pci_enable_device не удался\n");
 		goto out_free;
 	}
 
@@ -5638,10 +5635,10 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	 */
 	err = pci_alloc_irq_vectors(pdev, 1, 64, PCI_IRQ_MSI | PCI_IRQ_MSIX);
 	if (err < 0) {
-		dev_err(&pdev->dev, "alloc_irq_vectors err: %d\n", err);
+		dev_err(&pdev->dev, "ошибка alloc_irq_vectors: %d\n", err);
 		goto out;
 	} else {
-		dev_info(&pdev->dev, "MSI/MSI-X info: %d\n", err);
+		dev_info(&pdev->dev, "Информация MSI/MSI-X: %d\n", err);
 	}
 
 	bp->n_irqs = err;
@@ -5654,7 +5651,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bp->ptp = ptp_clock_register(&bp->ptp_info, &pdev->dev);
 	if (IS_ERR(bp->ptp)) {
 		err = PTR_ERR(bp->ptp);
-		dev_err(&pdev->dev, "ptp_clock_register: %d\n", err);
+		dev_err(&pdev->dev, "ошибка ptp_clock_register: %d\n", err);
 		bp->ptp = NULL;
 		goto out;
 	}
@@ -5676,9 +5673,9 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	ptp_ocp_devlink_register(devlink, &pdev->dev);
 
 	if(bp->pdev->msix_enabled) {
-		/* Enable MSI-X Irq in LitePCIe*/
+		/* Включить MSI-X прерывания в LitePCIe */
 		iowrite32(0xFF, &bp->msi->enable);
-		dev_info(&pdev->dev, "Enabled MSI-X 0xFF\n");
+		dev_info(&pdev->dev, "Включен MSI-X 0xFF\n");
 	}
 
 	return 0;
@@ -5805,4 +5802,4 @@ module_init(ptp_ocp_init);
 module_exit(ptp_ocp_fini);
 
 MODULE_DESCRIPTION("OpenCompute TimeCard driver");
-MODULE_LICENSE("GPL v2");
+
