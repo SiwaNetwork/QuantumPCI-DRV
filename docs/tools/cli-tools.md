@@ -4,6 +4,79 @@
 
 Данный документ описывает утилиты командной строки для работы с PTP OCP драйвером и системой временной синхронизации.
 
+## Работа с TimeCard через sysfs
+
+### Основные команды
+
+#### Проверка устройства
+
+```bash
+# Список TimeCard устройств
+ls /sys/class/timecard/
+
+# Информация о устройстве
+cat /sys/class/timecard/ocp0/serialnum
+cat /sys/class/timecard/ocp0/clock_source
+cat /sys/class/timecard/ocp0/gnss_sync
+```
+
+#### Настройка источника времени
+
+```bash
+# Просмотр доступных источников
+cat /sys/class/timecard/ocp0/available_clock_sources
+
+# Установка источника
+echo "GNSS" > /sys/class/timecard/ocp0/clock_source
+echo "MAC" > /sys/class/timecard/ocp0/clock_source
+echo "external" > /sys/class/timecard/ocp0/clock_source
+```
+
+#### Конфигурация SMA коннекторов
+
+```bash
+# Просмотр доступных сигналов
+cat /sys/class/timecard/ocp0/available_sma_inputs
+cat /sys/class/timecard/ocp0/available_sma_outputs
+
+# Настройка входов
+echo "10MHz" > /sys/class/timecard/ocp0/sma1_in
+echo "PPS" > /sys/class/timecard/ocp0/sma2_in
+
+# Настройка выходов
+echo "10MHz" > /sys/class/timecard/ocp0/sma3_out
+echo "PPS" > /sys/class/timecard/ocp0/sma4_out
+```
+
+#### Калибровка задержек
+
+```bash
+# Установка задержек (в наносекундах)
+echo "100" > /sys/class/timecard/ocp0/external_pps_cable_delay
+echo "50" > /sys/class/timecard/ocp0/internal_pps_cable_delay
+echo "25" > /sys/class/timecard/ocp0/pci_delay
+
+# UTC-TAI offset
+echo "37" > /sys/class/timecard/ocp0/utc_tai_offset
+```
+
+#### Получение связанных устройств
+
+```bash
+# Автоматическое определение PTP устройства
+PTP_DEV=$(basename $(readlink /sys/class/timecard/ocp0/ptp))
+echo "PTP device: /dev/$PTP_DEV"
+
+# Получение последовательных портов
+GNSS_TTY=$(basename $(readlink /sys/class/timecard/ocp0/ttyGNSS))
+MAC_TTY=$(basename $(readlink /sys/class/timecard/ocp0/ttyMAC))
+NMEA_TTY=$(basename $(readlink /sys/class/timecard/ocp0/ttyNMEA))
+
+echo "GNSS port: /dev/$GNSS_TTY"
+echo "MAC port: /dev/$MAC_TTY"
+echo "NMEA port: /dev/$NMEA_TTY"
+```
+
 ## Основные утилиты PTP
 
 ### testptp

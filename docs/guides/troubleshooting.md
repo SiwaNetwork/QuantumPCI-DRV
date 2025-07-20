@@ -14,14 +14,30 @@ lsmod | grep ptp
 dmesg | grep -i ptp | tail -20
 journalctl -k | grep ptp
 
-# Проверка устройств
+# Проверка TimeCard устройств
+ls -la /sys/class/timecard/
+if [ -d "/sys/class/timecard/ocp0" ]; then
+    echo "TimeCard device info:"
+    cat /sys/class/timecard/ocp0/serialnum
+    cat /sys/class/timecard/ocp0/clock_source
+    cat /sys/class/timecard/ocp0/gnss_sync
+fi
+
+# Проверка PTP устройств
 ls -la /dev/ptp*
 cat /sys/class/ptp/ptp*/clock_name
 
 # Тестирование функциональности
-sudo testptp -d /dev/ptp0 -c  # capabilities
-sudo testptp -d /dev/ptp0 -g  # get time
-sudo testptp -d /dev/ptp0 -k  # kernel info
+# Определение PTP устройства из TimeCard
+if [ -L "/sys/class/timecard/ocp0/ptp" ]; then
+    PTP_DEV=$(basename $(readlink /sys/class/timecard/ocp0/ptp))
+else
+    PTP_DEV="ptp0"
+fi
+
+sudo testptp -d /dev/$PTP_DEV -c  # capabilities
+sudo testptp -d /dev/$PTP_DEV -g  # get time
+sudo testptp -d /dev/$PTP_DEV -k  # kernel info
 
 # Проверка PCI устройств
 lspci | grep -i time
@@ -316,6 +332,211 @@ echo "first_step_threshold 0.000020" >> /etc/ptp4l.conf
 # Настройка servo parameters
 echo "pi_proportional_const 0.0" >> /etc/ptp4l.conf
 echo "pi_integral_const 0.0" >> /etc/ptp4l.conf
+```
+
+### Проблемы с TimeCard
+
+#### TimeCard устройство не обнаружено
+
+**Симптомы:**
+```bash
+$ ls /sys/class/timecard/
+ls: cannot access '/sys/class/timecard/': No such file or directory
+```
+
+**Диагностика:**
+```bash
+# Проверка загрузки драйвера
+lsmod | grep ptp_ocp
+
+# Проверка PCI устройств
+lspci | grep -E "(1d9b|18d4|1ad7)"
+lspci -nn | grep -E "(1d9b:0400|18d4:1008|1ad7:a000)"
+
+# Проверка логов драйвера
+dmesg | grep -i ptp_ocp
+journalctl -k | grep ptp_ocp
+```
+
+**Решения:**
+```bash
+# Перезагрузка драйвера
+sudo rmmod ptp_ocp
+sudo modprobe ptp_ocp
+
+# Проверка идентификаторов устройств
+lspci -nn | grep "Time\|Clock"
+
+# Проверка BIOS настроек (VT-d должен быть включен)
+# Перезагрузите систему и проверьте BIOS
+```
+
+#### GNSS не синхронизируется
+
+**Симптомы:**
+```bash
+$ cat /sys/class/timecard/ocp0/gnss_sync
+unlocked
+```
+
+**Диагностика:**
+```bash
+# Проверка GNSS порта
+GNSS_TTY=$(basename $(readlink /sys/class/timecard/ocp0/ttyGNSS))
+sudo cat /dev/$GNSS_TTY | head -20
+
+# Проверка NMEA сообщений
+NMEA_TTY=$(basename $(readlink /sys/class/timecard/ocp0/ttyNMEA))
+sudo cat /dev/$NMEA_TTY | head -10
+
+# Проверка источника часов
+cat /sys/class/timecard/ocp0/clock_source
+cat /sys/class/timecard/ocp0/available_clock_sources
+```
+
+**Решения:**
+```bash
+# Установка GNSS как источника времени
+echo "GNSS" > /sys/class/timecard/ocp0/clock_source
+
+# Проверка антенны GNSS (должна быть подключена и иметь обзор неба)
+# Ожидание синхронизации (может занять до 15 минут)
+timeout=900  # 15 минут
+while [ $timeout -gt 0 ]; do
+    sync_status=$(cat /sys/class/timecard/ocp0/gnss_sync)
+    echo "GNSS status: $sync_status (timeout: ${timeout}s)"
+    if [ "$sync_status" = "locked" ]; then
+        echo "GNSS synchronized!"
+        break
+    fi
+    sleep 10
+    timeout=$((timeout - 10))
+done
+```
+
+#### SMA коннекторы не работают
+
+**Симптомы:**
+Нет сигнала на SMA выходах или неправильная конфигурация входов
+
+**Диагностика:**
+```bash
+# Проверка доступных сигналов
+cat /sys/class/timecard/ocp0/available_sma_inputs
+cat /sys/class/timecard/ocp0/available_sma_outputs
+
+# Проверка текущей конфигурации
+cat /sys/class/timecard/ocp0/sma1_in
+cat /sys/class/timecard/ocp0/sma2_in
+cat /sys/class/timecard/ocp0/sma3_out
+cat /sys/class/timecard/ocp0/sma4_out
+```
+
+**Решения:**
+```bash
+# Настройка SMA коннекторов
+echo "10MHz" > /sys/class/timecard/ocp0/sma1_in
+echo "PPS" > /sys/class/timecard/ocp0/sma2_in
+echo "10MHz" > /sys/class/timecard/ocp0/sma3_out
+echo "PPS" > /sys/class/timecard/ocp0/sma4_out
+
+# Проверка кабельных соединений
+# Убедитесь, что SMA кабели правильно подключены
+```
+
+#### Высокая задержка или неточность
+
+**Симптомы:**
+```bash
+$ sudo testptp -d /dev/ptp0 -o
+offset from CLOCK_REALTIME is 12345678ns
+```
+
+**Диагностика:**
+```bash
+# Проверка задержек кабелей
+cat /sys/class/timecard/ocp0/external_pps_cable_delay
+cat /sys/class/timecard/ocp0/internal_pps_cable_delay
+cat /sys/class/timecard/ocp0/pci_delay
+
+# Проверка UTC-TAI offset
+cat /sys/class/timecard/ocp0/utc_tai_offset
+```
+
+**Решения:**
+```bash
+# Калибровка задержек (в наносекундах)
+# Измерьте длину кабелей и используйте ~5ns на метр для коаксиальных кабелей
+echo "100" > /sys/class/timecard/ocp0/external_pps_cable_delay
+echo "50" > /sys/class/timecard/ocp0/internal_pps_cable_delay
+echo "25" > /sys/class/timecard/ocp0/pci_delay
+
+# Обновление UTC-TAI offset (37 секунд на 2024 год)
+echo "37" > /sys/class/timecard/ocp0/utc_tai_offset
+```
+
+#### Скрипт диагностики TimeCard
+
+```bash
+#!/bin/bash
+# Комплексная диагностика TimeCard
+
+echo "=== TimeCard Diagnostics ==="
+
+TIMECARD_BASE="/sys/class/timecard/ocp0"
+
+if [ ! -d "$TIMECARD_BASE" ]; then
+    echo "ERROR: TimeCard device not found"
+    echo "Checking driver status..."
+    lsmod | grep ptp_ocp
+    echo "Checking PCI devices..."
+    lspci | grep -E "(1d9b|18d4|1ad7)"
+    exit 1
+fi
+
+echo "✓ TimeCard device found"
+echo "Serial number: $(cat $TIMECARD_BASE/serialnum)"
+echo "Clock source: $(cat $TIMECARD_BASE/clock_source)"
+echo "GNSS sync: $(cat $TIMECARD_BASE/gnss_sync)"
+
+echo
+echo "=== SMA Configuration ==="
+echo "SMA1 in: $(cat $TIMECARD_BASE/sma1_in 2>/dev/null || echo 'N/A')"
+echo "SMA2 in: $(cat $TIMECARD_BASE/sma2_in 2>/dev/null || echo 'N/A')"
+echo "SMA3 out: $(cat $TIMECARD_BASE/sma3_out 2>/dev/null || echo 'N/A')"
+echo "SMA4 out: $(cat $TIMECARD_BASE/sma4_out 2>/dev/null || echo 'N/A')"
+
+echo
+echo "=== Delay Configuration ==="
+echo "External PPS delay: $(cat $TIMECARD_BASE/external_pps_cable_delay)ns"
+echo "Internal PPS delay: $(cat $TIMECARD_BASE/internal_pps_cable_delay)ns"
+echo "PCI delay: $(cat $TIMECARD_BASE/pci_delay)ns"
+echo "UTC-TAI offset: $(cat $TIMECARD_BASE/utc_tai_offset)s"
+
+echo
+echo "=== Linked Devices ==="
+if [ -L "$TIMECARD_BASE/ptp" ]; then
+    PTP_DEV=$(basename $(readlink $TIMECARD_BASE/ptp))
+    echo "PTP device: /dev/$PTP_DEV"
+fi
+
+if [ -L "$TIMECARD_BASE/ttyGNSS" ]; then
+    GNSS_TTY=$(basename $(readlink $TIMECARD_BASE/ttyGNSS))
+    echo "GNSS port: /dev/$GNSS_TTY"
+fi
+
+if [ -L "$TIMECARD_BASE/ttyNMEA" ]; then
+    NMEA_TTY=$(basename $(readlink $TIMECARD_BASE/ttyNMEA))
+    echo "NMEA port: /dev/$NMEA_TTY"
+fi
+
+echo
+echo "=== PTP Test ==="
+if [ -n "$PTP_DEV" ]; then
+    sudo testptp -d /dev/$PTP_DEV -g 2>/dev/null && echo "✓ PTP device responsive" || echo "✗ PTP device error"
+fi
+
+echo "=== TimeCard Diagnostics Complete ==="
 ```
 
 ## Расширенная диагностика

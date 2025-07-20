@@ -92,6 +92,46 @@ EOF
         return
     fi
 
+    # Проверка TimeCard устройств
+    for timecard in /sys/class/timecard/ocp*; do
+        if [ -d "$timecard" ]; then
+            ocp_name=$(basename "$timecard")
+            
+            # Основная информация о TimeCard
+            if [ -f "$timecard/serialnum" ]; then
+                serial=$(cat "$timecard/serialnum" 2>/dev/null || echo "unknown")
+                echo "timecard_device_info{device=\"$ocp_name\",serial=\"$serial\"} 1" >> "$TEMP_FILE"
+            fi
+            
+            # Статус GNSS синхронизации
+            if [ -f "$timecard/gnss_sync" ]; then
+                gnss_status=$(cat "$timecard/gnss_sync" 2>/dev/null || echo "unknown")
+                gnss_locked=$( [ "$gnss_status" = "locked" ] && echo 1 || echo 0 )
+                echo "timecard_gnss_locked{device=\"$ocp_name\"} $gnss_locked" >> "$TEMP_FILE"
+            fi
+            
+            # Источник часов
+            if [ -f "$timecard/clock_source" ]; then
+                clock_source=$(cat "$timecard/clock_source" 2>/dev/null || echo "unknown")
+                echo "timecard_clock_source_info{device=\"$ocp_name\",source=\"$clock_source\"} 1" >> "$TEMP_FILE"
+            fi
+            
+            # Задержки кабелей
+            for delay_type in external_pps_cable_delay internal_pps_cable_delay pci_delay; do
+                if [ -f "$timecard/$delay_type" ]; then
+                    delay_value=$(cat "$timecard/$delay_type" 2>/dev/null || echo "0")
+                    echo "timecard_delay_ns{device=\"$ocp_name\",type=\"$delay_type\"} $delay_value" >> "$TEMP_FILE"
+                fi
+            done
+            
+            # UTC-TAI offset
+            if [ -f "$timecard/utc_tai_offset" ]; then
+                utc_tai=$(cat "$timecard/utc_tai_offset" 2>/dev/null || echo "0")
+                echo "timecard_utc_tai_offset{device=\"$ocp_name\"} $utc_tai" >> "$TEMP_FILE"
+            fi
+        fi
+    done
+
     # Проверка PTP устройств
     for dev in /dev/ptp*; do
         if [ -c "$dev" ]; then

@@ -28,6 +28,11 @@
          │
 ┌─────────────────────────────────────────────────────────────────┐
 │                       PTP OCP Driver                           │
+│  ┌─────────────────┐              ┌─────────────────────────┐   │
+│  │ TimeCard Class  │              │    PTP Interface        │   │
+│  │ /sys/class/     │              │    /sys/class/ptp/      │   │
+│  │ timecard/ocpN/  │  <-------->  │    /dev/ptp*           │   │
+│  └─────────────────┘              └─────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
          │
 ┌─────────────────────────────────────────────────────────────────┐
@@ -101,6 +106,140 @@ echo "perout 0 0" > $GPIO_BASE/pins/SMA1
 
 # Конфигурация пина как вход
 echo "extts 0 0" > $GPIO_BASE/pins/SMA2
+```
+
+### Конфигурация TimeCard
+
+#### Основные операции с TimeCard
+
+```bash
+# Базовый путь к TimeCard устройству
+TIMECARD_BASE="/sys/class/timecard/ocp0"
+
+# Проверка доступности устройства
+if [ -d "$TIMECARD_BASE" ]; then
+    echo "TimeCard device found"
+else
+    echo "TimeCard device not found"
+    exit 1
+fi
+
+# Просмотр доступных источников времени
+cat $TIMECARD_BASE/available_clock_sources
+
+# Установка источника времени
+echo "GNSS" > $TIMECARD_BASE/clock_source
+
+# Проверка синхронизации GNSS
+cat $TIMECARD_BASE/gnss_sync
+```
+
+#### Конфигурация SMA коннекторов
+
+```bash
+# Просмотр доступных сигналов
+cat $TIMECARD_BASE/available_sma_inputs
+cat $TIMECARD_BASE/available_sma_outputs
+
+# Настройка SMA1 как вход для 10MHz
+echo "10MHz" > $TIMECARD_BASE/sma1_in
+
+# Настройка SMA2 как вход для PPS
+echo "PPS" > $TIMECARD_BASE/sma2_in
+
+# Настройка SMA3 как выход 10MHz
+echo "10MHz" > $TIMECARD_BASE/sma3_out
+
+# Настройка SMA4 как выход PPS
+echo "PPS" > $TIMECARD_BASE/sma4_out
+```
+
+#### Калибровка задержек
+
+```bash
+# Установка задержки внешнего PPS кабеля (в наносекундах)
+echo "100" > $TIMECARD_BASE/external_pps_cable_delay
+
+# Установка задержки внутреннего PPS
+echo "50" > $TIMECARD_BASE/internal_pps_cable_delay
+
+# Установка задержки PCIe
+echo "25" > $TIMECARD_BASE/pci_delay
+
+# Установка смещения UTC-TAI
+echo "37" > $TIMECARD_BASE/utc_tai_offset
+```
+
+#### Получение информации о устройстве
+
+```bash
+# Серийный номер
+cat $TIMECARD_BASE/serialnum
+
+# Конфигурация IRIG-B
+cat $TIMECARD_BASE/irig_b_mode
+echo "B003" > $TIMECARD_BASE/irig_b_mode
+
+# Получение связанных устройств
+PTP_DEV=$(basename $(readlink $TIMECARD_BASE/ptp))
+GNSS_TTY=$(basename $(readlink $TIMECARD_BASE/ttyGNSS))
+MAC_TTY=$(basename $(readlink $TIMECARD_BASE/ttyMAC))
+NMEA_TTY=$(basename $(readlink $TIMECARD_BASE/ttyNMEA))
+
+echo "PTP device: /dev/$PTP_DEV"
+echo "GNSS port: /dev/$GNSS_TTY"
+echo "MAC port: /dev/$MAC_TTY"
+echo "NMEA port: /dev/$NMEA_TTY"
+```
+
+#### Скрипт автоматической конфигурации
+
+```bash
+#!/bin/bash
+# Файл: /usr/local/bin/configure-timecard.sh
+
+TIMECARD_BASE="/sys/class/timecard/ocp0"
+
+# Проверка устройства
+if [ ! -d "$TIMECARD_BASE" ]; then
+    echo "Error: TimeCard device not found"
+    exit 1
+fi
+
+# Базовая конфигурация
+echo "GNSS" > $TIMECARD_BASE/clock_source
+echo "10MHz" > $TIMECARD_BASE/sma1_in
+echo "PPS" > $TIMECARD_BASE/sma2_in
+echo "10MHz" > $TIMECARD_BASE/sma3_out
+echo "PPS" > $TIMECARD_BASE/sma4_out
+
+# Калибровка задержек (настройте под ваши кабели)
+echo "100" > $TIMECARD_BASE/external_pps_cable_delay
+echo "50" > $TIMECARD_BASE/internal_pps_cable_delay
+echo "25" > $TIMECARD_BASE/pci_delay
+echo "37" > $TIMECARD_BASE/utc_tai_offset
+
+# Настройка IRIG-B
+echo "B003" > $TIMECARD_BASE/irig_b_mode
+
+echo "TimeCard configured successfully"
+
+# Ожидание синхронизации GNSS
+echo "Waiting for GNSS sync..."
+timeout=60
+while [ $timeout -gt 0 ]; do
+    sync_status=$(cat $TIMECARD_BASE/gnss_sync)
+    if [ "$sync_status" = "locked" ]; then
+        echo "GNSS synchronized"
+        break
+    fi
+    sleep 1
+    timeout=$((timeout - 1))
+done
+
+if [ $timeout -eq 0 ]; then
+    echo "Warning: GNSS sync timeout"
+fi
 ```
 
 ## PTP конфигурация
