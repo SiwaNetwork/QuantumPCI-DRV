@@ -16,6 +16,16 @@
 - **Мониторинг синхронизации** - статус GNSS и других источников
 - **Автоматическое связывание устройств** - ссылки на PTP и tty устройства
 
+### Комплексная поддержка протоколов точного времени
+
+Добавлена полная поддержка для реализации различных протоколов с PCI картами атомных часов:
+
+- **NTP с аппаратными временными метками** - интеграция с chrony и PHC
+- **IEEE 1588-2019 (PTP v2.1)** - новые функции стандарта включая enhanced security
+- **White Rabbit** - субнаносекундная синхронизация для научных применений
+- **SMPTE timecode** - генерация для вещательных применений (25fps, 29.97fps, 30fps, 24fps)
+- **Готовые скрипты интеграции** - автоматизация настройки и мониторинга
+
 ## Структура документации
 
 ### Руководства пользователя
@@ -23,6 +33,7 @@
 - [`guides/quick-start.md`](guides/quick-start.md) - Быстрый старт с поддержкой TimeCard
 - [`guides/installation.md`](guides/installation.md) - Установка драйвера
 - [`guides/configuration.md`](guides/configuration.md) - Детальная конфигурация включая TimeCard
+- [`guides/precision-time-protocols.md`](guides/precision-time-protocols.md) - **Комплексное руководство по протоколам точного времени** (NTP, PTP, White Rabbit, SMPTE)
 - [`guides/troubleshooting.md`](guides/troubleshooting.md) - Устранение неполадок с TimeCard
 
 ### API документация
@@ -38,8 +49,11 @@
 ### Примеры и интеграция
 
 - [`examples/basic-setup/`](examples/basic-setup/) - Базовая настройка включая TimeCard скрипты
+- [`examples/basic-setup/timecard-integration-scripts.md`](examples/basic-setup/timecard-integration-scripts.md) - **Готовые скрипты интеграции** для всех протоколов времени
 - [`examples/integration/`](examples/integration/) - Интеграция с мониторингом TimeCard
 - [`examples/advanced-config/`](examples/advanced-config/) - Продвинутые конфигурации
+- [`examples/advanced-config/atomic-clock-ntp.conf`](examples/advanced-config/atomic-clock-ntp.conf) - Конфигурация chrony для атомных часов
+- [`examples/advanced-config/ieee1588-2019.conf`](examples/advanced-config/ieee1588-2019.conf) - Конфигурация PTP v2.1 с новыми функциями
 
 ## Быстрый старт с TimeCard
 
