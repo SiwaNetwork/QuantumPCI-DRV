@@ -1,0 +1,311 @@
+.TH PTPD 8 "2024-01-15" "LinuxPTP" "System Administration"
+.SH NAME
+ptpd \- PTP daemon administration guide
+.SH SYNOPSIS
+System administration tasks for PTP OCP devices and LinuxPTP services.
+.SH DESCRIPTION
+This manual page describes common administrative tasks for managing PTP (Precision Time Protocol) services with PTP OCP hardware in a Linux environment.
+
+.SH SERVICE MANAGEMENT
+.SS Starting and Stopping Services
+The PTP stack typically consists of two main services:
+
+.TP
+\fBptp4l.service\fR
+The main PTP daemon that implements the IEEE 1588 protocol.
+
+.TP
+\fBphc2sys.service\fR
+Service for synchronizing system clock with PTP hardware clock.
+
+Commands for service management:
+.nf
+# Start services
+systemctl start ptp4l.service
+systemctl start phc2sys.service
+
+# Stop services
+systemctl stop ptp4l.service
+systemctl stop phc2sys.service
+
+# Enable auto-start at boot
+systemctl enable ptp4l.service
+systemctl enable phc2sys.service
+
+# Check service status
+systemctl status ptp4l.service
+systemctl status phc2sys.service
+.fi
+
+.SS Service Dependencies
+The \fBphc2sys\fR service should depend on \fBptp4l\fR:
+.nf
+[Unit]
+After=ptp4l.service
+Requires=ptp4l.service
+.fi
+
+.SH DRIVER MANAGEMENT
+.SS Loading the PTP OCP Driver
+.nf
+# Load driver manually
+modprobe ptp_ocp
+
+# Check if driver is loaded
+lsmod | grep ptp_ocp
+
+# Auto-load at boot
+echo "ptp_ocp" >> /etc/modules
+.fi
+
+.SS Driver Parameters
+.nf
+# Load with debug enabled
+modprobe ptp_ocp debug=7
+
+# Permanent configuration
+echo "options ptp_ocp debug=0" > /etc/modprobe.d/ptp-ocp.conf
+.fi
+
+.SH DEVICE VERIFICATION
+.SS Checking Hardware Detection
+.nf
+# List PTP devices
+ls -la /dev/ptp*
+
+# Check PCI devices
+lspci | grep -i time
+lspci | grep 1d9b
+
+# Verify sysfs interfaces
+ls /sys/class/ptp/
+.fi
+
+.SS Testing Device Functionality
+.nf
+# Test basic functionality
+testptp -d /dev/ptp0 -c
+testptp -d /dev/ptp0 -g
+
+# Check capabilities
+cat /sys/class/ptp/ptp0/clock_name
+cat /sys/class/ptp/ptp0/max_adjustment
+.fi
+
+.SH CONFIGURATION MANAGEMENT
+.SS Configuration Files
+Primary configuration files:
+.TP
+\fI/etc/ptp4l.conf\fR
+Main PTP4L configuration
+.TP
+\fI/etc/chrony/chrony.conf\fR
+Chrony configuration (if using chrony)
+
+.SS Backup and Restore
+.nf
+# Backup configurations
+tar -czf ptp-config-backup.tar.gz \\
+    /etc/ptp4l.conf \\
+    /etc/systemd/system/ptp*.service \\
+    /etc/udev/rules.d/*ptp*.rules
+
+# Restore configurations
+tar -xzf ptp-config-backup.tar.gz -C /
+systemctl daemon-reload
+.fi
+
+.SH MONITORING AND LOGGING
+.SS Log Files
+.TP
+\fI/var/log/messages\fR
+System log messages (check for ptp4l and kernel messages)
+.TP
+\fI/var/log/ptp/\fR
+Dedicated PTP log directory (if configured)
+
+.SS Real-time Monitoring
+.nf
+# Monitor PTP logs
+journalctl -u ptp4l.service -f
+journalctl -u phc2sys.service -f
+
+# Monitor kernel messages
+dmesg -w | grep -i ptp
+
+# Monitor offset in real-time
+watch -n 1 'pmc -u -b 0 "GET CURRENT_DATA_SET"'
+.fi
+
+.SS Log Rotation
+.nf
+# Configure logrotate for PTP logs
+cat > /etc/logrotate.d/ptp << EOF
+/var/log/ptp/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 644 root root
+}
+EOF
+.fi
+
+.SH PERFORMANCE TUNING
+.SS Network Interface Optimization
+.nf
+# Enable hardware timestamping
+ethtool -s eth0 speed 1000 duplex full autoneg off
+
+# Optimize buffers
+ethtool -G eth0 rx 4096 tx 4096
+
+# Reduce interrupt coalescing
+ethtool -C eth0 rx-usecs 1 tx-usecs 1
+.fi
+
+.SS CPU Affinity and Priority
+.nf
+# Set CPU affinity for PTP processes
+echo 2 > /proc/irq/$(grep eth0 /proc/interrupts | cut -d: -f1)/smp_affinity
+
+# Set real-time priority
+chrt -f 80 ptp4l -f /etc/ptp4l.conf
+
+# Configure in systemd service
+[Service]
+Nice=-20
+IOSchedulingClass=1
+IOSchedulingPriority=4
+.fi
+
+.SS Kernel Parameters
+.nf
+# Real-time kernel tuning
+echo "isolcpus=1,2 nohz_full=1,2 rcu_nocbs=1,2" >> /etc/default/grub
+update-grub
+.fi
+
+.SH TROUBLESHOOTING
+.SS Common Issues
+.TP
+Driver not loading
+Check kernel version compatibility and module dependencies.
+.TP
+Device not detected
+Verify PCI device is present and IOMMU settings.
+.TP
+High offset values
+Check network configuration and hardware timestamping support.
+.TP
+Service failures
+Check configuration syntax and permissions.
+
+.SS Diagnostic Commands
+.nf
+# Full system check
+/usr/local/bin/ptp-diagnostics.sh
+
+# Network timestamping check
+ethtool -T eth0
+
+# PTP state information
+pmc -u -b 0 'GET DEFAULT_DATA_SET'
+pmc -u -b 0 'GET CURRENT_DATA_SET'
+pmc -u -b 0 'GET PORT_DATA_SET'
+.fi
+
+.SH SECURITY CONSIDERATIONS
+.SS Access Control
+.nf
+# Create PTP group
+groupadd ptp
+
+# Add users to PTP group
+usermod -a -G ptp username
+
+# Set device permissions
+echo 'SUBSYSTEM=="ptp", GROUP="ptp", MODE="0664"' > \\
+    /etc/udev/rules.d/99-ptp.rules
+.fi
+
+.SS Firewall Configuration
+.nf
+# Allow PTP traffic
+ufw allow 319/udp comment "PTP Event"
+ufw allow 320/udp comment "PTP General"
+
+# For multicast
+iptables -I INPUT -d 224.0.1.129 -j ACCEPT
+iptables -I INPUT -d 224.0.0.107 -j ACCEPT
+.fi
+
+.SH MAINTENANCE
+.SS Regular Tasks
+.TP
+Daily
+Monitor synchronization status and log for errors
+.TP
+Weekly
+Review performance metrics and adjust configuration if needed
+.TP
+Monthly
+Update drivers and software, backup configurations
+
+.SS Health Checks
+.nf
+# Automated health check script
+#!/bin/bash
+# Check driver
+lsmod | grep -q ptp_ocp || echo "Driver not loaded"
+
+# Check services
+systemctl is-active ptp4l.service || echo "PTP4L not running"
+systemctl is-active phc2sys.service || echo "PHC2SYS not running"
+
+# Check synchronization
+offset=$(pmc -u -b 0 'GET CURRENT_DATA_SET' | grep offsetFromMaster | awk '{print $2}')
+if [ ${offset#-} -gt 1000000 ]; then
+    echo "High offset: $offset ns"
+fi
+.fi
+
+.SH FILES
+.TP
+.I /etc/ptp4l.conf
+Main PTP configuration file
+.TP
+.I /etc/systemd/system/ptp*.service
+PTP service definitions
+.TP
+.I /etc/udev/rules.d/*ptp*.rules
+udev rules for PTP devices
+.TP
+.I /etc/modprobe.d/ptp-ocp.conf
+Driver module configuration
+.TP
+.I /var/log/ptp/
+PTP log directory
+.TP
+.I /dev/ptp*
+PTP device nodes
+.TP
+.I /sys/class/ptp/
+PTP sysfs interfaces
+
+.SH SEE ALSO
+.BR ptp4l (1),
+.BR phc2sys (1),
+.BR testptp (1),
+.BR pmc (1),
+.BR systemctl (1),
+.BR journalctl (1)
+
+.SH AUTHORS
+Richard Cochran <richardcochran@gmail.com>, Jonathan Lemon <jonathan.lemon@gmail.com>, and the LinuxPTP development team.
+
+.SH COPYRIGHT
+Copyright (C) 2011-2024 Richard Cochran, Meta Platforms, Inc., and the LinuxPTP project contributors.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

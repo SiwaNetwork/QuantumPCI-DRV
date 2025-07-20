@@ -1,0 +1,97 @@
+.TH PTP4L 1 "2024-01-15" "LinuxPTP" "User Commands"
+.SH NAME
+ptp4l \- PTP Boundary/Ordinary Clock
+.SH SYNOPSIS
+.B ptp4l
+[\fIOPTIONS\fR] [\fICONFIG_FILE\fR]
+.SH DESCRIPTION
+\fBptp4l\fR is an implementation of the PTP Boundary Clock and Ordinary Clock from the IEEE 1588 standard. PTP was developed to provide very precise time coordination of LAN connected computers.
+
+The program reads configuration files or command line options to configure the PTP clock. When operating as a boundary clock, the program may have multiple network interfaces, each with its own clock characteristics.
+
+When used with PTP OCP hardware, \fBptp4l\fR can achieve sub-microsecond synchronization accuracy.
+
+.SH OPTIONS
+.TP
+.BR \-f " " \fIFILE\fR
+Read configuration from \fIFILE\fR. The default configuration file is /etc/ptp4l.conf.
+.TP
+.BR \-i " " \fIINTERFACE\fR
+Specify a PTP port by network interface. This option may be given multiple times.
+.TP
+.BR \-p " " \fI/dev/ptpX\fR
+Specify the PTP hardware clock device to use. Without this option the first available clock will be used.
+.TP
+.BR \-s
+Enable slave only mode. In this mode the clock will never enter the master state.
+.TP
+.BR \-m
+Print messages to stdout instead of syslog.
+.TP
+.BR \-q
+Don't print messages to stdout.
+.TP
+.BR \-v
+Prints the software version and exits.
+.TP
+.BR \-l " " \fILEVEL\fR
+Set the maximum syslog level of messages which should be printed or sent to the system logger. The default level is LOG_INFO(6).
+.TP
+.BR \-u " " \fIADDRESS\fR
+Specify the address of the unix domain socket for receiving management messages. The default address is /var/run/ptp4l.
+.TP
+.BR \-2
+Select the IEEE 802.3 network transport.
+.TP
+.BR \-4
+Select the UDP IPv4 network transport. This is the default transport.
+.TP
+.BR \-6
+Select the UDP IPv6 network transport.
+
+.SH CONFIGURATION
+The configuration file contains sections for global options and per-port options. The global section starts with the [global] tag, while port sections start with the interface name in square brackets.
+
+Example configuration:
+.nf
+[global]
+verbose                 1
+time_stamping           hardware
+tx_timestamp_timeout    50
+use_syslog              1
+logSyncInterval        -3
+logMinDelayReqInterval -3
+logAnnounceInterval     1
+domainNumber            0
+priority1               128
+priority2               128
+clockClass              248
+
+[eth0]
+network_transport       UDPv4
+delay_mechanism         E2E
+.fi
+
+.SH FILES
+.TP
+.I /etc/ptp4l.conf
+Default configuration file.
+.TP
+.I /var/run/ptp4l
+Default unix domain socket for management interface.
+.TP
+.I /dev/ptp*
+PTP hardware clock devices.
+
+.SH SEE ALSO
+.BR phc2sys (1),
+.BR pmc (1),
+.BR testptp (1),
+.BR timemaster (1)
+
+.SH AUTHORS
+Richard Cochran <richardcochran@gmail.com> and the LinuxPTP development team.
+
+.SH COPYRIGHT
+Copyright (C) 2011-2024 Richard Cochran and the LinuxPTP project contributors.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
