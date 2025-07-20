@@ -1,0 +1,326 @@
+# timecard_alerts.yml - Alert rules for TimeCard PTP OCP monitoring
+
+groups:
+  # === PTP Critical Alerts ===
+  - name: timecard.ptp.critical
+    rules:
+      - alert: PTPOffsetCritical
+        expr: abs(timecard_ptp_offset_nanoseconds) > 1000000
+        for: 30s
+        labels:
+          severity: critical
+          component: ptp
+        annotations:
+          summary: "PTP offset critical on {{ $labels.device_id }}"
+          description: "PTP offset is {{ $value }}ns, exceeding 1ms threshold on device {{ $labels.device_id }}"
+
+      - alert: PTPPathDelayHigh
+        expr: timecard_ptp_path_delay_nanoseconds > 10000000
+        for: 1m
+        labels:
+          severity: warning
+          component: ptp
+        annotations:
+          summary: "High PTP path delay on {{ $labels.device_id }}"
+          description: "PTP path delay is {{ $value }}ns on device {{ $labels.device_id }}"
+
+      - alert: PTPPacketLossHigh
+        expr: timecard_ptp_packet_loss_percent > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: ptp
+        annotations:
+          summary: "High PTP packet loss on {{ $labels.device_id }}"
+          description: "PTP packet loss is {{ $value }}% on device {{ $labels.device_id }}"
+
+      - alert: PTPPerformanceLow
+        expr: timecard_ptp_performance_score < 70
+        for: 5m
+        labels:
+          severity: warning
+          component: ptp
+        annotations:
+          summary: "Low PTP performance on {{ $labels.device_id }}"
+          description: "PTP performance score is {{ $value }}/100 on device {{ $labels.device_id }}"
+
+  # === Thermal Alerts ===
+  - name: timecard.thermal
+    rules:
+      - alert: HighTemperatureCritical
+        expr: timecard_temperature_celsius > 85
+        for: 1m
+        labels:
+          severity: critical
+          component: thermal
+        annotations:
+          summary: "Critical temperature on {{ $labels.device_id }}"
+          description: "{{ $labels.sensor }} temperature is {{ $value }}°C on device {{ $labels.device_id }}"
+
+      - alert: HighTemperatureWarning
+        expr: timecard_temperature_celsius > 75
+        for: 3m
+        labels:
+          severity: warning
+          component: thermal
+        annotations:
+          summary: "High temperature warning on {{ $labels.device_id }}"
+          description: "{{ $labels.sensor }} temperature is {{ $value }}°C on device {{ $labels.device_id }}"
+
+      - alert: ThermalThrottling
+        expr: timecard_thermal_throttling == 1
+        for: 30s
+        labels:
+          severity: critical
+          component: thermal
+        annotations:
+          summary: "Thermal throttling active on {{ $labels.device_id }}"
+          description: "Device {{ $labels.device_id }} is experiencing thermal throttling"
+
+      - alert: FanSpeedLow
+        expr: timecard_fan_speed_rpm < 1000
+        for: 2m
+        labels:
+          severity: warning
+          component: thermal
+        annotations:
+          summary: "Low fan speed on {{ $labels.device_id }}"
+          description: "Fan speed is {{ $value }} RPM on device {{ $labels.device_id }}"
+
+  # === Power Alerts ===
+  - name: timecard.power
+    rules:
+      - alert: VoltageOutOfRange
+        expr: abs(timecard_voltage_deviation_percent) > 5
+        for: 1m
+        labels:
+          severity: warning
+          component: power
+        annotations:
+          summary: "Voltage deviation on {{ $labels.device_id }}"
+          description: "{{ $labels.rail }} voltage deviation is {{ $value }}% on device {{ $labels.device_id }}"
+
+      - alert: VoltageOutOfRangeCritical
+        expr: abs(timecard_voltage_deviation_percent) > 10
+        for: 30s
+        labels:
+          severity: critical
+          component: power
+        annotations:
+          summary: "Critical voltage deviation on {{ $labels.device_id }}"
+          description: "{{ $labels.rail }} voltage deviation is {{ $value }}% on device {{ $labels.device_id }}"
+
+      - alert: HighPowerConsumption
+        expr: timecard_power_consumption_watts{type="total"} > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: power
+        annotations:
+          summary: "High power consumption on {{ $labels.device_id }}"
+          description: "Power consumption is {{ $value }}W on device {{ $labels.device_id }}"
+
+      - alert: LowPowerEfficiency
+        expr: timecard_power_efficiency_percent < 80
+        for: 10m
+        labels:
+          severity: warning
+          component: power
+        annotations:
+          summary: "Low power efficiency on {{ $labels.device_id }}"
+          description: "Power efficiency is {{ $value }}% on device {{ $labels.device_id }}"
+
+  # === GNSS Alerts ===
+  - name: timecard.gnss
+    rules:
+      - alert: GNSSFixLost
+        expr: timecard_gnss_satellites{type="used",constellation="all"} < 4
+        for: 2m
+        labels:
+          severity: critical
+          component: gnss
+        annotations:
+          summary: "GNSS fix lost on {{ $labels.device_id }}"
+          description: "Only {{ $value }} satellites in use on device {{ $labels.device_id }}"
+
+      - alert: GNSSAccuracyLow
+        expr: timecard_gnss_accuracy{type="time",unit="nanoseconds"} > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: gnss
+        annotations:
+          summary: "Low GNSS time accuracy on {{ $labels.device_id }}"
+          description: "GNSS time accuracy is {{ $value }}ns on device {{ $labels.device_id }}"
+
+      - alert: GNSSAntennaIssue
+        expr: timecard_gnss_antenna_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: gnss
+        annotations:
+          summary: "GNSS antenna issue on {{ $labels.device_id }}"
+          description: "GNSS antenna status is not OK on device {{ $labels.device_id }}"
+
+      - alert: GNSSSignalWeak
+        expr: timecard_gnss_signal_strength_db < 35
+        for: 3m
+        labels:
+          severity: warning
+          component: gnss
+        annotations:
+          summary: "Weak GNSS signal on {{ $labels.device_id }}"
+          description: "GNSS signal strength is {{ $value }}dB on device {{ $labels.device_id }}"
+
+      - alert: GNSSHealthLow
+        expr: timecard_gnss_health_score < 70
+        for: 5m
+        labels:
+          severity: warning
+          component: gnss
+        annotations:
+          summary: "Low GNSS health score on {{ $labels.device_id }}"
+          description: "GNSS health score is {{ $value }}/100 on device {{ $labels.device_id }}"
+
+  # === Oscillator Alerts ===
+  - name: timecard.oscillator
+    rules:
+      - alert: OscillatorUnlocked
+        expr: timecard_oscillator_locked == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: oscillator
+        annotations:
+          summary: "Oscillator unlocked on {{ $labels.device_id }}"
+          description: "Oscillator is not locked on device {{ $labels.device_id }}"
+
+      - alert: OscillatorFrequencyError
+        expr: abs(timecard_oscillator_frequency_error_ppb) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          component: oscillator
+        annotations:
+          summary: "High oscillator frequency error on {{ $labels.device_id }}"
+          description: "Oscillator frequency error is {{ $value }}ppb on device {{ $labels.device_id }}"
+
+      - alert: OscillatorStabilityPoor
+        expr: timecard_oscillator_stability_score < 2
+        for: 10m
+        labels:
+          severity: warning
+          component: oscillator
+        annotations:
+          summary: "Poor oscillator stability on {{ $labels.device_id }}"
+          description: "Oscillator stability grade is {{ $value }} on device {{ $labels.device_id }}"
+
+      - alert: OscillatorAllanDeviationHigh
+        expr: timecard_oscillator_allan_deviation{tau_seconds="100"} > 1e-9
+        for: 5m
+        labels:
+          severity: warning
+          component: oscillator
+        annotations:
+          summary: "High Allan deviation on {{ $labels.device_id }}"
+          description: "Allan deviation (100s) is {{ $value }} on device {{ $labels.device_id }}"
+
+  # === Hardware Alerts ===
+  - name: timecard.hardware
+    rules:
+      - alert: LEDError
+        expr: timecard_led_status{led=~"status|error"} == 3
+        for: 30s
+        labels:
+          severity: critical
+          component: hardware
+        annotations:
+          summary: "Error LED active on {{ $labels.device_id }}"
+          description: "{{ $labels.led }} LED is red on device {{ $labels.device_id }}"
+
+      - alert: NetworkPortDown
+        expr: timecard_network_port_status == 0
+        for: 1m
+        labels:
+          severity: warning
+          component: hardware
+        annotations:
+          summary: "Network port down on {{ $labels.device_id }}"
+          description: "Network port {{ $labels.port }} is down on device {{ $labels.device_id }}"
+
+      - alert: FPGAUtilizationHigh
+        expr: timecard_fpga_utilization_percent{resource_type="overall"} > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: hardware
+        annotations:
+          summary: "High FPGA utilization on {{ $labels.device_id }}"
+          description: "FPGA utilization is {{ $value }}% on device {{ $labels.device_id }}"
+
+  # === System Health Alerts ===
+  - name: timecard.system
+    rules:
+      - alert: SystemHealthLow
+        expr: timecard_overall_health_score < 70
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Low system health on {{ $labels.device_id }}"
+          description: "Overall health score is {{ $value }}/100 on device {{ $labels.device_id }}"
+
+      - alert: SystemHealthCritical
+        expr: timecard_overall_health_score < 50
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Critical system health on {{ $labels.device_id }}"
+          description: "Overall health score is {{ $value }}/100 on device {{ $labels.device_id }}"
+
+      - alert: MultipleActiveAlerts
+        expr: sum by (device_id) (timecard_active_alerts{severity="critical"}) > 3
+        for: 1m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Multiple critical alerts on {{ $labels.device_id }}"
+          description: "{{ $value }} critical alerts are active on device {{ $labels.device_id }}"
+
+  # === Service Alerts ===
+  - name: timecard.service
+    rules:
+      - alert: TimeCardAPIDown
+        expr: up{job="timecard-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: service
+        annotations:
+          summary: "TimeCard API is down"
+          description: "TimeCard API is not responding"
+
+      - alert: TimeCardExporterDown
+        expr: up{job="timecard-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: service
+        annotations:
+          summary: "TimeCard Prometheus exporter is down"
+          description: "TimeCard Prometheus exporter is not responding"
+
+      - alert: HighScrapeErrors
+        expr: rate(prometheus_target_scrapes_exceeded_sample_limit_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          component: service
+        annotations:
+          summary: "High scrape errors"
+          description: "Prometheus is experiencing scrape errors for TimeCard metrics"

@@ -1,122 +1,322 @@
 {
   "dashboard": {
     "id": null,
-    "title": "PTP OCP Monitoring",
-    "tags": ["ptp", "ocp", "timing"],
-    "timezone": "UTC",
-    "refresh": "5s",
+    "title": "TimeCard PTP OCP Monitoring Extended",
+    "tags": ["timecard", "ptp", "ocp"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
     "time": {
       "from": "now-1h",
       "to": "now"
     },
+    "timepicker": {
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "device",
+          "type": "query",
+          "query": "label_values(timecard_uptime_seconds, device_id)",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "multi": false,
+          "includeAll": false,
+          "options": [],
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          }
+        }
+      ]
+    },
     "panels": [
       {
         "id": 1,
-        "title": "PTP Offset",
-        "type": "graph",
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 0
-        },
-        "targets": [
-          {
-            "expr": "ptp_offset_ns",
-            "legendFormat": "PTP Offset (ns)",
-            "refId": "A"
-          }
-        ],
-        "yAxes": [
-          {
-            "label": "Nanoseconds",
-            "unit": "ns"
-          }
-        ],
-        "thresholds": [
-          {
-            "value": 1000000,
-            "colorMode": "critical",
-            "op": "gt"
-          }
-        ]
-      },
-      {
-        "id": 2,
-        "title": "Frequency Adjustment",
-        "type": "graph", 
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 0
-        },
-        "targets": [
-          {
-            "expr": "ptp_frequency_adjustment",
-            "legendFormat": "Frequency (ppb)",
-            "refId": "B"
-          }
-        ],
-        "yAxes": [
-          {
-            "label": "Parts per billion",
-            "unit": "ppb"
-          }
-        ]
-      },
-      {
-        "id": 3,
-        "title": "Driver Status",
+        "title": "System Overview",
         "type": "stat",
-        "gridPos": {
-          "h": 4,
-          "w": 6,
-          "x": 0,
-          "y": 8
-        },
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
         "targets": [
           {
-            "expr": "ptp_driver_status",
-            "legendFormat": "Driver Status",
-            "refId": "C"
+            "expr": "timecard_overall_health_score{device_id=\"$device\"}",
+            "legendFormat": "Health Score"
+          },
+          {
+            "expr": "timecard_ptp_performance_score{device_id=\"$device\"}",
+            "legendFormat": "PTP Performance"
+          },
+          {
+            "expr": "timecard_gnss_health_score{device_id=\"$device\"}",
+            "legendFormat": "GNSS Health"
+          },
+          {
+            "expr": "timecard_oscillator_stability_score{device_id=\"$device\"} * 25",
+            "legendFormat": "Oscillator Grade"
           }
         ],
         "fieldConfig": {
           "defaults": {
-            "mappings": [
-              {
-                "options": {
-                  "0": {
-                    "text": "ERROR",
-                    "color": "red"
-                  },
-                  "1": {
-                    "text": "OK", 
-                    "color": "green"
-                  }
-                },
-                "type": "value"
-              }
-            ]
+            "min": 0,
+            "max": 100,
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 50},
+                {"color": "green", "value": 80}
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "fields": "",
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 2,
+        "title": "PTP Offset",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "timecard_ptp_offset_nanoseconds{device_id=\"$device\"}",
+            "legendFormat": "PTP Offset (ns)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ns",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "spanNulls": false,
+              "fillOpacity": 10,
+              "gradientMode": "none"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": -1000},
+                {"color": "yellow", "value": -100000},
+                {"color": "red", "value": -1000000}
+              ]
+            }
+          }
+        },
+        "options": {
+          "tooltip": {"mode": "multi", "sort": "none"},
+          "legend": {"displayMode": "visible", "placement": "bottom"}
+        }
+      },
+      {
+        "id": 3,
+        "title": "Path Delay & Variance",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "timecard_ptp_path_delay_nanoseconds{device_id=\"$device\"}",
+            "legendFormat": "Path Delay"
+          },
+          {
+            "expr": "timecard_ptp_path_delay_variance_nanoseconds{device_id=\"$device\"}",
+            "legendFormat": "Path Delay Variance"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ns",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear"
+            }
           }
         }
       },
       {
         "id": 4,
-        "title": "Port State",
-        "type": "stat",
-        "gridPos": {
-          "h": 4,
-          "w": 6,
-          "x": 6,
-          "y": 8
-        },
+        "title": "Temperature Monitoring",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
         "targets": [
           {
-            "expr": "ptp_port_state",
-            "legendFormat": "Port State",
-            "refId": "D"
+            "expr": "timecard_temperature_celsius{device_id=\"$device\",sensor=\"fpga_temp\"}",
+            "legendFormat": "FPGA"
+          },
+          {
+            "expr": "timecard_temperature_celsius{device_id=\"$device\",sensor=\"osc_temp\"}",
+            "legendFormat": "Oscillator"
+          },
+          {
+            "expr": "timecard_temperature_celsius{device_id=\"$device\",sensor=\"board_temp\"}",
+            "legendFormat": "Board"
+          },
+          {
+            "expr": "timecard_temperature_celsius{device_id=\"$device\",sensor=\"ambient_temp\"}",
+            "legendFormat": "Ambient"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "celsius",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 85}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Power Rails",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "timecard_voltage_volts{device_id=\"$device\",rail=\"3v3\"}",
+            "legendFormat": "3.3V Rail"
+          },
+          {
+            "expr": "timecard_voltage_volts{device_id=\"$device\",rail=\"1v8\"}",
+            "legendFormat": "1.8V Rail"
+          },
+          {
+            "expr": "timecard_voltage_volts{device_id=\"$device\",rail=\"1v2\"}",
+            "legendFormat": "1.2V Rail"
+          },
+          {
+            "expr": "timecard_voltage_volts{device_id=\"$device\",rail=\"12v\"}",
+            "legendFormat": "12V Rail"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "volt",
+            "custom": {
+              "drawStyle": "line"
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "GNSS Satellites",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "timecard_gnss_satellites{device_id=\"$device\",constellation=\"all\",type=\"used\"}",
+            "legendFormat": "Used"
+          },
+          {
+            "expr": "timecard_gnss_satellites{device_id=\"$device\",constellation=\"all\",type=\"visible\"}",
+            "legendFormat": "Visible"
+          },
+          {
+            "expr": "timecard_gnss_satellites{device_id=\"$device\",constellation=\"all\",type=\"tracked\"}",
+            "legendFormat": "Tracked"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 4},
+                {"color": "green", "value": 8}
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "horizontal",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 7,
+        "title": "GNSS Constellations",
+        "type": "piechart",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 20},
+        "targets": [
+          {
+            "expr": "timecard_gnss_satellites{device_id=\"$device\",constellation!=\"all\",type=\"used\"}",
+            "legendFormat": "{{constellation}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "pieType": "pie",
+          "displayLabels": ["name", "value"]
+        }
+      },
+      {
+        "id": 8,
+        "title": "GNSS Accuracy",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 20},
+        "targets": [
+          {
+            "expr": "timecard_gnss_accuracy{device_id=\"$device\",type=\"time\",unit=\"nanoseconds\"}",
+            "legendFormat": "Time (ns)"
+          },
+          {
+            "expr": "timecard_gnss_accuracy{device_id=\"$device\",type=\"horizontal\",unit=\"meters\"}",
+            "legendFormat": "Horizontal (m)"
+          },
+          {
+            "expr": "timecard_gnss_accuracy{device_id=\"$device\",type=\"vertical\",unit=\"meters\"}",
+            "legendFormat": "Vertical (m)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "orientation": "vertical",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 9,
+        "title": "Oscillator Status",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 26},
+        "targets": [
+          {
+            "expr": "timecard_oscillator_locked{device_id=\"$device\"}",
+            "legendFormat": "Lock Status"
+          },
+          {
+            "expr": "timecard_oscillator_lock_duration_seconds{device_id=\"$device\"}",
+            "legendFormat": "Lock Duration (s)"
           }
         ],
         "fieldConfig": {
@@ -124,76 +324,328 @@
             "mappings": [
               {
                 "options": {
-                  "3": {"text": "LISTENING"},
-                  "5": {"text": "MASTER"},
-                  "6": {"text": "PASSIVE"},
-                  "7": {"text": "UNCALIBRATED"},
-                  "8": {"text": "SLAVE"}
+                  "0": {"text": "UNLOCKED", "color": "red"},
+                  "1": {"text": "LOCKED", "color": "green"}
                 },
                 "type": "value"
               }
             ]
           }
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "textMode": "value_and_name"
         }
       },
       {
-        "id": 5,
-        "title": "Path Delay",
-        "type": "graph",
-        "gridPos": {
-          "h": 6,
-          "w": 12,
-          "x": 0,
-          "y": 12
-        },
+        "id": 10,
+        "title": "Frequency Error",
+        "type": "timeseries",
+        "gridPos": {"h": 4, "w": 9, "x": 6, "y": 26},
         "targets": [
           {
-            "expr": "ptp_path_delay_ns",
-            "legendFormat": "Path Delay (ns)",
-            "refId": "E"
-          }
-        ],
-        "yAxes": [
-          {
-            "label": "Nanoseconds",
-            "unit": "ns"
-          }
-        ]
-      },
-      {
-        "id": 6,
-        "title": "System Uptime",
-        "type": "stat",
-        "gridPos": {
-          "h": 3,
-          "w": 12,
-          "x": 12,
-          "y": 12
-        },
-        "targets": [
-          {
-            "expr": "time() - process_start_time_seconds",
-            "legendFormat": "Uptime",
-            "refId": "F"
+            "expr": "timecard_oscillator_frequency_error_ppb{device_id=\"$device\"}",
+            "legendFormat": "Frequency Error (ppb)"
           }
         ],
         "fieldConfig": {
           "defaults": {
-            "unit": "s"
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line"
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Allan Deviation",
+        "type": "timeseries",
+        "gridPos": {"h": 4, "w": 9, "x": 15, "y": 26},
+        "targets": [
+          {
+            "expr": "timecard_oscillator_allan_deviation{device_id=\"$device\",tau_seconds=\"1\"}",
+            "legendFormat": "1s"
+          },
+          {
+            "expr": "timecard_oscillator_allan_deviation{device_id=\"$device\",tau_seconds=\"10\"}",
+            "legendFormat": "10s"
+          },
+          {
+            "expr": "timecard_oscillator_allan_deviation{device_id=\"$device\",tau_seconds=\"100\"}",
+            "legendFormat": "100s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line"
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Power Consumption",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 30},
+        "targets": [
+          {
+            "expr": "timecard_power_consumption_watts{device_id=\"$device\",type=\"total\"}",
+            "legendFormat": "Total Power"
+          },
+          {
+            "expr": "timecard_current_milliamps{device_id=\"$device\",component=\"total\"} / 1000 * 12",
+            "legendFormat": "Calculated Power"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "watt",
+            "custom": {
+              "drawStyle": "line"
+            }
+          }
+        }
+      },
+      {
+        "id": 13,
+        "title": "Current Consumption",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 30},
+        "targets": [
+          {
+            "expr": "timecard_current_milliamps{device_id=\"$device\",component=\"fpga\"}",
+            "legendFormat": "FPGA"
+          },
+          {
+            "expr": "timecard_current_milliamps{device_id=\"$device\",component=\"osc\"}",
+            "legendFormat": "Oscillator"
+          },
+          {
+            "expr": "timecard_current_milliamps{device_id=\"$device\",component=\"ddr\"}",
+            "legendFormat": "DDR"
+          },
+          {
+            "expr": "timecard_current_milliamps{device_id=\"$device\",component=\"phy\"}",
+            "legendFormat": "PHY"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "milliamp",
+            "custom": {
+              "drawStyle": "line"
+            }
+          }
+        }
+      },
+      {
+        "id": 14,
+        "title": "Hardware Status",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 36},
+        "targets": [
+          {
+            "expr": "timecard_led_status{device_id=\"$device\",led=\"status\"}",
+            "legendFormat": "Status LED"
+          },
+          {
+            "expr": "timecard_led_status{device_id=\"$device\",led=\"error\"}",
+            "legendFormat": "Error LED"
+          },
+          {
+            "expr": "timecard_fpga_utilization_percent{device_id=\"$device\",resource_type=\"overall\"}",
+            "legendFormat": "FPGA Utilization (%)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {"text": "OFF", "color": "gray"},
+                  "1": {"text": "GREEN", "color": "green"},
+                  "2": {"text": "YELLOW", "color": "yellow"},
+                  "3": {"text": "RED", "color": "red"}
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 15,
+        "title": "Network Ports",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 36},
+        "targets": [
+          {
+            "expr": "timecard_network_port_status{device_id=\"$device\"}",
+            "legendFormat": "{{port}} Status"
+          },
+          {
+            "expr": "timecard_network_port_speed_mbps{device_id=\"$device\"}",
+            "legendFormat": "{{port}} Speed"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {"text": "DOWN", "color": "red"},
+                  "1": {"text": "UP", "color": "green"}
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 16,
+        "title": "Active Alerts",
+        "type": "table",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 36},
+        "targets": [
+          {
+            "expr": "timecard_active_alerts{device_id=\"$device\"}",
+            "legendFormat": "{{severity}}",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "center",
+              "displayMode": "color-background"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "critical": {"color": "red"},
+                  "warning": {"color": "yellow"},
+                  "info": {"color": "blue"}
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "options": {
+          "showHeader": true
+        }
+      },
+      {
+        "id": 17,
+        "title": "PTP Packet Statistics",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 42},
+        "targets": [
+          {
+            "expr": "rate(timecard_ptp_packets_total{device_id=\"$device\",packet_type=\"sync\"}[5m])",
+            "legendFormat": "{{direction}} Sync/s"
+          },
+          {
+            "expr": "rate(timecard_ptp_packets_total{device_id=\"$device\",packet_type=\"announce\"}[5m])",
+            "legendFormat": "{{direction}} Announce/s"
+          },
+          {
+            "expr": "rate(timecard_ptp_packets_total{device_id=\"$device\",packet_type=\"delay_req\"}[5m])",
+            "legendFormat": "{{direction}} DelayReq/s"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "line"
+            }
+          }
+        }
+      },
+      {
+        "id": 18,
+        "title": "System Health Trends",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 42},
+        "targets": [
+          {
+            "expr": "timecard_overall_health_score{device_id=\"$device\"}",
+            "legendFormat": "Overall Health"
+          },
+          {
+            "expr": "timecard_component_health_score{device_id=\"$device\",component=\"ptp\"}",
+            "legendFormat": "PTP Health"
+          },
+          {
+            "expr": "timecard_component_health_score{device_id=\"$device\",component=\"gnss\"}",
+            "legendFormat": "GNSS Health"
+          },
+          {
+            "expr": "timecard_component_health_score{device_id=\"$device\",component=\"hardware\"}",
+            "legendFormat": "Hardware Health"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "custom": {
+              "drawStyle": "line"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 90}
+              ]
+            }
           }
         }
       }
     ],
-    "templating": {
-      "list": []
-    },
     "annotations": {
-      "list": []
+      "list": [
+        {
+          "name": "Critical Alerts",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "ALERTS{alertname=~\".*Critical.*\",device_id=\"$device\"}",
+          "iconColor": "red",
+          "step": "60s",
+          "tagKeys": "alertname,severity",
+          "titleFormat": "{{alertname}}",
+          "textFormat": "{{description}}"
+        }
+      ]
     },
-    "schemaVersion": 27,
-    "version": 0,
-    "links": []
-  },
-  "folderId": 0,
-  "overwrite": true
+    "links": [
+      {
+        "title": "TimeCard Web Dashboard",
+        "url": "http://localhost:8080",
+        "type": "link",
+        "icon": "external link"
+      }
+    ]
+  }
 }
