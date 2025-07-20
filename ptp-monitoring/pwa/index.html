@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PTP Monitor Mobile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#2196F3">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .metric {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .metric-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .metric-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .status-ok { background-color: #4CAF50; }
+        .status-warning { background-color: #FF9800; }
+        .status-error { background-color: #F44336; }
+        button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            margin: 10px 5px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            cursor: pointer;
+            min-width: 120px;
+        }
+        button:active {
+            background: rgba(255,255,255,0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .install-prompt {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+        .offline-indicator {
+            background: #f44336;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <h1>🕐 PTP Monitor</h1>
+            <div id="install-prompt" class="install-prompt" style="display: none;">
+                <button onclick="installPWA()">📱 Install App</button>
+            </div>
+            <div id="offline-indicator" class="offline-indicator">
+                ⚠️ Offline Mode
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>System Status</h2>
+            <div id="status-section">
+                <span class="status-indicator" id="status-indicator"></span>
+                <span id="status-text">Checking...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="metric">
+                <div class="metric-value" id="offset-value">--</div>
+                <div class="metric-label">Offset (ns)</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="metric">
+                <div class="metric-value" id="freq-value">--</div>
+                <div class="metric-label">Frequency (ppb)</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="metric">
+                <div class="metric-value" id="port-value">--</div>
+                <div class="metric-label">Port State</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <button onclick="refreshData()">🔄 Refresh</button>
+            <button onclick="showLogs()">📋 Logs</button>
+            <button onclick="showConfig()">⚙️ Config</button>
+        </div>
+
+        <div class="card">
+            <button onclick="openDesktopDashboard()">💻 Full Dashboard</button>
+        </div>
+    </div>
+
+    <script>
+        let deferredPrompt;
+        
+        // Service Worker регистрация
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(function(registration) {
+                    console.log('SW registered: ', registration);
+                })
+                .catch(function(registrationError) {
+                    console.log('SW registration failed: ', registrationError);
+                });
+        }
+
+        // PWA установка
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-prompt').style.display = 'block';
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((result) => {
+                    if (result.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                        document.getElementById('install-prompt').style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+
+        // Функции приложения
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/metrics');
+                const data = await response.json();
+                
+                updateUI(data);
+                updateOnlineStatus(true);
+            } catch (error) {
+                console.error('Error:', error);
+                showError();
+                updateOnlineStatus(false);
+            }
+        }
+
+        function updateUI(data) {
+            // Обновление offset
+            document.getElementById('offset-value').textContent = 
+                data.offset ? data.offset.toLocaleString() : '--';
+            
+            // Обновление частоты
+            document.getElementById('freq-value').textContent = 
+                data.frequency ? data.frequency.toLocaleString() : '--';
+            
+            // Обновление порта
+            const portStates = {
+                1: 'INIT',
+                2: 'FAULTY',
+                3: 'DISABLED', 
+                4: 'LISTENING',
+                5: 'PRE_MASTER',
+                6: 'MASTER',
+                7: 'PASSIVE',
+                8: 'UNCALIB',
+                9: 'SLAVE'
+            };
+            document.getElementById('port-value').textContent = 
+                portStates[data.port_state] || '--';
+            
+            // Обновление статуса
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            if (data.driver_status === 1) {
+                statusIndicator.className = 'status-indicator status-ok';
+                statusText.textContent = 'System OK';
+            } else {
+                statusIndicator.className = 'status-indicator status-error';
+                statusText.textContent = 'System Error';
+            }
+        }
+
+        function showError() {
+            document.getElementById('status-indicator').className = 'status-indicator status-error';
+            document.getElementById('status-text').textContent = 'Connection Error';
+            document.getElementById('offset-value').textContent = '--';
+            document.getElementById('freq-value').textContent = '--';
+            document.getElementById('port-value').textContent = '--';
+        }
+
+        function updateOnlineStatus(isOnline) {
+            const offlineIndicator = document.getElementById('offline-indicator');
+            if (isOnline) {
+                offlineIndicator.style.display = 'none';
+            } else {
+                offlineIndicator.style.display = 'block';
+            }
+        }
+
+        function showLogs() {
+            window.open('/api/logs/export', '_blank');
+        }
+
+        function showConfig() {
+            window.open('/api/config', '_blank');
+        }
+
+        function openDesktopDashboard() {
+            window.open('/dashboard', '_blank');
+        }
+
+        // Обработка онлайн/офлайн состояния
+        window.addEventListener('online', () => {
+            updateOnlineStatus(true);
+            refreshData();
+        });
+
+        window.addEventListener('offline', () => {
+            updateOnlineStatus(false);
+        });
+
+        // Автообновление каждые 10 секунд
+        setInterval(refreshData, 10000);
+        
+        // Первоначальная загрузка
+        refreshData();
+        
+        // Проверка начального состояния сети
+        updateOnlineStatus(navigator.onLine);
+    </script>
+</body>
+</html>

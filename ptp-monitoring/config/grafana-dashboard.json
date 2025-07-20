@@ -1,0 +1,199 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "PTP OCP Monitoring",
+    "tags": ["ptp", "ocp", "timing"],
+    "timezone": "UTC",
+    "refresh": "5s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "PTP Offset",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "ptp_offset_ns",
+            "legendFormat": "PTP Offset (ns)",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Nanoseconds",
+            "unit": "ns"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 1000000,
+            "colorMode": "critical",
+            "op": "gt"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Frequency Adjustment",
+        "type": "graph", 
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "ptp_frequency_adjustment",
+            "legendFormat": "Frequency (ppb)",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Parts per billion",
+            "unit": "ppb"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Driver Status",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "ptp_driver_status",
+            "legendFormat": "Driver Status",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "ERROR",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "OK", 
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Port State",
+        "type": "stat",
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "ptp_port_state",
+            "legendFormat": "Port State",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "3": {"text": "LISTENING"},
+                  "5": {"text": "MASTER"},
+                  "6": {"text": "PASSIVE"},
+                  "7": {"text": "UNCALIBRATED"},
+                  "8": {"text": "SLAVE"}
+                },
+                "type": "value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Path Delay",
+        "type": "graph",
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 12
+        },
+        "targets": [
+          {
+            "expr": "ptp_path_delay_ns",
+            "legendFormat": "Path Delay (ns)",
+            "refId": "E"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Nanoseconds",
+            "unit": "ns"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "System Uptime",
+        "type": "stat",
+        "gridPos": {
+          "h": 3,
+          "w": 12,
+          "x": 12,
+          "y": 12
+        },
+        "targets": [
+          {
+            "expr": "time() - process_start_time_seconds",
+            "legendFormat": "Uptime",
+            "refId": "F"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  },
+  "folderId": 0,
+  "overwrite": true
+}
