@@ -1,0 +1,145 @@
+.TH PTP_OCP 4 "2024-01-15" "Linux" "Devices"
+.SH NAME
+ptp_ocp \- PTP OCP (Open Compute Project) hardware clock driver
+.SH SYNOPSIS
+.nf
+#include <linux/ptp_clock.h>
+.fi
+.SH DESCRIPTION
+The \fBptp_ocp\fR driver provides support for PTP OCP (Open Compute Project) hardware timestamping cards. These cards are designed to provide highly accurate time synchronization for datacenter and telecommunications applications.
+
+The driver creates PTP hardware clock devices that can be accessed through the standard Linux PTP clock API. Each supported card typically provides:
+
+.IP \(bu 4
+High-precision PTP hardware clock
+.IP \(bu 4
+Multiple GPIO pins for input/output signals
+.IP \(bu 4
+Support for periodic output generation
+.IP \(bu 4
+External timestamp capture
+.IP \(bu 4
+Hardware-based frequency adjustment
+
+.SH DEVICE NODES
+The driver creates character device nodes under \fI/dev/\fR with names following the pattern \fBptp\fIN\fR, where \fIN\fR is a number starting from 0.
+
+Example device nodes:
+.TP
+.I /dev/ptp0
+First PTP OCP device
+.TP
+.I /dev/ptp1
+Second PTP OCP device
+
+.SH SYSFS INTERFACE
+The driver provides various attributes under \fI/sys/class/ptp/ptp\fIN\fR/:
+
+.TP
+.I clock_name
+Read-only. Name of the PTP clock.
+.TP
+.I max_adjustment
+Read-only. Maximum frequency adjustment in parts per billion.
+.TP
+.I n_alarms
+Read-only. Number of programmable alarms.
+.TP
+.I n_external_timestamps
+Read-only. Number of external timestamp channels.
+.TP
+.I n_periodic_outputs
+Read-only. Number of periodic output channels.
+.TP
+.I n_pins
+Read-only. Number of configurable pins.
+.TP
+.I pins/
+Directory containing pin configuration files.
+
+.SH IOCTLS
+The device supports the standard PTP clock ioctls defined in \fI<linux/ptp_clock.h>\fR:
+
+.TP
+.B PTP_CLOCK_GETCAPS
+Get clock capabilities.
+.TP
+.B PTP_CLOCK_GETTIME
+Get current time.
+.TP
+.B PTP_CLOCK_SETTIME
+Set current time.
+.TP
+.B PTP_CLOCK_ADJTIME
+Adjust time.
+.TP
+.B PTP_CLOCK_ADJFREQ
+Adjust frequency.
+.TP
+.B PTP_EXTTS_REQUEST
+Request external timestamps.
+.TP
+.B PTP_PEROUT_REQUEST
+Configure periodic output.
+.TP
+.B PTP_PIN_GETFUNC
+Get pin function.
+.TP
+.B PTP_PIN_SETFUNC
+Set pin function.
+
+.SH MODULE PARAMETERS
+The driver accepts the following module parameters:
+
+.TP
+.B debug
+Debug level (0-7). Higher values produce more verbose output.
+.TP
+.B force_enable
+Force enable device even if not properly detected.
+
+.SH SUPPORTED HARDWARE
+The driver supports PTP OCP cards with the following PCI vendor/device IDs:
+
+.IP \(bu 4
+Vendor ID: 0x1d9b (Facebook/Meta)
+.IP \(bu 4
+Various device IDs for different card models
+
+.SH EXAMPLES
+.TP
+Load the driver:
+.B modprobe ptp_ocp
+.TP
+Check if device is detected:
+.B ls /dev/ptp*
+.TP
+Get device capabilities:
+.B testptp \-d /dev/ptp0 \-c
+.TP
+Show sysfs attributes:
+.B ls /sys/class/ptp/ptp0/
+
+.SH FILES
+.TP
+.I /dev/ptp*
+PTP character device nodes.
+.TP
+.I /sys/class/ptp/ptp*/
+Sysfs attributes for PTP devices.
+.TP
+.I /proc/interrupts
+Interrupt information (search for ptp_ocp).
+
+.SH SEE ALSO
+.BR ptp4l (1),
+.BR phc2sys (1),
+.BR testptp (1),
+.BR ptp_clock (7)
+
+.SH AUTHORS
+Jonathan Lemon <jonathan.lemon@gmail.com> and other contributors.
+
+.SH COPYRIGHT
+Copyright (C) 2021-2024 Meta Platforms, Inc. and the Linux kernel contributors.
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

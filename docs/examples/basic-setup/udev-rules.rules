@@ -1,0 +1,23 @@
+# udev правила для PTP OCP устройств
+# Сохраните этот файл как /etc/udev/rules.d/99-ptp-ocp.rules
+
+# PTP OCP устройства
+SUBSYSTEM=="ptp", ATTRS{idVendor}=="1d9b", GROUP="dialout", MODE="0664", TAG+="systemd"
+SUBSYSTEM=="ptp", GROUP="dialout", MODE="0664", TAG+="systemd"
+
+# Общие правила для PTP устройств
+KERNEL=="ptp[0-9]*", GROUP="dialout", MODE="0664", TAG+="systemd"
+
+# Символические ссылки для удобства
+KERNEL=="ptp0", SYMLINK+="ptp-master"
+KERNEL=="ptp1", SYMLINK+="ptp-slave"
+
+# Автоматический запуск сервисов при обнаружении устройства
+SUBSYSTEM=="ptp", ACTION=="add", TAG+="systemd", ENV{SYSTEMD_WANTS}="ptp4l.service"
+
+# Правила для GPIO пинов (если поддерживается)
+SUBSYSTEM=="gpio", ATTRS{idVendor}=="1d9b", GROUP="gpio", MODE="0664"
+
+# Настройки владельца и прав для sysfs атрибутов
+SUBSYSTEM=="ptp", ACTION=="add", RUN+="/bin/chgrp -R dialout /sys/class/ptp/%k"
+SUBSYSTEM=="ptp", ACTION=="add", RUN+="/bin/chmod -R g+w /sys/class/ptp/%k"
