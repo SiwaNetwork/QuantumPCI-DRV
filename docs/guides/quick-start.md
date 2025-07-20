@@ -54,7 +54,10 @@ sudo modprobe ptp_ocp
 # Проверка загрузки модуля
 lsmod | grep ptp_ocp
 
-# Проверка обнаружения устройств
+# Проверка обнаружения TimeCard устройств
+ls /sys/class/timecard/
+
+# Проверка обнаружения PTP устройств
 ls /dev/ptp*
 
 # Проверка через dmesg
@@ -66,24 +69,49 @@ dmesg | grep ptp_ocp
 ### Проверка устройства
 
 ```bash
+# Проверка TimeCard устройства
+if [ -d "/sys/class/timecard/ocp0" ]; then
+    echo "TimeCard device found"
+    cat /sys/class/timecard/ocp0/serialnum
+    cat /sys/class/timecard/ocp0/clock_source
+else
+    echo "TimeCard device not found"
+fi
+
+# Получение PTP устройства из TimeCard
+if [ -L "/sys/class/timecard/ocp0/ptp" ]; then
+    PTP_DEV=$(basename $(readlink /sys/class/timecard/ocp0/ptp))
+    echo "PTP device: /dev/$PTP_DEV"
+else
+    PTP_DEV="ptp0"
+fi
+
 # Получение информации о PTP устройстве
-sudo testptp -d /dev/ptp0 -c
+sudo testptp -d /dev/$PTP_DEV -c
 
 # Проверка capabilities
-sudo testptp -d /dev/ptp0 -k
+sudo testptp -d /dev/$PTP_DEV -k
 ```
 
 ### Базовая конфигурация
 
 ```bash
+# Настройка TimeCard (если доступно)
+if [ -d "/sys/class/timecard/ocp0" ]; then
+    echo "Configuring TimeCard..."
+    echo "GNSS" > /sys/class/timecard/ocp0/clock_source
+    echo "PPS" > /sys/class/timecard/ocp0/sma3_out
+    echo "TimeCard configured"
+fi
+
 # Получение текущего времени
-sudo testptp -d /dev/ptp0 -g
+sudo testptp -d /dev/$PTP_DEV -g
 
 # Установка времени (пример)
-sudo testptp -d /dev/ptp0 -t $(date +%s)
+sudo testptp -d /dev/$PTP_DEV -t $(date +%s)
 
 # Проверка точности
-sudo testptp -d /dev/ptp0 -o
+sudo testptp -d /dev/$PTP_DEV -o
 ```
 
 ## Первый тест
@@ -96,21 +124,26 @@ sudo apt-get install linuxptp  # Ubuntu/Debian
 # или
 sudo yum install linuxptp      # CentOS/RHEL
 
-# Запуск PTP master
-sudo ptp4l -i eth0 -m -s /dev/ptp0
+# Запуск PTP master (используя переменную PTP_DEV из предыдущего раздела)
+sudo ptp4l -i eth0 -m -s /dev/$PTP_DEV
 
 # В другом терминале - синхронизация системного времени
-sudo phc2sys -s /dev/ptp0 -m
+sudo phc2sys -s /dev/$PTP_DEV -m
 ```
 
 ### Проверка синхронизации
 
 ```bash
+# Проверка синхронизации TimeCard (если доступно)
+if [ -d "/sys/class/timecard/ocp0" ]; then
+    echo "GNSS sync status: $(cat /sys/class/timecard/ocp0/gnss_sync)"
+fi
+
 # Проверка offset между PTP и системным временем
-sudo phc2sys -s /dev/ptp0 -c CLOCK_REALTIME -O 0 -u 10
+sudo phc2sys -s /dev/$PTP_DEV -c CLOCK_REALTIME -O 0 -u 10
 
 # Мониторинг статистики
-watch -n 1 'sudo testptp -d /dev/ptp0 -o'
+watch -n 1 'sudo testptp -d /dev/$PTP_DEV -o'
 ```
 
 ## Типичные проблемы и решения

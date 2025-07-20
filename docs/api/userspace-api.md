@@ -18,6 +18,35 @@ int fd = open("/dev/ptp0", O_RDWR);
 
 ### Sysfs интерфейсы
 
+#### /sys/class/timecard/ocpN/
+
+Основной интерфейс драйвера PTP OCP для управления устройствами TimeCard:
+
+**Основные атрибуты:**
+- `clock_source` - текущий источник синхронизации (GNSS, MAC, IRIG-B, external)
+- `available_clock_sources` - список доступных источников времени
+- `sma[1-4]_in/out` - конфигурация SMA коннекторов
+- `available_sma_inputs/outputs` - доступные сигналы для SMA портов
+
+**Атрибуты синхронизации:**
+- `gnss_sync` - статус синхронизации GNSS (locked/unlocked/holdover)
+- `external_pps_cable_delay` - задержка внешнего PPS кабеля (нс)
+- `internal_pps_cable_delay` - задержка внутреннего PPS кабеля (нс)
+- `pci_delay` - задержка PCIe шины (нс)
+- `utc_tai_offset` - смещение UTC относительно TAI (секунды)
+
+**Служебные атрибуты:**
+- `serialnum` - серийный номер устройства
+- `irig_b_mode` - режим работы IRIG-B
+- `uevent` - события устройства
+
+**Символические ссылки:**
+- `device` -> `../../../XXXX:XX:XX.X` - ссылка на PCI устройство
+- `ptp` -> `../../ptp/ptpX` - ссылка на PTP устройство
+- `ttyGNSS` -> `../../tty/ttyX` - ссылка на GNSS порт
+- `ttyMAC` -> `../../tty/ttyX` - ссылка на MAC порт
+- `ttyNMEA` -> `../../tty/ttyX` - ссылка на NMEA порт
+
 #### /sys/class/ptp/ptp*/
 
 Системные атрибуты PTP устройства:
@@ -92,7 +121,28 @@ phc2sys -s /dev/ptp0 -m
 testptp -d /dev/ptp0 -g
 ```
 
-## Примеры использования
+## Примеры использования API
+
+### Работа с TimeCard через sysfs
+
+```bash
+# Проверка доступных устройств TimeCard
+ls /sys/class/timecard/
+
+# Настройка источника времени
+echo "GNSS" > /sys/class/timecard/ocp0/clock_source
+
+# Проверка синхронизации GNSS
+cat /sys/class/timecard/ocp0/gnss_sync
+
+# Настройка SMA коннекторов
+echo "10MHz" > /sys/class/timecard/ocp0/sma1_in
+echo "PPS" > /sys/class/timecard/ocp0/sma3_out
+
+# Получение PTP устройства из TimeCard
+PTP_DEV=$(basename $(readlink /sys/class/timecard/ocp0/ptp))
+echo "PTP device: /dev/$PTP_DEV"
+```
 
 ### Получение времени
 
