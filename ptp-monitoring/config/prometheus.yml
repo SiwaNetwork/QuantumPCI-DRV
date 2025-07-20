@@ -1,0 +1,136 @@
+# prometheus.yml - Prometheus configuration for TimeCard PTP OCP monitoring
+
+global:
+  scrape_interval: 15s      # Интервал сбора метрик по умолчанию
+  evaluation_interval: 15s  # Интервал вычисления правил
+
+# Правила алертов
+rule_files:
+  - "timecard_alerts.yml"
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Конфигурация сбора метрик
+scrape_configs:
+  # TimeCard Prometheus Exporter
+  - job_name: 'timecard-exporter'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: /metrics
+    honor_labels: true
+    
+    # Дополнительные метки для идентификации
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9090
+        
+    # Метки для группировки
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'timecard_.*'
+        target_label: 'system'
+        replacement: 'timecard'
+
+  # Node Exporter для системных метрик
+  - job_name: 'node-exporter'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:9100']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+)(:[0-9]+)?'
+        replacement: '${1}'
+
+  # TimeCard API напрямую (для базовых метрик)
+  - job_name: 'timecard-api'
+    scrape_interval: 30s
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ['localhost:8080']
+    scrape_timeout: 10s
+
+  # Prometheus самомониторинг
+  - job_name: 'prometheus'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:9091']
+
+# Recording rules для агрегированных метрик
+recording_rules:
+  - name: timecard.rules
+    rules:
+      # PTP health score
+      - record: timecard:ptp_health_score
+        expr: >
+          (
+            (100 - (abs(timecard_ptp_offset_nanoseconds) / 1000)) * 0.4 +
+            (100 - timecard_ptp_packet_loss_percent) * 0.3 +
+            (100 - (timecard_ptp_path_delay_variance_nanoseconds / 100)) * 0.3
+          )
+      
+      # Thermal health score
+      - record: timecard:thermal_health_score
+        expr: >
+          (
+            100 - 
+            max by (device_id) (
+              (timecard_temperature_celsius{sensor=~"fpga_temp|osc_temp"} - 40) * 2
+            )
+          )
+      
+      # GNSS health score
+      - record: timecard:gnss_health_score
+        expr: >
+          (
+            (timecard_gnss_satellites{type="used",constellation="all"} / 20) * 40 +
+            (timecard_gnss_antenna_status * 30) +
+            (100 - timecard_gnss_accuracy{type="time",unit="nanoseconds"}) * 0.3
+          )
+      
+      # Overall system health
+      - record: timecard:system_health_score
+        expr: >
+          (
+            timecard:ptp_health_score * 0.35 +
+            timecard:thermal_health_score * 0.25 +
+            timecard:gnss_health_score * 0.20 +
+            timecard_oscillator_stability_score * 25 * 0.20
+          )
+      
+      # Power efficiency
+      - record: timecard:power_efficiency_ratio
+        expr: >
+          timecard_power_consumption_watts{type="total"} / 
+          (timecard_current_milliamps{component="total"} / 1000 * 12)
+      
+      # Oscillator Allan deviation average
+      - record: timecard:oscillator_allan_deviation_avg
+        expr: >
+          avg by (device_id) (
+            timecard_oscillator_allan_deviation
+          )
+
+# Remote write configuration (для long-term storage)
+remote_write:
+  - url: "http://localhost:9009/api/v1/write"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+
+# Remote read configuration
+remote_read:
+  - url: "http://localhost:9009/api/v1/read"
+    read_recent: true

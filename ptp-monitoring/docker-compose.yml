@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  # TimeCard Extended API
+  timecard-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.timecard
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./api:/app/api
+      - ./web:/app/web
+    environment:
+      - PYTHONPATH=/app
+      - FLASK_ENV=production
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # TimeCard Prometheus Exporter
+  timecard-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile.exporter
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./api:/app/api
+    environment:
+      - TIMECARD_API_URL=http://timecard-api:8080
+      - EXPORTER_PORT=9090
+      - COLLECTION_INTERVAL=30
+    depends_on:
+      - timecard-api
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/timecard_alerts.yml:/etc/prometheus/timecard_alerts.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana-dashboard.json:/var/lib/grafana/dashboards/timecard.json
+      - ./config/grafana-datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml
+      - ./config/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/timecard.yml
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=timecard123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # AlertManager
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Node Exporter (для системных метрик)
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # VictoriaMetrics (для long-term storage)
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    ports:
+      - "9009:8428"
+    volumes:
+      - victoria_data:/victoria-metrics-data
+    command:
+      - '--storageDataPath=/victoria-metrics-data'
+      - '--retentionPeriod=1y'
+      - '--http.maxGracefulShutdownDuration=30s'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  victoria_data:
