@@ -1,4 +1,4 @@
-# 🚀 TimeCard PTP OCP Advanced Monitoring - Quick Start
+                                                                                                                                                                              # 🚀 TimeCard PTP OCP Advanced Monitoring - Quick Start
 
 Быстрое руководство по запуску полнофункциональной системы мониторинга TimeCard PTP OCP v2.0.
 
