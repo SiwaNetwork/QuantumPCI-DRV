@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # timecard-extended-api.py - Полнофункциональный API для мониторинга TimeCard PTP OCP
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_socketio import SocketIO
 from flask_cors import CORS
 import subprocess
@@ -1031,6 +1031,29 @@ def api_index():
         },
         'timestamp': time.time()
     })
+
+@app.route('/dashboard')
+@app.route('/dashboard/')
+def dashboard():
+    """Дашборд мониторинга"""
+    return send_from_directory('web', 'dashboard.html')
+
+@app.route('/pwa')
+@app.route('/pwa/')
+def pwa():
+    """PWA версия дашборда"""
+    return send_from_directory('web', 'timecard-dashboard.html')
+
+@app.route('/simple-dashboard')
+@app.route('/simple-dashboard/')
+def simple_dashboard():
+    """Простой дашборд"""
+    return send_from_directory('.', 'simple-dashboard.html')
+
+@app.route('/web/<path:filename>')
+def web_files(filename):
+    """Статические файлы из папки web"""
+    return send_from_directory('web', filename)
 
 # === WEBSOCKET EVENTS ===
 
