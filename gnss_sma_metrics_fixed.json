@@ -1,0 +1,20 @@
+{
+  "timestamp": 1753883584.325566,
+  "gnss_sync": false,
+  "gnss_holdover": false,
+  "clock_source": "PPS",
+  "sma_status": {
+    "sma1": "IN: 10Mhz",
+    "sma2": "IN: PPS1",
+    "sma3": "OUT: 10Mhz",
+    "sma4": "OUT: PHC"
+  },
+  "led_status": {
+    "power": "red",
+    "sync": "off",
+    "gnss": "red",
+    "alarm": "red",
+    "status1": "yellow",
+    "status2": "yellow"
+  }
+}

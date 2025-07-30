@@ -1,0 +1,103 @@
+{
+  "timestamp": "2025-07-30T14:48:16.449516",
+  "device": "TimeCard LED Controller",
+  "i2c_bus": 1,
+  "i2c_addr": "0x37",
+  "leds": {
+    "Power": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Sync": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "GNSS": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Alarm": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Status1": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Status2": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Status3": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Status4": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Debug1": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Debug2": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Debug3": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Debug4": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Info1": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Info2": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Info3": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Info4": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Test1": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    },
+    "Test2": {
+      "brightness": 0,
+      "state": "off",
+      "percentage": 0
+    }
+  },
+  "summary": {
+    "total_leds": 18,
+    "active_leds": 0,
+    "average_brightness": 0
+  }
+}

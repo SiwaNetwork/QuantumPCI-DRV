@@ -1,0 +1,47 @@
+{
+  "timestamp": "2025-07-30T15:42:26.106880",
+  "device": "TimeCard GNSS/SMA Monitor",
+  "gnss": {
+    "sync": "SYNC",
+    "clock_source": "PPS",
+    "available_sources": "NONE TOD IRIG PPS PTP RTC DCF REGS EXT",
+    "drift": "0",
+    "offset": "-175",
+    "mode": "sync",
+    "color": "green"
+  },
+  "sma": {
+    "sma1": {
+      "type": "input",
+      "signal": "IN: 10Mhz",
+      "reliable": true,
+      "color": "green"
+    },
+    "sma2": {
+      "type": "input",
+      "signal": "IN: PPS1",
+      "reliable": true,
+      "color": "green"
+    },
+    "sma3": {
+      "type": "output",
+      "signal": "OUT: 10Mhz",
+      "reliable": true,
+      "color": "green"
+    },
+    "sma4": {
+      "type": "output",
+      "signal": "OUT: PHC",
+      "reliable": true,
+      "color": "green"
+    }
+  },
+  "led_status": {
+    "gnss_sync": "green",
+    "holdover": "off",
+    "sma3": "green",
+    "sma4": "green",
+    "clock_source": "green",
+    "system": "green"
+  }
+}
