@@ -1,4 +1,4 @@
-# 🎯 TimeCard - Быстрая справка
+# 🎯 Quantum-PCI TimeCard - Быстрая справка
 
 ## ⚡ Самые частые команды
 
@@ -16,7 +16,7 @@ xdg-open http://localhost:8080/dashboard
 
 ### 🔍 Проверка статуса
 ```bash
-# TimeCard обнаружен?
+# Quantum-PCI TimeCard обнаружен?
 ls /sys/class/timecard/ocp0/
 
 # PTP синхронизация
@@ -88,7 +88,7 @@ sudo systemctl restart ptp4l phc2sys
 
 | Что | Путь |
 |-----|------|
-| Sysfs TimeCard | `/sys/class/timecard/ocp0/` |
+| Sysfs Quantum-PCI TimeCard | `/sys/class/timecard/ocp0/` |
 | PTP устройство | `/dev/ptp4` |
 | GNSS порт | `/dev/ttyS5` |
 | Dashboard | `http://localhost:8080/dashboard` |

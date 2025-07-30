@@ -1,4 +1,4 @@
-# Сопоставление функциональности драйвера ptp_ocp с инструкциями PCI устройства
+# Сопоставление PCI устройств и драйвера PTP OCP
 
 ## Общий обзор
 
@@ -12,16 +12,17 @@
 
 | Производитель | Устройство | Vendor ID | Device ID |
 |--------------|------------|-----------|-----------|
-| Facebook | TimeCard | 0x1d9b | 0x0400 |
-| Celestica | TimeCard | 0x18d4 | 0x1008 |
-| Orolia | ART Card | 0x1ad7 | 0xa000 |
+| Quantum-PCI | TimeCard | 0x1d9b | 0x0400 |
+| Art | Card | 0x1d9b | 0x0410 |
+| Orolia | ART Card | 0x2ab9 | 0x0400 |
+| ADVA | Timecard | 0x0b0b | 0x0410 |
 
 ### Реализация в драйвере
 
 ```c
 // Определение PCI ID в драйвере (строки 50-67)
-#ifndef PCI_DEVICE_ID_FACEBOOK_TIMECARD
-#define PCI_DEVICE_ID_FACEBOOK_TIMECARD 0x0400
+#ifndef PCI_DEVICE_ID_QUANTUM_PCI_TIMECARD
+#define PCI_DEVICE_ID_QUANTUM_PCI_TIMECARD 0x0400
 #endif
 
 #ifndef PCI_DEVICE_ID_CELESTICA_TIMECARD
@@ -34,9 +35,9 @@
 
 // Таблица PCI устройств (строки 1238-1242)
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
-    { PCI_DEVICE_DATA(FACEBOOK, TIMECARD, &ocp_fb_driver_data) },
-    { PCI_DEVICE_DATA(CELESTICA, TIMECARD, &ocp_fb_driver_data) },
+    { PCI_DEVICE_DATA(QUANTUM_PCI, TIMECARD, &ocp_quantum_pci_driver_data) },
     { PCI_DEVICE_DATA(OROLIA, ARTCARD, &ocp_art_driver_data) },
+    { PCI_DEVICE_DATA(ADVA, TIMECARD, &ocp_adva_driver_data) },
     { }
 };
 ```
@@ -220,14 +221,14 @@ ptp_ocp_adjfine()  // точная подстройка частоты
 ### Требования спецификации
 
 Некоторые устройства требуют специальной инициализации:
-- Facebook/Celestica TimeCard
+- Quantum-PCI TimeCard
 - Orolia ART Card
 
 ### Реализация в драйвере
 
 ```c
 // Специфичные функции инициализации
-ptp_ocp_fb_board_init()  // для Facebook/Celestica TimeCard
+ptp_ocp_fb_board_init()  // для Quantum-PCI TimeCard
 ptp_ocp_art_board_init() // для Orolia ART Card
 ```
 

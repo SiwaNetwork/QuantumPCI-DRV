@@ -578,7 +578,7 @@ class TimeCardMonitor:
             'identification': {
                 'device_id': device['id'],
                 'serial_number': device.get('serial_number') or 'TC-2024-001',
-                'part_number': 'TimeCard-PCIE',
+                'part_number': 'Quantum-PCI-TimeCard-PCIE',
                 'hardware_revision': 'Rev C',
                 'firmware_version': device.get('firmware_version') or '2.1.3',
                 'manufacture_date': '2024-01-01',

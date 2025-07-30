@@ -92,7 +92,7 @@ curl http://localhost:8080/api/devices
         "firmware_version": "2.1.3",
         "hardware_revision": "Rev C",
         "manufacture_date": "2024-01-01",
-        "part_number": "TimeCard-PCIE",
+                        "part_number": "Quantum-PCI-TimeCard-PCIE",
         "vendor": "Facebook Connectivity"
       },
       "capabilities": {

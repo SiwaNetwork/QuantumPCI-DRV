@@ -1,6 +1,6 @@
-# 🕐 TimeCard PTP OCP Advanced Monitoring System v2.0
+# 🕐 Quantum-PCI TimeCard PTP OCP Advanced Monitoring System v2.0
 
-Полнофункциональная система мониторинга для TimeCard PTP OCP устройств с поддержкой всех аппаратных особенностей.
+Полнофункциональная система мониторинга для Quantum-PCI TimeCard PTP OCP устройств с поддержкой всех аппаратных особенностей.
 
 > 📌 **Быстрый старт**: См. [QUICKSTART.md](QUICKSTART.md)  
 > 📌 **Полная инструкция**: См. [TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md](../TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md)  
@@ -8,7 +8,7 @@
 
 ## ✨ Возможности системы мониторинга
 
-### 🔥 Расширенный мониторинг TimeCard
+### 🔥 Расширенный мониторинг Quantum-PCI TimeCard
 
 #### 🌡️ Thermal Monitoring
 - **6 температурных сенсоров**: FPGA, осциллятор, плата, ambient, PLL, DDR
@@ -71,7 +71,7 @@ ptp-monitoring/
 │   ├── app.py                    # Основное приложение (auto-detection)
 │   ├── timecard-api.py           # Базовый API (v1.0)
 │   └── timecard-extended-api.py  # Расширенный API (v2.0)
-├── web/
+├── dashboards/
 │   ├── timecard-dashboard.html   # Расширенный dashboard
 │   └── timecard-dashboard-v1.html # Базовый dashboard
 ├── pwa/
@@ -149,7 +149,7 @@ docker run -d -p 8080:8080 --privileged \
 ### Требования
 - Python 3.7+
 - Linux kernel 5.12+
-- TimeCard драйвер загружен
+- Quantum-PCI TimeCard драйвер загружен
 
 ### Тестирование
 ```bash
@@ -173,5 +173,5 @@ python tests/integration_test.py
 
 ---
 
-**TimeCard PTP OCP Advanced Monitoring System v2.0**  
+**Quantum-PCI TimeCard PTP OCP Advanced Monitoring System v2.0**  
 *Professional-grade monitoring for precision timing applications*

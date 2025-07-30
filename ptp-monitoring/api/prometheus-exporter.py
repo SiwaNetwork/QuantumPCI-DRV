@@ -690,7 +690,7 @@ class TimeCardPrometheusExporter:
     
     def run(self, collect_interval=30):
         """Запуск Prometheus exporter"""
-        logger.info(f"🚀 Starting TimeCard Prometheus Exporter on port {self.port}")
+        logger.info(f"🚀 Starting Quantum-PCI TimeCard Prometheus Exporter on port {self.port}")
         
         # Запускаем HTTP сервер для метрик
         start_http_server(self.port, registry=self.registry)

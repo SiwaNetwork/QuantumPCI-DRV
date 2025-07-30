@@ -1,14 +1,14 @@
-# TimeCard PTP OCP Extended Monitoring Stack
+# Quantum-PCI TimeCard PTP OCP Extended Monitoring Stack
 
-Полная система мониторинга TimeCard PTP OCP с интеграцией Grafana, Prometheus и AlertManager.
+Полная система мониторинга Quantum-PCI TimeCard PTP OCP с интеграцией Grafana, Prometheus и AlertManager.
 
-> 📌 **Примечание**: Для базовой установки и настройки TimeCard см. [TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md](../TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md)
+> 📌 **Примечание**: Для базовой установки и настройки Quantum-PCI TimeCard см. [TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md](../TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md)
 
 ## 🏗️ Архитектура системы
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   TimeCard      │    │   Prometheus     │    │    Grafana      │
+│   Quantum-PCI TimeCard      │    │   Prometheus     │    │    Grafana      │
 │   Extended API  │◄──►│   Exporter       │◄──►│   Dashboard     │
 │   (Port 8080)   │    │   (Port 9090)    │    │   (Port 3000)   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
@@ -33,8 +33,8 @@
 
 ## 📊 Компоненты системы
 
-### 1. TimeCard Extended API (Порт 8080)
-- **Описание**: Расширенный API для мониторинга всех аспектов TimeCard
+### 1. Quantum-PCI TimeCard Extended API (Порт 8080)
+- **Описание**: Расширенный API для мониторинга всех аспектов Quantum-PCI TimeCard
 - **Функции**:
   - Веб-дашборд с real-time updates
   - REST API для всех метрик
@@ -43,7 +43,7 @@
   - Исторические данные
 
 ### 2. Prometheus Exporter (Порт 9090)
-- **Описание**: Экспортер метрик TimeCard в формате Prometheus
+- **Описание**: Экспортер метрик Quantum-PCI TimeCard в формате Prometheus
 - **Метрики**:
   - 📡 **PTP**: offset, path delay, packet stats, performance score
   - 🌡️ **Thermal**: 6 температурных сенсоров + охлаждение
@@ -66,7 +66,7 @@
 - **Описание**: Система визуализации и dashboards
 - **Логин**: admin / timecard123
 - **Функции**:
-  - Comprehensive TimeCard dashboard
+  - Comprehensive Quantum-PCI TimeCard dashboard
   - 18 panels для всех аспектов
   - Device selector
   - Алерты и аннотации
@@ -119,14 +119,14 @@
 
 | Сервис | URL | Логин | Описание |
 |--------|-----|-------|----------|
-| **TimeCard Dashboard** | http://localhost:8080 | - | Основной дашборд TimeCard |
+| **Quantum-PCI TimeCard Dashboard** | http://localhost:8080 | - | Основной дашборд Quantum-PCI TimeCard |
 | **Grafana** | http://localhost:3000 | admin:timecard123 | Система мониторинга |
 | **Prometheus** | http://localhost:9091 | - | Сбор метрик |
 | **AlertManager** | http://localhost:9093 | - | Управление алертами |
 
 ## 📊 API Endpoints
 
-### TimeCard API
+### Quantum-PCI TimeCard API
 - `GET /api/health` - Health check
 - `GET /api/metrics/extended` - Все расширенные метрики
 - `GET /api/metrics/ptp/advanced` - Продвинутые PTP метрики
@@ -352,4 +352,4 @@ docker-compose exec grafana tar -czf /grafana-backup.tar.gz /var/lib/grafana
 - [Prometheus Documentation](https://prometheus.io/docs/)
 - [Grafana Documentation](https://grafana.com/docs/)
 - [AlertManager Documentation](https://prometheus.io/docs/alerting/latest/alertmanager/)
-- [TimeCard PTP OCP Specification](https://www.opencompute.org/documents/ocp-timecard-specification-1-0-pdf)
+- [Quantum-PCI TimeCard PTP OCP Specification](https://www.opencompute.org/documents/ocp-timecard-specification-1-0-pdf)

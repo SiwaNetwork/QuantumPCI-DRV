@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-# demo-extended.py - Расширенная демо версия TimeCard мониторинга
+"""
+Quantum-PCI TimeCard PTP OCP Extended Demo v2.0
+"""
 
 import os
 import sys
@@ -13,7 +15,7 @@ sys.path.insert(0, str(api_path))
 
 def main():
     print("="*80)
-    print("🚀 Starting TimeCard PTP OCP Extended Demo v2.0")
+    print("🚀 Starting Quantum-PCI TimeCard PTP OCP Extended Demo v2.0")
     print("="*80)
     
     # Проверяем наличие расширенного API

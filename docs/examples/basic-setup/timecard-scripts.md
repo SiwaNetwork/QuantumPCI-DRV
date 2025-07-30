@@ -104,7 +104,7 @@ verify_config() {
 
 # Основная функция
 main() {
-    log "Starting TimeCard configuration"
+    log "Starting Quantum-PCI TimeCard configuration"
     
     check_device
     configure_basic

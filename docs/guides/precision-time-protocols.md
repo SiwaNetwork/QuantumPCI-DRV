@@ -821,8 +821,8 @@ Wants=network.target
 
 [Service]
 Type=forking
-ExecStartPre=/usr/local/bin/timecard-init.sh
-ExecStart=/usr/local/bin/timecard-start-protocols.sh
+ExecStartPre=/usr/local/bin/quantum-pci-timecard-init.sh
+ExecStart=/usr/local/bin/quantum-pci-timecard-start-protocols.sh
 ExecStop=/usr/local/bin/timecard-stop-protocols.sh
 ExecReload=/usr/local/bin/timecard-reload-config.sh
 PIDFile=/var/run/timecard-protocols.pid

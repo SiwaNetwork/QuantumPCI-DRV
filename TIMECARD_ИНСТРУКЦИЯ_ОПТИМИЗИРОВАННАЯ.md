@@ -1,4 +1,4 @@
-# 🕐 TimeCard PTP OCP - Оптимизированная инструкция
+# Quantum-PCI TimeCard PTP OCP - Полная инструкция
 
 ## 📋 Содержание
 1. [Быстрый старт](#быстрый-старт)
@@ -29,7 +29,7 @@ sudo modprobe ptp_ocp
 
 # Проверка установки
 ls -la /sys/class/timecard/ocp0/
-lspci -d 1d9b:  # Для Facebook TimeCard
+lspci -d 1d9b:  # Для Quantum-PCI TimeCard
 ```
 
 ### Шаг 2: Запуск мониторинга
@@ -56,9 +56,9 @@ python3 demo-extended.py
 ### Поддерживаемые устройства
 | Производитель | PCI ID | Модель |
 |--------------|--------|--------|
-| Facebook | 0x1d9b:0x0400 | TimeCard |
-| Celestica | 0x18d4:0x1008 | TimeCard |
+| Quantum-PCI | 0x1d9b:0x0400 | TimeCard |
 | Orolia | 0x1ad7:0xa000 | ART Card |
+| ADVA | 0x0b0b:0x0410 | Timecard |
 
 ### Процесс установки
 ```bash
