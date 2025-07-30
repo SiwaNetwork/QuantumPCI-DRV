@@ -44,20 +44,20 @@
 #endif /* MRO50_IOCTL_H */
 /*---------------------------------------------------------------------------*/
 
-#ifndef PCI_VENDOR_ID_FACEBOOK
-#define PCI_VENDOR_ID_FACEBOOK 0x1d9b
+#ifndef PCI_VENDOR_ID_QUANTUM_PCI
+#define PCI_VENDOR_ID_QUANTUM_PCI 0x1d9b
 #endif
 
-#ifndef PCI_DEVICE_ID_FACEBOOK_TIMECARD
-#define PCI_DEVICE_ID_FACEBOOK_TIMECARD 0x0400
+#ifndef PCI_DEVICE_ID_QUANTUM_PCI_TIMECARD
+#define PCI_DEVICE_ID_QUANTUM_PCI_TIMECARD 0x0400
 #endif
 
-#ifndef PCI_VENDOR_ID_CELESTICA
-#define PCI_VENDOR_ID_CELESTICA 0x18d4
+#ifndef PCI_VENDOR_ID_ADVA
+#define PCI_VENDOR_ID_ADVA 0x0b0b
 #endif
 
-#ifndef PCI_DEVICE_ID_CELESTICA_TIMECARD
-#define PCI_DEVICE_ID_CELESTICA_TIMECARD 0x1008
+#ifndef PCI_DEVICE_ID_ADVA_TIMECARD
+#define PCI_DEVICE_ID_ADVA_TIMECARD 0x0410
 #endif
 
 #ifndef PCI_VENDOR_ID_OROLIA
@@ -1048,7 +1048,7 @@ static struct ocp_resource ocp_fb_resource_rev2[] = {
 	{ }
 };
 
-static struct ocp_driver_data ocp_fb_driver_data[] = {
+static struct ocp_driver_data ocp_quantum_pci_driver_data[] = {
 	{
 		.ocp_resource_msi = (struct ocp_resource *) (&ocp_fb_resource_rev1),
 		.ocp_resource_msix = (struct ocp_resource *) (&ocp_fb_resource_rev2),
@@ -1237,8 +1237,8 @@ static struct ocp_driver_data ocp_art_driver_data[] = {
 };
 
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
-	{ PCI_DEVICE_DATA(FACEBOOK, TIMECARD, &ocp_fb_driver_data) },
-	{ PCI_DEVICE_DATA(CELESTICA, TIMECARD, &ocp_fb_driver_data) },
+	{ PCI_DEVICE_DATA(QUANTUM_PCI, TIMECARD, &ocp_quantum_pci_driver_data) },
+	{ PCI_DEVICE_DATA(ADVA, TIMECARD, &ocp_adva_driver_data) },
 	{ PCI_DEVICE_DATA(OROLIA, ARTCARD, &ocp_art_driver_data) },
 	{ }
 };

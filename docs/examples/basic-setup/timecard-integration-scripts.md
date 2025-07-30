@@ -278,7 +278,7 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStartPre=/usr/local/bin/sync-phc-timecard.sh &
+ExecStartPre=/usr/local/bin/sync-phc-quantum-pci-timecard.sh &
 ExecStart=/usr/bin/ptp4l -f /etc/ptp4l.conf -i eth0 -s
 Restart=always
 

@@ -1,6 +1,6 @@
-# 🚀 TimeCard PTP OCP Advanced Monitoring - Quick Start
+# 🚀 Quantum-PCI TimeCard PTP OCP Advanced Monitoring - Quick Start
 
-Быстрое руководство по запуску полнофункциональной системы мониторинга TimeCard PTP OCP v2.0.
+Быстрое руководство по запуску полнофункциональной системы мониторинга Quantum-PCI TimeCard PTP OCP v2.0.
 
 > 📌 **Примечание**: Для полной инструкции по установке драйвера и базовой настройке см. [TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md](../TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md)
 
@@ -113,5 +113,5 @@ socketio.run(app, debug=False, ...)
 ```
 
 ---
-**TimeCard PTP OCP Advanced Monitoring System v2.0**  
+**Quantum-PCI TimeCard PTP OCP Advanced Monitoring System v2.0**  
 *Professional-grade monitoring for precision timing applications*

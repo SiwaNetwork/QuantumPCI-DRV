@@ -1,5 +1,5 @@
 #!/bin/bash
-# start-monitoring-stack.sh - Запуск полной системы мониторинга TimeCard
+# start-monitoring-stack.sh - Запуск полной системы мониторинга Quantum-PCI TimeCard
 
 set -e
 

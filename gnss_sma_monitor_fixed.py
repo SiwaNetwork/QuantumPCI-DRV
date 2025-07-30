@@ -14,7 +14,7 @@ class GNSSSMAMonitorFixed:
     def __init__(self, bus=1, addr=0x37):
         self.bus = bus
         self.addr = addr
-        self.timecard_sysfs = "/sys/class/timecard/ocp0"
+        self.quantum_pci_timecard_sysfs = "/sys/class/timecard/ocp0"
         
         # ИСПРАВЛЕННАЯ схема нумерации LED
         # LED 1,3,5 используют регистры 0x01,0x03,0x05
@@ -100,7 +100,7 @@ class GNSSSMAMonitorFixed:
     def read_sysfs_value(self, attribute):
         """Чтение значения из sysfs"""
         try:
-            with open(f"{self.timecard_sysfs}/{attribute}", 'r') as f:
+                            with open(f"{self.quantum_pci_timecard_sysfs}/{attribute}", 'r') as f:
                 return f.read().strip()
         except (FileNotFoundError, PermissionError):
             return None

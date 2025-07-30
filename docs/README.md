@@ -53,7 +53,7 @@
 
 ### Руководства пользователя
 
-- [`guides/quick-start.md`](guides/quick-start.md) - Быстрый старт с поддержкой TimeCard
+- [`guides/quick-start.md`](guides/quick-start.md) - Быстрый старт с поддержкой Quantum-PCI TimeCard
 - [`guides/installation.md`](guides/installation.md) - Установка драйвера
 - [`guides/configuration.md`](guides/configuration.md) - Детальная конфигурация включая TimeCard
 - [`guides/precision-time-protocols.md`](guides/precision-time-protocols.md) - **Комплексное руководство по протоколам точного времени** (NTP, PTP, White Rabbit, SMPTE)
@@ -226,9 +226,9 @@ sudo diagnose-timecard
 
 ## Поддерживаемые устройства
 
-- Facebook TimeCard (PCI ID: 1d9b:0400)
-- Celestica TimeCard (PCI ID: 18d4:1008)  
+- Quantum-PCI TimeCard (PCI ID: 1d9b:0400)
 - Orolia ART Card (PCI ID: 1ad7:a000)
+- ADVA Timecard (PCI ID: 0b0b:0410)
 
 ## Системные требования
 

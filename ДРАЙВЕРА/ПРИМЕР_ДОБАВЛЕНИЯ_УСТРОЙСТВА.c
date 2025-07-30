@@ -124,8 +124,8 @@ static struct ocp_driver_data ocp_example_driver_data[] = {
 /* Изменить существующую таблицу ptp_ocp_pcidev_id около строки 1238 */
 
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
-	{ PCI_DEVICE_DATA(FACEBOOK, TIMECARD, &ocp_fb_driver_data) },
-	{ PCI_DEVICE_DATA(CELESTICA, TIMECARD, &ocp_fb_driver_data) },
+	{ PCI_DEVICE_DATA(QUANTUM_PCI, TIMECARD, &ocp_quantum_pci_driver_data) },
+	{ PCI_DEVICE_DATA(ADVA, TIMECARD, &ocp_adva_driver_data) },
 	{ PCI_DEVICE_DATA(OROLIA, ARTCARD, &ocp_art_driver_data) },
 	{ PCI_DEVICE_DATA(EXAMPLE, TIMECARD, &ocp_example_driver_data) },  /* <-- Добавить эту строку */
 	{ }

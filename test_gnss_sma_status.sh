@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Тест статусов GNSS и SMA для TimeCard
+# Тест статусов GNSS и SMA для Quantum-PCI TimeCard
 # Автор: AI Assistant
 
+# Пути sysfs
 TIMECARD_SYSFS="/sys/class/timecard/ocp0"
 BUS=1
 ADDR=0x37
@@ -32,17 +33,17 @@ COLOR_PURPLE=0x80
 COLOR_YELLOW=0xC0
 
 echo -e "${CYAN}=== Тест статусов GNSS и SMA ===${NC}"
-echo "TimeCard: $TIMECARD_SYSFS"
+echo "Quantum-PCI TimeCard: $TIMECARD_SYSFS"
 echo "I2C Bus: $BUS, Address: $ADDR"
 echo
 
-# Проверка TimeCard
+# Проверка Quantum-PCI TimeCard
 if [ ! -d "$TIMECARD_SYSFS" ]; then
-    echo -e "${RED}❌ TimeCard не найден${NC}"
+    echo -e "${RED}❌ Quantum-PCI TimeCard не найден${NC}"
     exit 1
+else
+    echo -e "${GREEN}✅ Quantum-PCI TimeCard найден${NC}"
 fi
-
-echo -e "${GREEN}✅ TimeCard найден${NC}"
 
 # Проверка IS32FL3207
 if ! sudo i2cdetect -y $BUS | grep -q "37"; then
