@@ -8,7 +8,7 @@ export LC_NUMERIC=C
 
 # Конфигурация I2C
 I2CBUS=1
-DEVADDR=0x28  # Стандартный адрес BNO055
+DEVADDR=0x29  # Адрес BNO055
 
 # Регистры режимов работы
 OPR_MODE=0x3D
@@ -67,7 +67,7 @@ initialize_bno055() {
     # Проверка доступности I2C шины
     if ! i2cdetect -y $I2CBUS | grep -q $(echo $DEVADDR | sed 's/0x//'); then
         echo "Ошибка: Датчик BNO055 не найден на шине I2C $I2CBUS"
-        echo "Проверьте адрес датчика (попробуйте 0x28 или 0x29)"
+        echo "Проверьте адрес датчика (попробуйте 0x29 или 0x28)"
         return 1
     fi
     

@@ -38,8 +38,8 @@ echo "Сканирование I2C устройств на шине $I2CBUS:"
 i2cdetect -y $I2CBUS
 
 # Проверка наличия датчика BNO055 (проверяем оба возможных адреса)
-DEVADDR1=0x28
-DEVADDR2=0x29
+DEVADDR1=0x29
+DEVADDR2=0x28
 FOUND_DEVICE=false
 
 if i2cdetect -y $I2CBUS | grep -q $(echo $DEVADDR1 | sed 's/0x//'); then
