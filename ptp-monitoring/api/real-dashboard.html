@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TimeCard Real Monitor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            min-width: 150px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .status-ok { color: #28a745; }
+        .status-warning { color: #ffc107; }
+        .status-error { color: #dc3545; }
+        .status-critical { color: #dc3545; }
+        .status-normal { color: #28a745; }
+        .status-unknown { color: #6c757d; }
+        
+        #log {
+            height: 300px;
+            overflow-y: scroll;
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .last-update {
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+            margin-top: 10px;
+        }
+        .alert {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #f5c6cb;
+        }
+        .alert.critical {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .alert.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕐 TimeCard Real Monitor</h1>
+            <div class="last-update" id="last-update">Last update: Never</div>
+        </div>
+        
+        <div class="card">
+            <h2>📡 PTP Status</h2>
+            <div class="metric">
+                <div class="metric-value" id="ptp-offset">Loading...</div>
+                <div class="metric-label">Offset (ns)</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="ptp-drift">Loading...</div>
+                <div class="metric-label">Drift (ppb)</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="ptp-source">Loading...</div>
+                <div class="metric-label">Clock Source</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="ptp-status">Loading...</div>
+                <div class="metric-label">Status</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🛰️ GNSS Status</h2>
+            <div class="metric">
+                <div class="metric-value" id="gnss-status">Loading...</div>
+                <div class="metric-label">Sync Status</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="gnss-fix">Loading...</div>
+                <div class="metric-label">Fix Type</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔌 SMA Connectors</h2>
+            <div class="metric">
+                <div class="metric-value" id="sma1-status">Loading...</div>
+                <div class="metric-label">SMA1</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="sma2-status">Loading...</div>
+                <div class="metric-label">SMA2</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="sma3-status">Loading...</div>
+                <div class="metric-label">SMA3</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="sma4-status">Loading...</div>
+                <div class="metric-label">SMA4</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🚨 Active Alerts</h2>
+            <div id="alerts-container">
+                <div class="alert">No alerts</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Configuration & Control</h2>
+            <button onclick="refreshData()">🔃 Refresh Data</button>
+            <button onclick="showDeviceInfo()">📋 Device Info</button>
+            <button onclick="showRealMetrics()">📊 Real Metrics</button>
+        </div>
+
+        <div class="card">
+            <h2>Real-time Log</h2>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        
+        // Функции для обновления данных
+        async function updateMetrics() {
+            try {
+                // Получение реальных метрик
+                const response = await fetch('/api/metrics/real');
+                const data = await response.json();
+                
+                if (data && Object.keys(data).length > 0) {
+                    const deviceId = Object.keys(data)[0];
+                    const deviceData = data[deviceId];
+                    
+                    // PTP данные
+                    const ptp = deviceData.ptp || {};
+                    document.getElementById('ptp-offset').textContent = ptp.offset_ns || 'N/A';
+                    document.getElementById('ptp-drift').textContent = ptp.drift_ppb || 'N/A';
+                    document.getElementById('ptp-source').textContent = ptp.clock_source || 'N/A';
+                    
+                    // PTP статус
+                    const ptpStatus = ptp.status || 'unknown';
+                    document.getElementById('ptp-status').textContent = ptpStatus.toUpperCase();
+                    document.getElementById('ptp-status').className = 'metric-value status-' + ptpStatus;
+                    
+                    // GNSS данные
+                    const gnss = deviceData.gnss || {};
+                    document.getElementById('gnss-status').textContent = gnss.sync_status || 'UNKNOWN';
+                    document.getElementById('gnss-fix').textContent = gnss.fix_type || 'UNKNOWN';
+                    
+                    // GNSS статус
+                    const gnssStatus = gnss.status || 'unknown';
+                    document.getElementById('gnss-status').className = 'metric-value status-' + gnssStatus;
+                    document.getElementById('gnss-fix').className = 'metric-value status-' + gnssStatus;
+                    
+                    // SMA данные
+                    const sma = deviceData.sma || {};
+                    updateSMAStatus('sma1', sma.sma1);
+                    updateSMAStatus('sma2', sma.sma2);
+                    updateSMAStatus('sma3', sma.sma3);
+                    updateSMAStatus('sma4', sma.sma4);
+                    
+                    // Обновление времени
+                    document.getElementById('last-update').textContent = 
+                        'Last update: ' + new Date().toLocaleString();
+                        
+                    addLog('✅ Real data updated successfully');
+                } else {
+                    addLog('⚠️ No device data available');
+                }
+                
+            } catch (error) {
+                console.error('Error updating metrics:', error);
+                addLog('❌ Error updating metrics: ' + error.message);
+            }
+        }
+
+        function updateSMAStatus(elementId, smaData) {
+            const element = document.getElementById(elementId + '-status');
+            if (smaData) {
+                element.textContent = smaData.status || 'UNKNOWN';
+                element.className = 'metric-value status-' + (smaData.status || 'unknown');
+            } else {
+                element.textContent = 'N/A';
+                element.className = 'metric-value status-unknown';
+            }
+        }
+
+        // Обновление алертов
+        async function updateAlerts() {
+            try {
+                const response = await fetch('/api/alerts');
+                const data = await response.json();
+                
+                const alertsContainer = document.getElementById('alerts-container');
+                
+                if (data.count > 0) {
+                    alertsContainer.innerHTML = '';
+                    data.alerts.forEach(alert => {
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = `alert ${alert.severity}`;
+                        alertDiv.innerHTML = `
+                            <strong>${alert.severity.toUpperCase()}:</strong> ${alert.message}
+                            <br><small>${new Date(alert.timestamp * 1000).toLocaleString()}</small>
+                        `;
+                        alertsContainer.appendChild(alertDiv);
+                    });
+                } else {
+                    alertsContainer.innerHTML = '<div class="alert">No active alerts</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error updating alerts:', error);
+                addLog('❌ Error updating alerts: ' + error.message);
+            }
+        }
+
+        // Функции управления
+        function refreshData() {
+            updateMetrics();
+            updateAlerts();
+            addLog('🔃 Data refreshed manually');
+        }
+
+        function showDeviceInfo() {
+            window.open('/api/devices', '_blank');
+        }
+
+        function showRealMetrics() {
+            window.open('/api/metrics/real', '_blank');
+        }
+
+        // Функция добавления сообщений в лог
+        function addLog(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            // Ограничиваем количество строк в логе
+            const lines = logElement.innerHTML.split('\n');
+            if (lines.length > 100) {
+                logElement.innerHTML = lines.slice(-100).join('\n');
+            }
+        }
+
+        // WebSocket для real-time обновлений
+        function connectWebSocket() {
+            try {
+                socket = io();
+                
+                socket.on('connect', function() {
+                    addLog('🔗 Connected to real-time updates');
+                });
+                
+                socket.on('device_update', function(data) {
+                    addLog(`📡 Device update: PTP offset ${data.ptp_offset}ns, GNSS: ${data.gnss_status}`);
+                });
+                
+                socket.on('disconnect', function() {
+                    addLog('❌ Disconnected from real-time updates');
+                    setTimeout(connectWebSocket, 5000);
+                });
+                
+                socket.on('connect_error', function(error) {
+                    addLog('❌ WebSocket connection error: ' + error);
+                });
+                
+            } catch (error) {
+                addLog('❌ Error connecting WebSocket: ' + error.message);
+                setTimeout(connectWebSocket, 5000);
+            }
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 TimeCard Real Monitor initialized');
+            updateMetrics();
+            updateAlerts();
+            connectWebSocket();
+            
+            // Автообновление каждые 5 секунд
+            setInterval(updateMetrics, 5000);
+            setInterval(updateAlerts, 10000);
+        });
+    </script>
+</body>
+</html> 

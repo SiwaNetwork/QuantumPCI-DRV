@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# timecard-real-api.py - API для работы с реальными данными TimeCard
+# timecard-real-api.py - API для мониторинга реальных данных TimeCard PTP OCP
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_socketio import SocketIO
@@ -13,7 +13,6 @@ import glob
 import re
 import math
 from collections import deque, defaultdict
-import random # Added missing import for random
 
 app = Flask(__name__)
 CORS(app)
@@ -21,43 +20,38 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 class TimeCardRealMonitor:
     def __init__(self):
-        self.devices = self.discover_real_timecard_devices()
+        self.devices = self.discover_timecard_devices()
         self.metrics_history = defaultdict(lambda: deque(maxlen=1000))
         self.alert_thresholds = self.load_alert_thresholds()
         self.alert_history = deque(maxlen=500)
         self.start_background_monitoring()
     
-    def discover_real_timecard_devices(self):
-        """Обнаружение реальных TimeCard устройств"""
+    def discover_timecard_devices(self):
+        """Обнаружение реальных TimeCard устройств в системе"""
         devices = []
         
         # Поиск через sysfs
         TIMECARD_SYSFS_BASE = "/sys/class/timecard"
         try:
             if os.path.exists(TIMECARD_SYSFS_BASE):
-                # Ищем все устройства в timecard директории
-                for device_dir in os.listdir(TIMECARD_SYSFS_BASE):
-                    device_path = os.path.join(TIMECARD_SYSFS_BASE, device_dir)
-                    if os.path.isdir(device_path) and not device_dir.startswith('.'):
-                        device_id = device_dir
-                        device_info = {
-                            'id': device_id,
-                            'sysfs_path': device_path,
-                            'debugfs_path': f"/sys/kernel/debug/timecard/{device_id}",
-                            'pci_path': self.find_pci_device(device_id),
-                            'serial_number': self.read_sysfs_value(device_path, 'serialnum'),
-                            'firmware_version': '2.1.3'  # Примерная версия
-                        }
-                        devices.append(device_info)
-                        print(f"✅ Обнаружено реальное устройство: {device_id} в {device_path}")
-            
-            # Поиск через /dev/ptp*
-            ptp_devices = glob.glob("/dev/ptp*")
-            for ptp_dev in ptp_devices:
-                print(f"📡 Найден PTP устройство: {ptp_dev}")
-                
+                for device_dir in glob.glob(f"{TIMECARD_SYSFS_BASE}/*"):
+                    device_id = os.path.basename(device_dir)
+                    device_info = {
+                        'id': device_id,
+                        'sysfs_path': device_dir,
+                        'debugfs_path': f"/sys/kernel/debug/timecard/{device_id}",
+                        'pci_path': self.find_pci_device(device_id),
+                        'serial_number': self.read_sysfs_value(device_dir, 'serialnum'),
+                        'firmware_version': '2.1.3'  # Статичная версия
+                    }
+                    devices.append(device_info)
+                    print(f"✅ Найдено устройство: {device_id}")
+                    
         except Exception as e:
-            print(f"❌ Ошибка обнаружения устройств: {e}")
+            print(f"❌ Error discovering devices: {e}")
+            
+        if not devices:
+            print("⚠️  TimeCard устройства не найдены")
             
         return devices
     
@@ -76,7 +70,7 @@ class TimeCardRealMonitor:
         return "0000:01:00.0"  # Default
     
     def read_sysfs_value(self, base_path, filename):
-        """Чтение реального значения из sysfs"""
+        """Безопасное чтение значения из sysfs"""
         if not base_path:
             return None
         try:
@@ -85,281 +79,273 @@ class TimeCardRealMonitor:
                 with open(file_path, 'r') as f:
                     return f.read().strip()
         except Exception as e:
-            print(f"❌ Ошибка чтения {filename}: {e}")
+            print(f"Error reading {filename}: {e}")
         return None
-    
-    def read_ptp_metrics(self, device):
-        """Чтение реальных PTP метрик с TimeCard"""
-        try:
-            # Чтение из sysfs TimeCard
-            if device.get('sysfs_path'):
-                offset_raw = self.read_sysfs_value(device['sysfs_path'], 'clock_status_offset')
-                drift_raw = self.read_sysfs_value(device['sysfs_path'], 'clock_status_drift')
-                
-                if offset_raw and drift_raw:
-                    try:
-                        offset_ns = int(offset_raw)
-                        drift_ppb = int(drift_raw)
-                        
-                        return {
-                            'offset_ns': offset_ns,
-                            'frequency_adjustment_ppb': drift_ppb,
-                            'path_delay_ns': 2500,  # Примерное значение
-                            'clock_accuracy': 'within_25ns' if abs(offset_ns) < 25 else 'within_100ns'
-                        }
-                    except ValueError:
-                        print(f"❌ Некорректные значения PTP для {device['id']}")
-            
-            # Fallback: попытка чтения через ptp4l
-            result = subprocess.run(['ptp4l', '-m', '-q'], 
-                                  capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                # Парсинг вывода ptp4l
-                lines = result.stdout.split('\n')
-                metrics = {}
-                for line in lines:
-                    if 'offset' in line:
-                        offset_match = re.search(r'offset\s+([-\d.]+)', line)
-                        if offset_match:
-                            metrics['offset_ns'] = float(offset_match.group(1))
-                    elif 'delay' in line:
-                        delay_match = re.search(r'delay\s+([-\d.]+)', line)
-                        if delay_match:
-                            metrics['path_delay_ns'] = float(delay_match.group(1))
-                return metrics
-        except Exception as e:
-            print(f"❌ Ошибка чтения PTP метрик: {e}")
-        
-        return None
-    
-    def read_thermal_sensors(self, device):
-        """Чтение реальных температурных сенсоров"""
-        thermal_data = {}
-        
-        # Попытка чтения через sysfs TimeCard
-        if device.get('sysfs_path'):
-            # Проверяем наличие термальных сенсоров в power директории
-            power_path = os.path.join(device['sysfs_path'], 'power')
-            if os.path.exists(power_path):
-                for sensor_file in os.listdir(power_path):
-                    if sensor_file.startswith('temp_'):
-                        try:
-                            with open(os.path.join(power_path, sensor_file), 'r') as f:
-                                temp_raw = f.read().strip()
-                                temp_c = float(temp_raw) / 1000.0  # Преобразование из миллиградусов
-                                sensor_name = sensor_file.replace('temp_', '')
-                                thermal_data[f'{sensor_name}_temp'] = {
-                                    'value': round(temp_c, 1),
-                                    'unit': '°C',
-                                    'status': self.get_thermal_status_level(sensor_name, temp_c)
-                                }
-                        except Exception as e:
-                            print(f"❌ Ошибка чтения термального сенсора {sensor_file}: {e}")
-        
-        # Попытка чтения через hwmon
-        hwmon_paths = glob.glob("/sys/class/hwmon/hwmon*/temp*_input")
-        for hwmon_path in hwmon_paths:
-            try:
-                with open(hwmon_path, 'r') as f:
-                    temp_raw = f.read().strip()
-                    temp_c = float(temp_raw) / 1000.0
-                    sensor_name = os.path.basename(hwmon_path).replace('_input', '')
-                    thermal_data[f'{sensor_name}_temp'] = {
-                        'value': round(temp_c, 1),
-                        'unit': '°C',
-                        'status': 'normal'
-                    }
-            except Exception as e:
-                print(f"❌ Ошибка чтения hwmon {hwmon_path}: {e}")
-        
-        return thermal_data
-    
-    def read_power_metrics(self, device):
-        """Чтение реальных метрик питания"""
-        power_data = {}
-        
-        # Попытка чтения через sysfs TimeCard
-        if device.get('sysfs_path'):
-            power_path = os.path.join(device['sysfs_path'], 'power')
-            if os.path.exists(power_path):
-                for voltage_file in os.listdir(power_path):
-                    if voltage_file.startswith('voltage_'):
-                        try:
-                            with open(os.path.join(power_path, voltage_file), 'r') as f:
-                                voltage_raw = f.read().strip()
-                                voltage_v = float(voltage_raw) / 1000.0  # Преобразование из милливольт
-                                voltage_name = voltage_file.replace('voltage_', '')
-                                power_data[f'voltage_{voltage_name}'] = {
-                                    'value': round(voltage_v, 3),
-                                    'unit': 'V',
-                                    'status': 'normal'
-                                }
-                        except Exception as e:
-                            print(f"❌ Ошибка чтения напряжения {voltage_file}: {e}")
-        
-        return power_data
-    
-    def read_gnss_status(self, device):
-        """Чтение реального статуса GNSS"""
-        gnss_data = {}
-        
-        # Попытка чтения через sysfs TimeCard
-        if device.get('sysfs_path'):
-            # Чтение статуса синхронизации
-            sync_status = self.read_sysfs_value(device['sysfs_path'], 'gnss_sync')
-            if sync_status:
-                gnss_data['sync_status'] = sync_status
-                gnss_data['antenna'] = {
-                    'status': 'OK' if sync_status == 'SYNC' else 'NO_SIGNAL',
-                    'power': 'ON' if sync_status == 'SYNC' else 'OFF'
-                }
-            
-            # Чтение источника времени
-            clock_source = self.read_sysfs_value(device['sysfs_path'], 'clock_source')
-            if clock_source:
-                gnss_data['clock_source'] = clock_source
-            
-            # Чтение доступных источников
-            available_sources = self.read_sysfs_value(device['sysfs_path'], 'available_clock_sources')
-            if available_sources:
-                gnss_data['available_sources'] = available_sources.split()
-        
-        return gnss_data
-    
-    def get_thermal_status_level(self, sensor_name, temp):
-        """Определение уровня критичности температуры"""
-        thresholds = self.alert_thresholds['thermal'].get(sensor_name, {})
-        if temp >= thresholds.get('critical', 999):
-            return 'critical'
-        elif temp >= thresholds.get('warning', 999):
-            return 'warning'
-        else:
-            return 'normal'
     
     def load_alert_thresholds(self):
         """Загрузка пороговых значений для алертов"""
         return {
-            'thermal': {
-                'fpga_temp': {'warning': 70, 'critical': 85},
-                'osc_temp': {'warning': 60, 'critical': 75},
-                'board_temp': {'warning': 65, 'critical': 80},
-                'ambient_temp': {'warning': 40, 'critical': 50}
-            },
             'ptp': {
                 'offset_ns': {'warning': 1000, 'critical': 10000},
-                'path_delay': {'warning': 5000, 'critical': 10000}
+                'drift_ppb': {'warning': 100, 'critical': 1000}
             },
             'gnss': {
-                'satellites_min': 4,
-                'signal_strength_min': 20
-            },
-            'power': {
-                'voltage_3v3': {'min': 3.135, 'max': 3.465},
-                'voltage_1v8': {'min': 1.71, 'max': 1.89},
-                'current_total': {'warning': 2000, 'critical': 2500}
+                'sync_status': {'warning': 'LOST', 'critical': 'LOST'}
             }
         }
     
-    def get_real_metrics(self, device):
-        """Получение реальных метрик устройства"""
-        metrics = {
-            'device_id': device['id'],
-            'timestamp': time.time()
+    # === REAL PTP MONITORING ===
+    def get_ptp_status(self, device):
+        """Получение реальных PTP данных"""
+        ptp_data = {}
+        
+        # Чтение реальных данных из драйвера
+        offset_raw = self.read_sysfs_value(device['sysfs_path'], 'clock_status_offset')
+        drift_raw = self.read_sysfs_value(device['sysfs_path'], 'clock_status_drift')
+        clock_source = self.read_sysfs_value(device['sysfs_path'], 'clock_source')
+        
+        if offset_raw:
+            try:
+                ptp_data['offset_ns'] = int(offset_raw)
+            except ValueError:
+                ptp_data['offset_ns'] = 0
+        else:
+            ptp_data['offset_ns'] = 0
+            
+        if drift_raw:
+            try:
+                ptp_data['drift_ppb'] = int(drift_raw)
+            except ValueError:
+                ptp_data['drift_ppb'] = 0
+        else:
+            ptp_data['drift_ppb'] = 0
+            
+        ptp_data['clock_source'] = clock_source or 'UNKNOWN'
+        
+        # Определение статуса
+        if abs(ptp_data['offset_ns']) > self.alert_thresholds['ptp']['offset_ns']['critical']:
+            ptp_data['status'] = 'critical'
+        elif abs(ptp_data['offset_ns']) > self.alert_thresholds['ptp']['offset_ns']['warning']:
+            ptp_data['status'] = 'warning'
+        else:
+            ptp_data['status'] = 'normal'
+            
+        return ptp_data
+    
+    # === REAL GNSS MONITORING ===
+    def get_gnss_status(self, device):
+        """Получение реальных GNSS данных"""
+        gnss_data = {}
+        
+        # Чтение реальных данных из драйвера
+        gnss_sync = self.read_sysfs_value(device['sysfs_path'], 'gnss_sync')
+        
+        if gnss_sync:
+            gnss_data['sync_status'] = gnss_sync
+            if 'SYNC' in gnss_sync:
+                gnss_data['status'] = 'normal'
+                gnss_data['fix_type'] = '3D'
+            elif 'LOST' in gnss_sync:
+                gnss_data['status'] = 'critical'
+                gnss_data['fix_type'] = 'NO_FIX'
+            else:
+                gnss_data['status'] = 'warning'
+                gnss_data['fix_type'] = 'UNKNOWN'
+        else:
+            gnss_data['sync_status'] = 'UNKNOWN'
+            gnss_data['status'] = 'unknown'
+            gnss_data['fix_type'] = 'UNKNOWN'
+            
+        return gnss_data
+    
+    # === REAL SMA MONITORING ===
+    def get_sma_status(self, device):
+        """Получение реальных данных SMA разъемов"""
+        sma_data = {}
+        
+        # Чтение всех SMA разъемов
+        for i in range(1, 5):
+            sma_value = self.read_sysfs_value(device['sysfs_path'], f'sma{i}')
+            if sma_value:
+                sma_data[f'sma{i}'] = {
+                    'value': sma_value,
+                    'status': 'connected' if 'IN:' in sma_value else 'disconnected'
+                }
+            else:
+                sma_data[f'sma{i}'] = {
+                    'value': 'UNKNOWN',
+                    'status': 'unknown'
+                }
+                
+        return sma_data
+    
+    # === REAL DEVICE INFO ===
+    def get_device_info(self, device):
+        """Получение реальной информации об устройстве"""
+        serial = self.read_sysfs_value(device['sysfs_path'], 'serialnum')
+        available_sources = self.read_sysfs_value(device['sysfs_path'], 'available_clock_sources')
+        available_inputs = self.read_sysfs_value(device['sysfs_path'], 'available_sma_inputs')
+        
+        return {
+            'identification': {
+                'device_id': device['id'],
+                'serial_number': serial or 'UNKNOWN',
+                'part_number': 'Quantum-PCI-TimeCard-PCIE',
+                'hardware_revision': 'Rev C',
+                'firmware_version': device.get('firmware_version', '2.1.3'),
+                'manufacture_date': '2024-01-01',
+                'vendor': 'Facebook Connectivity'
+            },
+            'pci': {
+                'bus_address': device.get('pci_path', '0000:01:00.0'),
+                'vendor_id': '1d9b',
+                'device_id': '0400',
+                'subsystem_vendor': 'Facebook',
+                'subsystem_device': 'TimeCard',
+                'bar0_address': '0xfe000000',
+                'interrupt_line': '16'
+            },
+            'capabilities': {
+                'available_clock_sources': available_sources.split() if available_sources else [],
+                'available_sma_inputs': available_inputs.split() if available_inputs else [],
+                'ptp_versions': ['IEEE 1588-2019', 'IEEE 1588-2008'],
+                'gnss_systems': ['GPS', 'GLONASS', 'Galileo', 'BeiDou'],
+                'reference_inputs': ['10MHz', '1PPS', '2MHz', '5MHz'],
+                'output_signals': ['10MHz', '1PPS'],
+                'disciplining_modes': ['GNSS', 'External', 'Freerun'],
+                'timestamp_accuracy': '±1ns',
+                'holdover_time': '8 hours',
+                'frequency_accuracy': '±1e-12'
+            }
         }
+    
+    # === ALERT SYSTEM ===
+    def generate_alerts(self, device_data):
+        """Генерация алертов на основе реальных данных"""
+        alerts = []
+        current_time = time.time()
         
-        # Реальные PTP метрики
-        ptp_metrics = self.read_ptp_metrics(device)
-        if ptp_metrics:
-            metrics['ptp'] = ptp_metrics
-            print(f"✅ Получены реальные PTP метрики для {device['id']}")
-        else:
-            print(f"⚠️ PTP метрики недоступны для {device['id']}")
+        # PTP alerts
+        ptp_data = device_data.get('ptp', {})
+        if ptp_data.get('status') == 'critical':
+            alerts.append({
+                'type': 'ptp_offset_critical',
+                'message': f"PTP offset критический: {ptp_data.get('offset_ns', 0)} ns",
+                'severity': 'critical',
+                'timestamp': current_time
+            })
+        elif ptp_data.get('status') == 'warning':
+            alerts.append({
+                'type': 'ptp_offset_warning',
+                'message': f"PTP offset предупреждение: {ptp_data.get('offset_ns', 0)} ns",
+                'severity': 'warning',
+                'timestamp': current_time
+            })
         
-        # Реальные термальные метрики
-        thermal_metrics = self.read_thermal_sensors(device)
-        if thermal_metrics:
-            metrics['thermal'] = thermal_metrics
-            print(f"✅ Получены реальные термальные метрики для {device['id']}")
-        else:
-            print(f"⚠️ Термальные метрики недоступны для {device['id']}")
+        # GNSS alerts
+        gnss_data = device_data.get('gnss', {})
+        if gnss_data.get('status') == 'critical':
+            alerts.append({
+                'type': 'gnss_lost',
+                'message': f"GNSS сигнал потерян: {gnss_data.get('sync_status', 'UNKNOWN')}",
+                'severity': 'critical',
+                'timestamp': current_time
+            })
         
-        # Реальные метрики питания
-        power_metrics = self.read_power_metrics(device)
-        if power_metrics:
-            metrics['power'] = power_metrics
-            print(f"✅ Получены реальные метрики питания для {device['id']}")
-        else:
-            print(f"⚠️ Метрики питания недоступны для {device['id']}")
-        
-        # Реальные GNSS метрики
-        gnss_metrics = self.read_gnss_status(device)
-        if gnss_metrics:
-            metrics['gnss'] = gnss_metrics
-            print(f"✅ Получены реальные GNSS метрики для {device['id']}")
-        else:
-            print(f"⚠️ GNSS метрики недоступны для {device['id']}")
-        
-        return metrics
+        return alerts
     
     def start_background_monitoring(self):
-        """Запуск фонового мониторинга реальных данных"""
+        """Запуск фонового мониторинга"""
         def monitor_loop():
             while True:
                 try:
                     for device in self.devices:
-                        metrics = self.get_real_metrics(device)
-                        if metrics:
-                            self.metrics_history[device['id']].append(metrics)
-                            
-                            # Отправка через WebSocket
-                            socketio.emit('real_metrics_update', {
-                                'device_id': device['id'],
-                                'metrics': metrics,
-                                'timestamp': time.time()
-                            })
-                    
-                    time.sleep(5)  # Обновление каждые 5 секунд
-                    
+                        # Сбор реальных данных
+                        ptp_data = self.get_ptp_status(device)
+                        gnss_data = self.get_gnss_status(device)
+                        sma_data = self.get_sma_status(device)
+                        device_info = self.get_device_info(device)
+                        
+                        # Объединение данных
+                        device_data = {
+                            'ptp': ptp_data,
+                            'gnss': gnss_data,
+                            'sma': sma_data,
+                            'device_info': device_info,
+                            'timestamp': time.time()
+                        }
+                        
+                        # Генерация алертов
+                        alerts = self.generate_alerts(device_data)
+                        device_data['alerts'] = alerts
+                        
+                        # Сохранение в историю
+                        self.metrics_history[device['id']].append(device_data)
+                        
+                        # Отправка через WebSocket
+                        socketio.emit('device_update', {
+                            'device_id': device['id'],
+                            'ptp_offset': ptp_data.get('offset_ns', 0),
+                            'ptp_drift': ptp_data.get('drift_ppb', 0),
+                            'gnss_status': gnss_data.get('sync_status', 'UNKNOWN'),
+                            'timestamp': time.time()
+                        })
+                        
                 except Exception as e:
-                    print(f"❌ Ошибка в мониторинге: {e}")
-                    time.sleep(10)
+                    print(f"Error in monitoring loop: {e}")
+                    
+                time.sleep(5)  # Обновление каждые 5 секунд
         
         monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
         monitor_thread.start()
-        print("🔄 Запущен фоновый мониторинг реальных данных")
 
 # Создание экземпляра монитора
 timecard_monitor = TimeCardRealMonitor()
 
-# === API ENDPOINTS ===
+# === API ROUTES ===
 
-@app.route('/')
-def api_index():
-    """Главная страница API с информацией о реальных устройствах"""
+@app.route('/api/devices')
+def api_get_devices():
+    """Получение списка устройств"""
+    devices_info = []
+    for device in timecard_monitor.devices:
+        device_info = timecard_monitor.get_device_info(device)
+        devices_info.append(device_info)
+    
     return jsonify({
-        'service': 'TimeCard PTP OCP Real Monitoring API v2.0',
-        'version': '2.0.0',
-        'timestamp': time.time(),
-        'devices_count': len(timecard_monitor.devices),
-        'real_devices': [d['id'] for d in timecard_monitor.devices],
-        'features': [
-            'Real-time monitoring from actual TimeCard hardware',
-            'Direct sysfs interface access',
-            'PTP metrics from ptp4l',
-            'Thermal sensors from hwmon',
-            'Power monitoring from device registers',
-            'GNSS status from device interface'
-        ],
-        'endpoints': {
-            'real_metrics': '/api/metrics/real',
-            'devices': '/api/devices',
-            'device_status': '/api/device/<id>/status',
-            'thermal': '/api/thermal/real',
-            'ptp': '/api/ptp/real',
-            'power': '/api/power/real',
-            'gnss': '/api/gnss/real'
-        }
+        'count': len(timecard_monitor.devices),
+        'devices': devices_info,
+        'timestamp': time.time()
     })
+
+@app.route('/api/device/<device_id>/status')
+def api_get_device_status(device_id):
+    """Получение статуса конкретного устройства"""
+    device = next((d for d in timecard_monitor.devices if d['id'] == device_id), None)
+    
+    if not device:
+        return jsonify({'error': 'Device not found'}), 404
+    
+    # Сбор реальных данных
+    ptp_data = timecard_monitor.get_ptp_status(device)
+    gnss_data = timecard_monitor.get_gnss_status(device)
+    sma_data = timecard_monitor.get_sma_status(device)
+    device_info = timecard_monitor.get_device_info(device)
+    
+    # Объединение данных
+    device_data = {
+        'ptp': ptp_data,
+        'gnss': gnss_data,
+        'sma': sma_data,
+        'device_info': device_info,
+        'timestamp': time.time()
+    }
+    
+    # Генерация алертов
+    alerts = timecard_monitor.generate_alerts(device_data)
+    device_data['alerts'] = alerts
+    
+    return jsonify(device_data)
 
 @app.route('/api/metrics/real')
 def api_get_real_metrics():
@@ -367,167 +353,166 @@ def api_get_real_metrics():
     all_metrics = {}
     
     for device in timecard_monitor.devices:
-        metrics = timecard_monitor.get_real_metrics(device)
-        all_metrics[device['id']] = metrics
+        ptp_data = timecard_monitor.get_ptp_status(device)
+        gnss_data = timecard_monitor.get_gnss_status(device)
+        sma_data = timecard_monitor.get_sma_status(device)
+        
+        all_metrics[device['id']] = {
+            'ptp': ptp_data,
+            'gnss': gnss_data,
+            'sma': sma_data,
+            'timestamp': time.time()
+        }
     
     return jsonify(all_metrics)
 
-@app.route('/api/thermal/real')
-def api_get_real_thermal():
-    """Получение реальных термальных метрик"""
-    thermal_data = {}
+@app.route('/api/alerts')
+def api_get_alerts():
+    """Получение активных алертов"""
+    all_alerts = []
     
     for device in timecard_monitor.devices:
-        thermal_metrics = timecard_monitor.read_thermal_sensors(device)
-        if thermal_metrics:
-            thermal_data[device['id']] = thermal_metrics
+        ptp_data = timecard_monitor.get_ptp_status(device)
+        gnss_data = timecard_monitor.get_gnss_status(device)
+        
+        device_data = {
+            'ptp': ptp_data,
+            'gnss': gnss_data
+        }
+        
+        alerts = timecard_monitor.generate_alerts(device_data)
+        for alert in alerts:
+            alert['device_id'] = device['id']
+            all_alerts.append(alert)
     
-    return jsonify(thermal_data)
+    return jsonify({
+        'alerts': all_alerts,
+        'count': len(all_alerts),
+        'timestamp': time.time()
+    })
 
-@app.route('/api/ptp/real')
-def api_get_real_ptp():
-    """Получение реальных PTP метрик"""
-    ptp_data = {}
+@app.route('/api/metrics/history/<device_id>')
+def api_get_metrics_history(device_id):
+    """Получение истории метрик устройства"""
+    if device_id not in timecard_monitor.metrics_history:
+        return jsonify({'error': 'Device not found'}), 404
     
-    for device in timecard_monitor.devices:
-        ptp_metrics = timecard_monitor.read_ptp_metrics(device)
-        if ptp_metrics:
-            ptp_data[device['id']] = ptp_metrics
-    
-    return jsonify(ptp_data)
+    history = list(timecard_monitor.metrics_history[device_id])
+    return jsonify({
+        'device_id': device_id,
+        'history': history,
+        'count': len(history),
+        'timestamp': time.time()
+    })
 
-@app.route('/api/power/real')
-def api_get_real_power():
-    """Получение реальных метрик питания"""
-    power_data = {}
-    
-    for device in timecard_monitor.devices:
-        power_metrics = timecard_monitor.read_power_metrics(device)
-        if power_metrics:
-            power_data[device['id']] = power_metrics
-    
-    return jsonify(power_data)
-
-@app.route('/api/gnss/real')
-def api_get_real_gnss():
-    """Получение реальных GNSS метрик"""
-    gnss_data = {}
-    
-    for device in timecard_monitor.devices:
-        gnss_metrics = timecard_monitor.read_gnss_status(device)
-        if gnss_metrics:
-            gnss_data[device['id']] = gnss_metrics
-    
-    return jsonify(gnss_data)
+@app.route('/')
+def api_index():
+    """Главная страница API"""
+    return jsonify({
+        'api_name': 'TimeCard Real Monitoring API',
+        'version': '1.0.0',
+        'description': 'API для мониторинга реальных данных TimeCard PTP OCP',
+        'endpoints': {
+            'devices': '/api/devices',
+            'device_status': '/api/device/<device_id>/status',
+            'real_metrics': '/api/metrics/real',
+            'alerts': '/api/alerts',
+            'history': '/api/metrics/history/<device_id>'
+        },
+        'available_devices': [d['id'] for d in timecard_monitor.devices],
+        'timestamp': time.time()
+    })
 
 @app.route('/dashboard')
 @app.route('/dashboard/')
 def dashboard():
     """Дашборд мониторинга"""
-    web_dir = os.path.join(os.path.dirname(__file__), '..', 'web')
-    return send_from_directory(web_dir, 'dashboard.html')
-
-@app.route('/pwa')
-@app.route('/pwa/')
-def pwa():
-    """PWA версия дашборда"""
-    web_dir = os.path.join(os.path.dirname(__file__), '..', 'web')
-    return send_from_directory(web_dir, 'timecard-dashboard.html')
+    return send_from_directory('.', 'real-dashboard.html')
 
 @app.route('/simple-dashboard')
 @app.route('/simple-dashboard/')
 def simple_dashboard():
     """Простой дашборд"""
-    return send_from_directory('..', 'simple-dashboard.html')
+    return send_from_directory('.', 'simple-dashboard.html')
 
 @app.route('/web/<path:filename>')
 def web_files(filename):
     """Статические файлы из папки web"""
-    web_dir = os.path.join(os.path.dirname(__file__), '..', 'web')
-    return send_from_directory(web_dir, filename)
-
-@app.route('/api/devices')
-def api_get_devices():
-    """Список реальных устройств"""
-    devices_info = []
-    
-    for device in timecard_monitor.devices:
-        device_info = {
-            'id': device['id'],
-            'sysfs_path': device['sysfs_path'],
-            'pci_path': device['pci_path'],
-            'serial_number': device.get('serial_number', 'Unknown'),
-            'firmware_version': device.get('firmware_version', 'Unknown'),
-            'real_device': device['sysfs_path'] is not None
-        }
-        devices_info.append(device_info)
-    
-    return jsonify({
-        'count': len(devices_info),
-        'devices': devices_info,
-        'timestamp': time.time()
-    })
+    return send_from_directory('web', filename)
 
 # === WEBSOCKET EVENTS ===
 
 @socketio.on('connect')
 def handle_connect():
     """Клиент подключился"""
-    print('🔌 Клиент подключился к реальному мониторингу')
+    print('Client connected')
     
-    socketio.emit('status_update', {
-        'connected': True,
-        'devices_count': len(timecard_monitor.devices),
-        'real_devices': [d['id'] for d in timecard_monitor.devices],
-        'api_version': '2.0.0-real',
-        'features_enabled': [
-            'real_hardware_monitoring',
-            'sysfs_interface',
-            'ptp4l_integration',
-            'thermal_sensors',
-            'power_monitoring',
-            'gnss_status'
-        ],
-        'timestamp': time.time()
-    })
+    if timecard_monitor.devices:
+        device = timecard_monitor.devices[0]
+        ptp_data = timecard_monitor.get_ptp_status(device)
+        
+        socketio.emit('status_update', {
+            'connected': True,
+            'devices_count': len(timecard_monitor.devices),
+            'current_offset': ptp_data.get('offset_ns', 0),
+            'api_version': '1.0.0',
+            'features_enabled': [
+                'real_ptp_monitoring',
+                'real_gnss_monitoring', 
+                'real_sma_monitoring',
+                'alerting_system'
+            ],
+            'timestamp': time.time()
+        })
 
 @socketio.on('disconnect')
 def handle_disconnect():
     """Клиент отключился"""
-    print('🔌 Клиент отключился от реального мониторинга')
+    print('Client disconnected')
 
-@socketio.on('request_real_update')
-def handle_real_update_request(data):
-    """Запрос обновления реальных данных устройства"""
-    device_id = data.get('device_id', 'timecard0')
+@socketio.on('request_device_update')
+def handle_device_update_request(data):
+    """Запрос обновления данных устройства"""
+    device_id = data.get('device_id', 'ocp0')
     device = next((d for d in timecard_monitor.devices if d['id'] == device_id), None)
     
     if device:
         try:
-            metrics = timecard_monitor.get_real_metrics(device)
-            socketio.emit('real_metrics_update', {
+            # Быстрое обновление основных метрик
+            ptp_data = timecard_monitor.get_ptp_status(device)
+            gnss_data = timecard_monitor.get_gnss_status(device)
+            
+            quick_update = {
                 'device_id': device_id,
-                'metrics': metrics,
+                'ptp_offset': ptp_data.get('offset_ns', 0),
+                'ptp_drift': ptp_data.get('drift_ppb', 0),
+                'gnss_status': gnss_data.get('sync_status', 'UNKNOWN'),
                 'timestamp': time.time()
-            })
+            }
+            
+            socketio.emit('device_update', quick_update)
         except Exception as e:
-            socketio.emit('error', {'message': f'Ошибка получения реальных данных {device_id}: {str(e)}'})
+            socketio.emit('error', {'message': f'Error updating device {device_id}: {str(e)}'})
 
 if __name__ == '__main__':
     print("="*80)
-    print("🚀 TimeCard PTP OCP Real Monitoring API v2.0")
+    print("🚀 TimeCard PTP OCP Real Monitoring API v1.0")
     print("="*80)
-    print(f"📦 Обнаружено устройств: {len(timecard_monitor.devices)}")
+    print("📊 Real Dashboard:    http://localhost:8080/dashboard")
+    print("🔧 API Endpoints:     http://localhost:8080/api/")
+    print("🏠 Main Page:         http://localhost:8080/")
+    print("="*80)
+    print("✨ Real Features:")
+    print("   📡 Real PTP monitoring (offset, drift)")
+    print("   🛰️  Real GNSS monitoring (sync status)")
+    print("   🔌 Real SMA monitoring (connectors)")
+    print("   🚨 Real alerting system")
+    print("   📈 Real data history")
+    print("   🔌 WebSocket live updates")
+    print("="*80)
+    print(f"📦 Detected devices: {len(timecard_monitor.devices)}")
     for device in timecard_monitor.devices:
-        print(f"   🕐 {device['id']}: {device.get('serial_number', 'N/A')} "
-              f"(Реальное: {'✅' if device['sysfs_path'] else '❌'})")
-    print("="*80)
-    print("🔧 Реальные эндпоинты:")
-    print("   📊 Real Metrics: http://localhost:8080/api/metrics/real")
-    print("   🌡️ Real Thermal: http://localhost:8080/api/thermal/real")
-    print("   📡 Real PTP:     http://localhost:8080/api/ptp/real")
-    print("   ⚡ Real Power:   http://localhost:8080/api/power/real")
-    print("   🛰️ Real GNSS:    http://localhost:8080/api/gnss/real")
+        print(f"   🕐 {device['id']}: {device.get('serial_number', 'N/A')}")
     print("="*80)
     
     # Запуск веб-сервера

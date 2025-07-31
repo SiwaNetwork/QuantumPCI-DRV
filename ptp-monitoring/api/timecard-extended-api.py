@@ -1036,13 +1036,13 @@ def api_index():
 @app.route('/dashboard/')
 def dashboard():
     """Дашборд мониторинга"""
-    return send_from_directory('web', 'dashboard.html')
+    return send_from_directory('.', 'dashboard.html')
 
 @app.route('/pwa')
 @app.route('/pwa/')
 def pwa():
     """PWA версия дашборда"""
-    return send_from_directory('web', 'timecard-dashboard.html')
+    return send_from_directory('.', 'timecard-dashboard.html')
 
 @app.route('/simple-dashboard')
 @app.route('/simple-dashboard/')
@@ -1053,7 +1053,7 @@ def simple_dashboard():
 @app.route('/web/<path:filename>')
 def web_files(filename):
     """Статические файлы из папки web"""
-    return send_from_directory('web', filename)
+    return send_from_directory('.', filename)
 
 # === WEBSOCKET EVENTS ===
 
