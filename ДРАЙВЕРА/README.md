@@ -5,8 +5,7 @@
 ## Поддерживаемые устройства
 
 - Quantum-PCI TimeCard (PCI ID: 0x1d9b:0x0400)
-- Art Card (PCI ID: 0x1d9b:0x0410)
-- Orolia ART Card (PCI ID: 0x2ab9:0x0400)
+- Orolia ART Card (PCI ID: 0x1ad7:0xa000)
 - ADVA Timecard (PCI ID: 0x0b0b:0x0410)
 
 Для добавления поддержки новых устройств см. [ДОБАВЛЕНИЕ_НОВЫХ_УСТРОЙСТВ.md](ДОБАВЛЕНИЕ_НОВЫХ_УСТРОЙСТВ.md)
@@ -52,16 +51,16 @@ lrwxrwxrwx. 1 root    0 Sep  8 18:20 device -> ../../../0000:02:00.0
 -r--r--r--. 1 root 4096 Sep  8 18:20 gnss_sync
 -rw-r--r--. 1 root 4096 Sep  8 18:20 internal_pps_cable_delay
 -rw-r--r--. 1 root 4096 Sep  8 18:20 irig_b_mode
--rw-r--r--. 1 root 4096 Sep  8 18:20 pci_delay
 drwxr-xr-x. 2 root    0 Sep  8 18:20 power
 lrwxrwxrwx. 1 root    0 Sep  8 18:20 ptp -> ../../ptp/ptp4
 -r--r--r--. 1 root 4096 Sep  8 18:20 serialnum
--rw-r--r--. 1 root 4096 Sep  8 18:20 sma1_in
--rw-r--r--. 1 root 4096 Sep  8 18:20 sma2_in
--rw-r--r--. 1 root 4096 Sep  8 21:04 sma3_out
--rw-r--r--. 1 root 4096 Sep  8 21:04 sma4_out
+-rw-r--r--. 1 root 4096 Sep  8 18:20 sma1
+-rw-r--r--. 1 root 4096 Sep  8 18:20 sma2
+-rw-r--r--. 1 root 4096 Sep  8 21:04 sma3
+-rw-r--r--. 1 root 4096 Sep  8 21:04 sma4
 lrwxrwxrwx. 1 root    0 Sep  8 18:20 subsystem -> ../../../../../../class/timecard
 lrwxrwxrwx. 1 root    0 Sep  8 18:20 ttyGNSS -> ../../tty/ttyS5
+lrwxrwxrwx. 1 root    0 Sep  8 18:20 ttyGNSS2 -> ../../tty/ttyS?
 lrwxrwxrwx. 1 root    0 Sep  8 18:20 ttyMAC -> ../../tty/ttyS6
 lrwxrwxrwx. 1 root    0 Sep  8 18:20 ttyNMEA -> ../../tty/ttyS7
 -rw-r--r--. 1 root 4096 Sep  8 18:20 uevent
@@ -80,7 +79,8 @@ lrwxrwxrwx. 1 root    0 Sep  8 18:20 ttyNMEA -> ../../tty/ttyS7
 
 После успешной загрузки драйвера появятся:
 * PTP POSIX clock, связанный с физическим аппаратным часами (PHC) на Qantum Card  (`/dev/ptp4`) 
-* GNSS serial `/dev/ttyS5` 
+* GNSS serial `/dev/ttyS5`
+* GNSS2 serial `/dev/ttyS?` (если поддерживается)
 * Atomic clock serial `/dev/ttyS6`
 * NMEA Master serial `/dev/ttyS7`
 * i2c (`/dev/i2c-*`) device
