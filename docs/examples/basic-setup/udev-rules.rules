@@ -2,7 +2,6 @@
 # Сохраните этот файл как /etc/udev/rules.d/99-ptp-ocp.rules
 
 # PTP OCP устройства
-SUBSYSTEM=="ptp", ATTRS{idVendor}=="1d9b", GROUP="dialout", MODE="0664", TAG+="systemd"
 SUBSYSTEM=="ptp", GROUP="dialout", MODE="0664", TAG+="systemd"
 
 # Общие правила для PTP устройств

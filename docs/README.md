@@ -242,8 +242,8 @@ sudo diagnose-timecard
 ## Дополнительные ресурсы
 
 - [Основная документация драйвера](../ДРАЙВЕРА/) - Исходная документация и код
-- [LinuxPTP Documentation](../LinuxPTP_Documentation.md) - Документация LinuxPTP
-- [Chrony Documentation](../Chrony_Documentation.md) - Документация Chrony
+- [LinuxPTP Guide](guides/linuxptp-guide.md) - Документация LinuxPTP
+- [Chrony Guide](guides/chrony-guide.md) - Документация Chrony
 - [Веб-мониторинг](../ptp-monitoring/) - Система веб-мониторинга
 
 ## Обратная связь

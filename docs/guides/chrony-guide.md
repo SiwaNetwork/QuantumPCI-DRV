@@ -187,7 +187,7 @@ refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0
 # /etc/chrony/chrony.conf
 
 # TimeCard PHC как основной источник
-refclock PHC /dev/ptp_ocp poll 0 dpoll -2 offset 0 stratum 1 prefer
+refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0 stratum 1 prefer
 
 # Резервные NTP серверы
 server 0.pool.ntp.org iburst
@@ -737,7 +737,7 @@ sudo chronyd -d -l /tmp/chronyd.debug
 # /etc/chrony/chrony.conf
 
 # TimeCard как основной источник времени
-refclock PHC /dev/ptp_ocp poll 0 dpoll -2 offset 0 stratum 0 precision 1e-9 prefer trust
+refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0 stratum 0 precision 1e-9 prefer trust
 
 # Дополнительные источники для резервирования
 server 0.pool.ntp.org iburst
@@ -769,7 +769,7 @@ local stratum 1
 echo "=== TimeCard + Chrony Integration Check ==="
 
 # Проверка TimeCard
-if [ -c /dev/ptp_ocp ]; then
+if [ -c /dev/ptp0 ]; then
     echo "✓ TimeCard устройство найдено"
     
     # Проверка sysfs

@@ -125,7 +125,7 @@ sudo apt-get install linuxptp  # Ubuntu/Debian
 sudo yum install linuxptp      # CentOS/RHEL
 
 # Запуск PTP master (используя переменную PTP_DEV из предыдущего раздела)
-sudo ptp4l -i eth0 -m -s /dev/$PTP_DEV
+sudo ptp4l -i eth0 -m -p /dev/$PTP_DEV
 
 # В другом терминале - синхронизация системного времени
 sudo phc2sys -s /dev/$PTP_DEV -m

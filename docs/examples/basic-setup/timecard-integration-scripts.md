@@ -43,7 +43,7 @@ fi
 log "Ожидание синхронизации GNSS (максимум 5 минут)..."
 timeout=300
 while [ $timeout -gt 0 ]; do
-    if [ -f "$TIMECARD_DEV/gnss_sync" ] && [ "$(cat $TIMECARD_DEV/gnss_sync)" = "1" ]; then
+    if [ -f "$TIMECARD_DEV/gnss_sync" ] && [ "$(cat $TIMECARD_DEV/gnss_sync)" = "locked" ]; then
         log "✓ GNSS синхронизация установлена"
         break
     fi
@@ -116,7 +116,7 @@ echo "=== Настройка SMA выходов ==="
 configure_sma_output 1 "pps" "1000000000"
 
 # SMA2: 10MHz опорная частота  
-configure_sma_output 2 "10mhz" "100"
+configure_sma_output 2 "10MHz" "100"
 
 # SMA3: SMPTE timecode для вещания
 configure_sma_output 3 "smpte" "" "25fps"
@@ -552,7 +552,7 @@ done
 
 echo ""
 echo "7. Рекомендации..."
-if [ -f "$TIMECARD_DEV/gnss_sync" ] && [ "$(cat $TIMECARD_DEV/gnss_sync)" != "1" ]; then
+if [ -f "$TIMECARD_DEV/gnss_sync" ] && [ "$(cat $TIMECARD_DEV/gnss_sync)" != "locked" ]; then
     echo "• Дождитесь синхронизации GNSS (может занять до 15 минут)"
 fi
 

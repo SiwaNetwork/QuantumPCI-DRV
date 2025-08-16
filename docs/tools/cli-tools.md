@@ -172,8 +172,8 @@ sudo ptp4l -f /etc/ptp4l.conf -m
 # Запуск в slave режиме
 sudo ptp4l -i eth0 -s -m
 
-# Запуск с hardware timestamping
-sudo ptp4l -i eth0 -m -s /dev/ptp0
+# Запуск с hardware timestamping и явным выбором PHC
+sudo ptp4l -i eth0 -m -p /dev/ptp0
 
 # Запуск с Layer 2 transport
 sudo ptp4l -i eth0 -2 -m

@@ -77,8 +77,8 @@ sudo ptp4l -i eth0 -m
 # Принудительный режим слейва
 sudo ptp4l -i eth0 -s -m
 
-# Принудительный режим мастера
-sudo ptp4l -i eth0 -m --masterOnly
+# Принудительный режим мастера (через конфигурационный файл)
+sudo ptp4l -i eth0 -f /etc/ptp4l-master.conf -m
 ```
 
 #### 2. Граничные часы (Boundary Clock)
@@ -354,8 +354,8 @@ masterOnly                        1
 
 **На сервере (Master):**
 ```bash
-# Запуск ptp4l в режиме мастера
-sudo ptp4l -i eth0 --masterOnly -m &
+# Запуск ptp4l в режиме мастера (через конфигурационный файл)
+sudo ptp4l -i eth0 -f /etc/ptp4l-master.conf -m &
 
 # Синхронизация системных часов с PHC
 sudo phc2sys -s eth0 -w -m &
