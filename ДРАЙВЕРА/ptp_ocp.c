@@ -2311,17 +2311,21 @@ ptp_ocp_devlink_info_get(struct devlink *devlink, struct devlink_info_req *req,
 	return 0;
 }
 
+/* devlink param callbacks forward declarations */
+static int ptp_ocp_devlink_param_get(struct devlink *devlink, u32 id, struct devlink_param_gset_ctx *ctx);
+static int ptp_ocp_devlink_param_set(struct devlink *devlink, u32 id, struct devlink_param_gset_ctx *ctx, struct netlink_ext_ack *extack);
+
 static const struct devlink_ops ptp_ocp_devlink_ops = {
 	.flash_update = ptp_ocp_devlink_flash_update,
 	.info_get = ptp_ocp_devlink_info_get,
+	.param_get = ptp_ocp_devlink_param_get,
+	.param_set = ptp_ocp_devlink_param_set,
 };
 
 static void __iomem *
 __ptp_ocp_get_mem(struct ptp_ocp *bp, resource_size_t start, int size)
 {
-	struct resource res = DEFINE_RES_MEM_NAMED(start, size, "ptp_ocp");
-
-	return devm_ioremap_resource(&bp->pdev->dev, &res);
+	return devm_ioremap(&bp->pdev->dev, start, size);
 }
 
 static void __iomem *
@@ -5623,10 +5627,17 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto out_free;
 	}
 
+	/* Reserve BAR regions explicitly before sub-region mappings */
+	err = pci_request_mem_regions(pdev, KBUILD_MODNAME);
+	if (err) {
+		dev_err(&pdev->dev, "pci_request_mem_regions failed: %d\n", err);
+		goto out_disable;
+	}
+
 	bp = devlink_priv(devlink);
 	err = ptp_ocp_device_init(bp, pdev);
 	if (err)
-		goto out_disable;
+		goto out_release;
 
 	/* compat mode.
 	 * Older FPGA firmware only returns 2 irq's.
@@ -5636,7 +5647,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	err = pci_alloc_irq_vectors(pdev, 1, 64, PCI_IRQ_MSI | PCI_IRQ_MSIX);
 	if (err < 0) {
 		dev_err(&pdev->dev, "ошибка alloc_irq_vectors: %d\n", err);
-		goto out;
+		goto out_release;
 	} else {
 		dev_info(&pdev->dev, "Информация MSI/MSI-X: %d\n", err);
 	}
@@ -5646,30 +5657,37 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	err = ptp_ocp_register_resources(bp, id->driver_data);
 	if (err)
-		goto out;
+		goto out_release;
 
 	bp->ptp = ptp_clock_register(&bp->ptp_info, &pdev->dev);
 	if (IS_ERR(bp->ptp)) {
 		err = PTR_ERR(bp->ptp);
 		dev_err(&pdev->dev, "ошибка ptp_clock_register: %d\n", err);
 		bp->ptp = NULL;
-		goto out;
+		goto out_release;
 	}
 
 	err = ptp_ocp_complete(bp);
 	if (err)
-		goto out;
+		goto out_release;
 
 	if (bp->ptm) {
 		err = pci_enable_ptm(bp->pdev, NULL);
 		if (err)
-			goto out;
+			goto out_release;
 		ptp_ocp_disable_ptm(bp);
 		ptp_ocp_enable_ptm(bp);
 	} else {
 		bp->ptp_info.getcrosststamp = NULL;
 	}
 	ptp_ocp_info(bp);
+
+	/* Register devlink params */
+	err = devlink_params_register(devlink, ptp_ocp_devlink_params,
+					ARRAY_SIZE(ptp_ocp_devlink_params));
+	if (err)
+		dev_warn(&pdev->dev, "devlink params register failed: %d\n", err);
+
 	ptp_ocp_devlink_register(devlink, &pdev->dev);
 
 	if(bp->pdev->msix_enabled) {
@@ -5683,11 +5701,18 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 out:
 	ptp_ocp_detach(bp);
 	pci_set_drvdata(pdev, NULL);
+	pci_release_mem_regions(pdev);
 out_disable:
 	pci_disable_device(pdev);
 out_free:
 	devlink_free(devlink);
 	return err;
+
+out_release:
+	ptp_ocp_detach(bp);
+	pci_set_drvdata(pdev, NULL);
+	pci_release_mem_regions(pdev);
+	goto out_disable;
 }
 
 static void
@@ -5696,9 +5721,12 @@ ptp_ocp_remove(struct pci_dev *pdev)
 	struct ptp_ocp *bp = pci_get_drvdata(pdev);
 	struct devlink *devlink = priv_to_devlink(bp);
 
+	devlink_params_unregister(devlink, ptp_ocp_devlink_params,
+				   ARRAY_SIZE(ptp_ocp_devlink_params));
 	devlink_unregister(devlink);
 	ptp_ocp_detach(bp);
 	pci_set_drvdata(pdev, NULL);
+	pci_release_mem_regions(pdev);
 	pci_disable_device(pdev);
 
 	devlink_free(devlink);
@@ -5802,4 +5830,68 @@ module_init(ptp_ocp_init);
 module_exit(ptp_ocp_fini);
 
 MODULE_DESCRIPTION("OpenCompute TimeCard driver");
+
+enum ptp_ocp_devlink_param_id {
+	PTP_OCP_DEVLINK_PARAM_TS_WINDOW_ADJUST,
+	PTP_OCP_DEVLINK_PARAM_CLOCK_SOURCE,
+};
+
+static const struct devlink_param ptp_ocp_devlink_params[] = {
+	{
+		.id = PTP_OCP_DEVLINK_PARAM_TS_WINDOW_ADJUST,
+		.name = "ts_window_adjust",
+		.type = DEVLINK_PARAM_TYPE_U32,
+		.supported_cmodes = BIT(DEVLINK_PARAM_CMODE_RUNTIME),
+	},
+	{
+		.id = PTP_OCP_DEVLINK_PARAM_CLOCK_SOURCE,
+		.name = "clock_source",
+		.type = DEVLINK_PARAM_TYPE_U32,
+		.supported_cmodes = BIT(DEVLINK_PARAM_CMODE_RUNTIME),
+	},
+};
+
+static int
+ptp_ocp_devlink_param_get(struct devlink *devlink, u32 id,
+			       struct devlink_param_gset_ctx *ctx)
+{
+	struct ptp_ocp *bp = devlink_priv(devlink);
+
+	switch (id) {
+	case PTP_OCP_DEVLINK_PARAM_TS_WINDOW_ADJUST:
+		ctx->val.vu32 = bp->ts_window_adjust;
+		break;
+	case PTP_OCP_DEVLINK_PARAM_CLOCK_SOURCE:
+		ctx->val.vu32 = ioread32(&bp->reg->select) >> 16;
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+	ctx->cmode = DEVLINK_PARAM_CMODE_RUNTIME;
+	return 0;
+}
+
+static int
+ptp_ocp_devlink_param_set(struct devlink *devlink, u32 id,
+			       struct devlink_param_gset_ctx *ctx,
+			       struct netlink_ext_ack *extack)
+{
+	struct ptp_ocp *bp = devlink_priv(devlink);
+
+	switch (id) {
+	case PTP_OCP_DEVLINK_PARAM_TS_WINDOW_ADJUST:
+		bp->ts_window_adjust = ctx->val.vu32;
+		return 0;
+	case PTP_OCP_DEVLINK_PARAM_CLOCK_SOURCE: {
+		unsigned long flags;
+		u32 val = ctx->val.vu32;
+		spin_lock_irqsave(&bp->lock, flags);
+		iowrite32(val, &bp->reg->select);
+		spin_unlock_irqrestore(&bp->lock, flags);
+		return 0;
+	}
+	default:
+		return -EOPNOTSUPP;
+	}
+}
 
