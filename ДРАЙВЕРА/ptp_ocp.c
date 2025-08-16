@@ -22,6 +22,7 @@
 #include <linux/version.h>
 #include <linux/crc16.h>
 #include <linux/timekeeping.h>
+#include <linux/workqueue.h>
 
 /*---------------------------------------------------------------------------*/
 #ifndef MRO50_IOCTL_H
@@ -427,6 +428,9 @@ struct ptp_ocp {
 	struct platform_device	*spi_flash;
 	struct clk_hw		*i2c_clk;
 	struct timer_list	watchdog;
+	struct i2c_client	*led_client;
+	struct delayed_work	led_work;
+	bool			led_initialized;
 	const struct ocp_attr_group *attr_tbl;
 	const struct ptp_ocp_eeprom_map *eeprom_map;
 	struct dentry		*debug_root;
@@ -1889,6 +1893,105 @@ ptp_ocp_watchdog(struct timer_list *t)
 	}
 
 	mod_timer(&bp->watchdog, jiffies + HZ);
+}
+
+/* LED control via I2C IS32FL3207 */
+#define TC_LED_I2C_ADDR		0x37
+#define TC_LED_REG_UPDATE	0x49
+#define TC_LED_REG_GLOBAL_CURRENT	0x6E
+#define TC_LED_REG_SCALING_START	0x4A
+#define TC_LED_NUM_CHANNELS	18
+
+static const u8 tc_led_register_map[6] = { 0x01, 0x07, 0x03, 0x09, 0x05, 0x0B };
+
+static int ptp_ocp_led_write_reg(struct ptp_ocp *bp, u8 reg, u8 val)
+{
+	if (!bp->led_client)
+		return -ENODEV;
+	return i2c_smbus_write_byte_data(bp->led_client, reg, val);
+}
+
+static void ptp_ocp_led_hw_init(struct ptp_ocp *bp)
+{
+	int i;
+	if (!bp->led_client)
+		return;
+	/* Включение чипа */
+	ptp_ocp_led_write_reg(bp, 0x00, 0x01);
+	/* Глобальный ток */
+	ptp_ocp_led_write_reg(bp, TC_LED_REG_GLOBAL_CURRENT, 0xFF);
+	/* Scaling для всех каналов */
+	for (i = 0; i < TC_LED_NUM_CHANNELS; i++)
+		ptp_ocp_led_write_reg(bp, TC_LED_REG_SCALING_START + i, 0xFF);
+	/* Обновить регистры */
+	ptp_ocp_led_write_reg(bp, TC_LED_REG_UPDATE, 0x00);
+	bp->led_initialized = true;
+}
+
+static void ptp_ocp_led_set_brightness(struct ptp_ocp *bp, int led_index, u8 brightness)
+{
+	u8 reg;
+	if (led_index < 0 || led_index >= ARRAY_SIZE(tc_led_register_map))
+		return;
+	if (!bp->led_client)
+		return;
+	reg = tc_led_register_map[led_index];
+	ptp_ocp_led_write_reg(bp, reg, brightness);
+}
+
+static void ptp_ocp_led_update_work(struct work_struct *work)
+{
+	struct ptp_ocp *bp = container_of(to_delayed_work(work), struct ptp_ocp, led_work);
+	u32 status = 0;
+	bool in_sync = false;
+	bool in_holdover = false;
+	bool sma3_out = false, sma4_out = false;
+	u8 off = 0x00, green = 0xFF, purple = 0x80, yellow = 0xC0, red = 0xFF;
+
+	if (!bp->led_client)
+		goto out_resched;
+
+	if (!bp->led_initialized)
+		ptp_ocp_led_hw_init(bp);
+
+	status = ioread32(&bp->reg->status);
+	in_sync = !!(status & OCP_STATUS_IN_SYNC);
+	in_holdover = !!(status & OCP_STATUS_IN_HOLDOVER);
+	/* SMA3/4 считаются надёжными, если они выходы и не отключены */
+	sma3_out = (bp->sma[2].mode == SMA_MODE_OUT) && !bp->sma[2].disabled;
+	sma4_out = (bp->sma[3].mode == SMA_MODE_OUT) && !bp->sma[3].disabled;
+
+	/* LED 0: GNSS Sync (Power) */
+	ptp_ocp_led_set_brightness(bp, 0, in_sync ? green : red);
+	/* LED 1: Holdover (Sync) */
+	ptp_ocp_led_set_brightness(bp, 1, in_holdover ? purple : off);
+	/* LED 2: SMA3 (GNSS) */
+	ptp_ocp_led_set_brightness(bp, 2, (in_sync && sma3_out) ? green : red);
+	/* LED 3: SMA4 (Alarm) */
+	ptp_ocp_led_set_brightness(bp, 3, (in_sync && sma4_out) ? green : red);
+	/* LED 4: Clock source/status1 */
+	ptp_ocp_led_set_brightness(bp, 4, in_holdover ? purple : (in_sync ? green : yellow));
+	/* LED 5: System status */
+	ptp_ocp_led_set_brightness(bp, 5, (in_sync && !in_holdover) ? green : yellow);
+	/* Латч обновления */
+	ptp_ocp_led_write_reg(bp, TC_LED_REG_UPDATE, 0x00);
+
+out_resched:
+	schedule_delayed_work(&bp->led_work, msecs_to_jiffies(1000));
+}
+
+static void ptp_ocp_led_start(struct ptp_ocp *bp)
+{
+	if (!bp->led_client)
+		return;
+	INIT_DELAYED_WORK(&bp->led_work, ptp_ocp_led_update_work);
+	schedule_delayed_work(&bp->led_work, 0);
+}
+
+static void ptp_ocp_led_stop(struct ptp_ocp *bp)
+{
+	cancel_delayed_work_sync(&bp->led_work);
+	bp->led_initialized = false;
 }
 
 static void
@@ -5567,6 +5670,11 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		platform_device_unregister(bp->i2c_ctrl);
 	if (bp->i2c_mac)
 		platform_device_unregister(bp->i2c_mac);
+	if (bp->led_client) {
+		ptp_ocp_led_stop(bp);
+		i2c_unregister_device(bp->led_client);
+		bp->led_client = NULL;
+	}
 	if (bp->i2c_clk)
 		clk_hw_unregister_fixed_rate(bp->i2c_clk);
 	if (bp->mro50.name)
@@ -5770,9 +5878,35 @@ found:
 	if (add) {
 		if (bp->i2c_count++ == 0)
 			ptp_ocp_symlink(bp, child, "i2c");
+		/* Создать I2C клиент LED, если доступен */
+		if (!bp->led_client) {
+			struct i2c_adapter *adap = i2c_verify_adapter(child);
+			if (adap) {
+				struct i2c_client *cli = i2c_new_dummy_device(adap, TC_LED_I2C_ADDR);
+				if (!IS_ERR(cli)) {
+					/* Проверим, что чип действительно отвечает */
+					int rc = i2c_smbus_read_byte_data(cli, TC_LED_REG_GLOBAL_CURRENT);
+					if (rc >= 0) {
+						bp->led_client = cli;
+						ptp_ocp_led_start(bp);
+					} else {
+						i2c_unregister_device(cli);
+					}
+				}
+			}
+		}
 	} else {
 		if (--bp->i2c_count == 0)
 			sysfs_remove_link(&bp->dev.kobj, "i2c");
+		/* Остановить и удалить I2C LED клиента, только если это тот же адаптер */
+		if (bp->led_client) {
+			struct device *led_adap_dev = bp->led_client->adapter ? &bp->led_client->adapter->dev : NULL;
+			if (led_adap_dev == child) {
+				ptp_ocp_led_stop(bp);
+				i2c_unregister_device(bp->led_client);
+				bp->led_client = NULL;
+			}
+		}
 	}
 
 	return 0;
