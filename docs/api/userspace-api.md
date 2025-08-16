@@ -102,7 +102,7 @@ ioctl(fd, PTP_CLOCK_ADJFREQ, &ppb);
 Демон PTP версии 4:
 
 ```bash
-ptp4l -i eth0 -m -s /dev/ptp0
+ptp4l -i eth0 -m -p /dev/ptp0
 ```
 
 ### phc2sys

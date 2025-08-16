@@ -166,7 +166,7 @@ echo "GNSS" > $TIMECARD_DEV/clock_source
 
 # Ожидание синхронизации GNSS
 echo "Ожидание синхронизации GNSS..."
-while [ "$(cat $TIMECARD_DEV/gnss_sync)" != "1" ]; do
+while [ "$(cat $TIMECARD_DEV/gnss_sync)" != "locked" ]; do
     sleep 5
     echo -n "."
 done
@@ -174,7 +174,7 @@ echo " Синхронизация GNSS установлена"
 
 # Настройка SMA выходов
 echo "PPS" > $TIMECARD_DEV/sma1_out
-echo "10MHZ" > $TIMECARD_DEV/sma2_out
+echo "10MHz" > $TIMECARD_DEV/sma2_out
 
 # Установка начального времени в PHC
 TIMECARD_TIME=$(cat $TIMECARD_DEV/time_ns)
@@ -636,7 +636,7 @@ configure_sma() {
 configure_sma 1 "pps" "1000000000"
 
 # SMA2: 10MHz опорная частота  
-configure_sma 2 "10mhz" "100"
+configure_sma 2 "10MHz" "100"
 
 # SMA3: SMPTE timecode 25fps
 configure_sma 3 "smpte" "" "echo '25fps' > $TIMECARD_DEV/sma3_smpte_format"
@@ -858,12 +858,12 @@ init_timecard() {
     
     # Ожидание синхронизации
     timeout=300  # 5 минут
-    while [ $timeout -gt 0 ] && [ "$(cat $TIMECARD_DEV/gnss_sync)" != "1" ]; do
+    while [ $timeout -gt 0 ] && [ "$(cat $TIMECARD_DEV/gnss_sync)" != "locked" ]; do
         sleep 1
         timeout=$((timeout - 1))
     done
     
-    if [ "$(cat $TIMECARD_DEV/gnss_sync)" = "1" ]; then
+    if [ "$(cat $TIMECARD_DEV/gnss_sync)" = "locked" ]; then
         log "GNSS синхронизация установлена"
     else
         log "ПРЕДУПРЕЖДЕНИЕ: GNSS синхронизация не установлена"

@@ -211,7 +211,6 @@ sudo dkms install -m ptp-ocp -v 1.0
 # Создание правил для устройств PTP
 sudo tee /etc/udev/rules.d/99-ptp-ocp.rules << EOF
 # PTP OCP device rules
-SUBSYSTEM=="ptp", ATTRS{idVendor}=="1d9b", GROUP="dialout", MODE="0664"
 SUBSYSTEM=="ptp", GROUP="dialout", MODE="0664"
 KERNEL=="ptp[0-9]*", GROUP="dialout", MODE="0664"
 EOF
