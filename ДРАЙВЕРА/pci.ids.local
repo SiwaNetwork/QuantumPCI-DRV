@@ -1,0 +1,6 @@
+# Локальная база данных PCI ID для Quantum Platforms, Inc.
+# Этот файл должен быть помещен в /usr/share/misc/pci.ids.local
+# или добавлен в основной файл /usr/share/misc/pci.ids
+
+1d9c  Quantum Platforms, Inc.
+        0400  TimeCard 

@@ -54,6 +54,15 @@
 #define PCI_DEVICE_ID_QUANTUM_PCI_TIMECARD 0x0400
 #endif
 
+/* Добавляем новое определение для Quantum Platforms, Inc. */
+#ifndef PCI_VENDOR_ID_QUANTUM_PLATFORMS
+#define PCI_VENDOR_ID_QUANTUM_PLATFORMS 0x1d9c
+#endif
+
+#ifndef PCI_DEVICE_ID_QUANTUM_PLATFORMS_TIMECARD
+#define PCI_DEVICE_ID_QUANTUM_PLATFORMS_TIMECARD 0x0400
+#endif
+
 #ifndef PCI_VENDOR_ID_ADVA
 #define PCI_VENDOR_ID_ADVA 0x0b0b
 #endif
@@ -1253,6 +1262,7 @@ static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 	{ PCI_DEVICE_DATA(QUANTUM_PCI, TIMECARD, &ocp_quantum_pci_driver_data) },
 	{ PCI_DEVICE_DATA(ADVA, TIMECARD, &ocp_adva_driver_data) },
 	{ PCI_DEVICE_DATA(OROLIA, ARTCARD, &ocp_art_driver_data) },
+	{ PCI_DEVICE_DATA(QUANTUM_PLATFORMS, TIMECARD, &ocp_quantum_pci_driver_data) },
 	{ }
 };
 MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
