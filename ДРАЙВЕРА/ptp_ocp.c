@@ -23,6 +23,7 @@
 #include <linux/crc16.h>
 #include <linux/timekeeping.h>
 #include <linux/workqueue.h>
+#include <asm/tsc.h>
 
 /*---------------------------------------------------------------------------*/
 #ifndef MRO50_IOCTL_H
@@ -1060,6 +1061,14 @@ static struct ocp_driver_data ocp_quantum_pci_driver_data[] = {
 	{ }
 };
 
+static struct ocp_driver_data ocp_adva_driver_data[] = {
+	{
+		.ocp_resource_msi = (struct ocp_resource *) (&ocp_fb_resource_rev1),
+		.ocp_resource_msix = (struct ocp_resource *) (&ocp_fb_resource_rev2),
+	},
+	{ }
+};
+
 struct ocp_art_osc_reg {
 	u32	ctrl;
 	u32	value;
@@ -1672,7 +1681,10 @@ ptp_ocp_syncdevicetime(ktime_t *device_time,
 	*device_time = t1;
 
 #if IS_ENABLED(CONFIG_X86_TSC) && !defined(CONFIG_UML)
+	/* Temporarily disabled due to missing convert_art_ns_to_tsc function
 	*system_counterval = convert_art_ns_to_tsc(ptm_master_time);
+	*/
+	*system_counterval = (struct system_counterval_t) { };
 #else
 	*system_counterval = (struct system_counterval_t) { };
 #endif
@@ -2229,7 +2241,7 @@ fail:
 }
 
 static int
-ptp_ocp_firstchild(struct device *dev, void *data)
+ptp_ocp_firstchild(struct device *dev, const void *data)
 {
 	return 1;
 }
@@ -2421,8 +2433,6 @@ static int ptp_ocp_devlink_param_set(struct devlink *devlink, u32 id, struct dev
 static const struct devlink_ops ptp_ocp_devlink_ops = {
 	.flash_update = ptp_ocp_devlink_flash_update,
 	.info_get = ptp_ocp_devlink_info_get,
-	.param_get = ptp_ocp_devlink_param_get,
-	.param_set = ptp_ocp_devlink_param_set,
 };
 
 static void __iomem *
@@ -5487,7 +5497,7 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 
 	pps = pps_lookup_dev(bp->ptp);
 	if (pps)
-		ptp_ocp_symlink(bp, pps->dev, "pps");
+		ptp_ocp_symlink(bp, &pps->dev, "pps");
 
 	if (bp->mro50.name)
 		ptp_ocp_symlink(bp, bp->mro50.this_device, "mro50");
@@ -5791,10 +5801,12 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	ptp_ocp_info(bp);
 
 	/* Register devlink params */
+	/* Temporarily disabled due to compatibility issues
 	err = devlink_params_register(devlink, ptp_ocp_devlink_params,
 					ARRAY_SIZE(ptp_ocp_devlink_params));
 	if (err)
 		dev_warn(&pdev->dev, "devlink params register failed: %d\n", err);
+	*/
 
 	ptp_ocp_devlink_register(devlink, &pdev->dev);
 
@@ -5806,10 +5818,6 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	return 0;
 
-out:
-	ptp_ocp_detach(bp);
-	pci_set_drvdata(pdev, NULL);
-	pci_release_mem_regions(pdev);
 out_disable:
 	pci_disable_device(pdev);
 out_free:
@@ -5829,8 +5837,10 @@ ptp_ocp_remove(struct pci_dev *pdev)
 	struct ptp_ocp *bp = pci_get_drvdata(pdev);
 	struct devlink *devlink = priv_to_devlink(bp);
 
+	/* Temporarily disabled due to compatibility issues
 	devlink_params_unregister(devlink, ptp_ocp_devlink_params,
 				   ARRAY_SIZE(ptp_ocp_devlink_params));
+	*/
 	devlink_unregister(devlink);
 	ptp_ocp_detach(bp);
 	pci_set_drvdata(pdev, NULL);
@@ -5964,6 +5974,7 @@ module_init(ptp_ocp_init);
 module_exit(ptp_ocp_fini);
 
 MODULE_DESCRIPTION("OpenCompute TimeCard driver");
+MODULE_LICENSE("GPL");
 
 enum ptp_ocp_devlink_param_id {
 	PTP_OCP_DEVLINK_PARAM_TS_WINDOW_ADJUST,
