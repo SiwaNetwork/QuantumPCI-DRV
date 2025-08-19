@@ -48,6 +48,18 @@ static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 ```bash
 git clone https://github.com/SiwaNetwork/QuantumPCI-Firmware-Tool.git
 cd QuantumPCI-Firmware-Tool
+go mod init quantum-pci-ft
+go get github.com/sirupsen/logrus github.com/sigurn/crc16
+```
+
+#### Исправление магического заголовка:
+Необходимо изменить магический заголовок с "SHIW" на "OCPC" в файле `header/firmware.go`:
+```go
+var hdrMagic = [4]byte{'O', 'C', 'P', 'C'}
+```
+
+#### Компиляция инструмента:
+```bash
 go build -o quantum-pci-ft
 ```
 
@@ -55,7 +67,7 @@ go build -o quantum-pci-ft
 ```bash
 ./quantum-pci-ft -input исходная_прошивка.bin \
     -output прошивка_quantum.bin \
-    -vendor 0x1d9c \
+    -vendor 0x1d9b \
     -device 0x0400 \
     -apply
 ```
@@ -67,11 +79,17 @@ go build -o quantum-pci-ft
 
 ### 3. Обновление базы данных PCI ID
 
-Добавлена запись в `/usr/share/misc/pci.ids.local`:
+Изменена запись в `/usr/share/misc/pci.ids`:
 
+```bash
+sudo sed -i 's/1d9b  Meta Platforms, Inc./1d9b  Quantum Platforms, Inc./' /usr/share/misc/pci.ids
 ```
-1d9c  Quantum Platforms, Inc.
-        0400  TimeCard
+
+Результат:
+```
+1d9b  Quantum Platforms, Inc.
+        0010  Networking DOM Engine
+        0011  IO Bridge
 ```
 
 ### 4. Обновление прошивки устройства
@@ -79,12 +97,14 @@ go build -o quantum-pci-ft
 После создания прошивки с новым Vendor ID, обновите устройство:
 
 ```bash
-# Загрузите новый драйвер
-sudo rmmod ptp_ocp
-sudo insmod ptp_ocp.ko
+# Скопируйте прошивку в директорию firmware
+sudo cp прошивка_quantum.bin /lib/firmware/
 
-# Обновите прошивку (если доступно)
+# Обновите прошивку через devlink
 sudo devlink dev flash pci/0000:01:00.0 file прошивка_quantum.bin
+
+# Загрузите драйвер (если не загружен)
+sudo modprobe /lib/modules/$(uname -r)/kernel/drivers/ptp/ptp_ocp.ko.zst
 ```
 
 ### 5. Проверка результата
