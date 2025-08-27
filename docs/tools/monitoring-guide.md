@@ -227,7 +227,7 @@ tail -f real-api.log
 
 РџРѕР»РЅР°СЏ СЃРёСЃС‚РµРјР° РјРѕРЅРёС‚РѕСЂРёРЅРіР° Quantum-PCI TimeCard PTP OCP СЃ РёРЅС‚РµРіСЂР°С†РёРµР№ Grafana, Prometheus Рё AlertManager.
 
-> рџ“Њ **РџСЂРёРјРµС‡Р°РЅРёРµ**: Р”Р»СЏ Р±Р°Р·РѕРІРѕР№ СѓСЃС‚Р°РЅРѕРІРєРё Рё РЅР°СЃС‚СЂРѕР№РєРё Quantum-PCI TimeCard СЃРј. [TIMECARD_РРќРЎРўР РЈРљР¦РРЇ_РћРџРўРРњРР—РР РћР’РђРќРќРђРЇ.md](../TIMECARD_РРќРЎРўР РЈРљР¦РРЇ_РћРџРўРРњРР—РР РћР’РђРќРќРђРЇ.md)
+> рџ“Њ **РџСЂРёРјРµС‡Р°РЅРёРµ**: Р”Р»СЏ Р±Р°Р·РѕРІРѕР№ СѓСЃС‚Р°РЅРѕРІРєРё Рё РЅР°СЃС‚СЂРѕР№РєРё Quantum-PCI TimeCard СЃРј. [TIMECARD_РРќРЎРўР РЈРљР¦РРЇ_РћРџРўРРњРР—РР РћР’РђРќРќРђРЇ.md](../docs/architecture.md)
 
 ## рџЏ—пёЏ РђСЂС…РёС‚РµРєС‚СѓСЂР° СЃРёСЃС‚РµРјС‹
 
@@ -578,3 +578,4 @@ docker-compose exec grafana tar -czf /grafana-backup.tar.gz /var/lib/grafana
 - [Grafana Documentation](https://grafana.com/docs/)
 - [AlertManager Documentation](https://prometheus.io/docs/alerting/latest/alertmanager/)
 - [Quantum-PCI TimeCard PTP OCP Specification](https://www.opencompute.org/documents/ocp-timecard-specification-1-0-pdf)
+

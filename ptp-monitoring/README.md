@@ -3,7 +3,7 @@
 РџРѕР»РЅРѕС„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅР°СЏ СЃРёСЃС‚РµРјР° РјРѕРЅРёС‚РѕСЂРёРЅРіР° РґР»СЏ Quantum-PCI TimeCard PTP OCP СѓСЃС‚СЂРѕР№СЃС‚РІ СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РІСЃРµС… Р°РїРїР°СЂР°С‚РЅС‹С… РѕСЃРѕР±РµРЅРЅРѕСЃС‚РµР№.
 
 > рџ“Њ **Р‘С‹СЃС‚СЂС‹Р№ СЃС‚Р°СЂС‚**: РЎРј. [QUICKSTART.md](QUICKSTART.md)  
-> рџ“Њ **РџРѕР»РЅР°СЏ РёРЅСЃС‚СЂСѓРєС†РёСЏ**: РЎРј. [TIMECARD_РРќРЎРўР РЈРљР¦РРЇ_РћРџРўРРњРР—РР РћР’РђРќРќРђРЇ.md](../TIMECARD_РРќРЎРўР РЈРљР¦РРЇ_РћРџРўРРњРР—РР РћР’РђРќРќРђРЇ.md)  
+> рџ“Њ **РџРѕР»РЅР°СЏ РёРЅСЃС‚СЂСѓРєС†РёСЏ**: РЎРј. [TIMECARD_РРќРЎРўР РЈРљР¦РРЇ_РћРџРўРРњРР—РР РћР’РђРќРќРђРЇ.md](../docs/architecture.md)  
 > рџ“Њ **Monitoring Stack (Docker/Grafana)**: РЎРј. [../docs/tools/monitoring-guide.md](../docs/tools/monitoring-guide.md)
 
 ## вњЁ Р’РѕР·РјРѕР¶РЅРѕСЃС‚Рё СЃРёСЃС‚РµРјС‹ РјРѕРЅРёС‚РѕСЂРёРЅРіР°
@@ -175,3 +175,4 @@ python tests/integration_test.py
 
 **Quantum-PCI TimeCard PTP OCP Advanced Monitoring System v2.0**  
 *Professional-grade monitoring for precision timing applications*
+
