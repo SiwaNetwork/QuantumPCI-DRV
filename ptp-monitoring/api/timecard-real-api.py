@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_socketio import SocketIO
 from flask_cors import CORS
 import subprocess
+import yaml
 import json
 import threading
 import time
@@ -13,15 +14,86 @@ import glob
 import re
 import math
 from collections import deque, defaultdict
+from pathlib import Path
+
+# === Configuration loading ===
+def _build_default_config():
+    return {
+        'version': '1.0.1',
+        'server': {
+            'port': 8080,
+            'async_mode': 'threading',
+            'cors_allowed_origins': [
+                'http://localhost:8080',
+                'http://127.0.0.1:8080',
+                'http://localhost'
+            ],
+        },
+        'monitoring': {
+            'update_interval_seconds': 5,
+            'history_maxlen': 1000,
+        },
+        'alerts': {
+            'ptp': {
+                'offset_ns': {'warning': 1000, 'critical': 10000},
+                'drift_ppb': {'warning': 100, 'critical': 1000},
+            },
+            'gnss': {
+                'sync_status': {'warning': 'LOST', 'critical': 'LOST'},
+            },
+        },
+        'static': {
+            'allowed_extensions': ['.html', '.css', '.js', '.svg', '.png', '.ico'],
+            'allowed_dashboard_files': ['real-dashboard.html', 'simple-dashboard.html'],
+        },
+    }
+
+
+def load_config() -> dict:
+    """Load YAML configuration if present; otherwise return defaults."""
+    defaults = _build_default_config()
+    try:
+        base_dir = Path(__file__).resolve().parents[1]  # ptp-monitoring/
+        cfg_path = base_dir / 'config' / 'config.yml'
+        if cfg_path.exists():
+            with cfg_path.open('r', encoding='utf-8') as f:
+                data = yaml.safe_load(f) or {}
+            # Deep-merge with defaults (shallow per section for simplicity)
+            for key in defaults:
+                if isinstance(defaults[key], dict):
+                    section = defaults[key].copy()
+                    section.update(data.get(key, {}) or {})
+                    defaults[key] = section
+                else:
+                    defaults[key] = data.get(key, defaults[key])
+    except Exception:
+        # Fall back to defaults silently
+        pass
+    return defaults
+
+
+CONFIG = load_config()
 
 app = Flask(__name__)
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Configure CORS from config (restrict origins)
+try:
+    allowed_origins = CONFIG.get('server', {}).get('cors_allowed_origins', ['http://localhost'])
+    CORS(app, resources={r"/*": {"origins": allowed_origins}})
+except Exception:
+    CORS(app)
+
+# Configure SocketIO with async_mode and CORS origins from config
+socketio = SocketIO(
+    app,
+    cors_allowed_origins=CONFIG.get('server', {}).get('cors_allowed_origins', '*'),
+    async_mode=CONFIG.get('server', {}).get('async_mode', 'threading'),
+)
 
 class TimeCardRealMonitor:
     def __init__(self):
         self.devices = self.discover_timecard_devices()
-        self.metrics_history = defaultdict(lambda: deque(maxlen=1000))
+        self.metrics_history = defaultdict(lambda: deque(maxlen=CONFIG.get('monitoring', {}).get('history_maxlen', 1000)))
         self.alert_thresholds = self.load_alert_thresholds()
         self.alert_history = deque(maxlen=500)
         self.start_background_monitoring()
@@ -84,15 +156,10 @@ class TimeCardRealMonitor:
     
     def load_alert_thresholds(self):
         """Загрузка пороговых значений для алертов"""
-        return {
-            'ptp': {
-                'offset_ns': {'warning': 1000, 'critical': 10000},
-                'drift_ppb': {'warning': 100, 'critical': 1000}
-            },
-            'gnss': {
-                'sync_status': {'warning': 'LOST', 'critical': 'LOST'}
-            }
-        }
+        return CONFIG.get('alerts', {})
+
+    def get_update_interval(self) -> int:
+        return int(CONFIG.get('monitoring', {}).get('update_interval_seconds', 5))
     
     # === REAL PTP MONITORING ===
     def get_ptp_status(self, device):
@@ -294,7 +361,7 @@ class TimeCardRealMonitor:
                 except Exception as e:
                     print(f"Error in monitoring loop: {e}")
                     
-                time.sleep(5)  # Обновление каждые 5 секунд
+                time.sleep(self.get_update_interval())
         
         monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
         monitor_thread.start()
@@ -397,12 +464,119 @@ def api_get_metrics_history(device_id):
     if device_id not in timecard_monitor.metrics_history:
         return jsonify({'error': 'Device not found'}), 404
     
-    history = list(timecard_monitor.metrics_history[device_id])
+    # Pagination parameters
+    try:
+        limit = int(request.args.get('limit', '100'))
+        offset = int(request.args.get('offset', '0'))
+        if limit < 1:
+            limit = 1
+        if limit > 1000:
+            limit = 1000
+        if offset < 0:
+            offset = 0
+    except ValueError:
+        limit = 100
+        offset = 0
+
+    full_history = list(timecard_monitor.metrics_history[device_id])
+    count_total = len(full_history)
+    end = min(offset + limit, count_total)
+    history = full_history[offset:end]
     return jsonify({
         'device_id': device_id,
         'history': history,
         'count': len(history),
+        'total': count_total,
+        'limit': limit,
+        'offset': offset,
         'timestamp': time.time()
+    })
+
+
+@app.route('/api/metrics/history/<device_id>/clear', methods=['POST'])
+def api_clear_metrics_history(device_id):
+    """Очистка истории метрик устройства"""
+    if device_id not in timecard_monitor.metrics_history:
+        return jsonify({'error': 'Device not found'}), 404
+    timecard_monitor.metrics_history[device_id].clear()
+    return jsonify({'device_id': device_id, 'cleared': True, 'timestamp': time.time()})
+
+
+@app.route('/api/config', methods=['GET', 'PUT'])
+def api_config():
+    """Получение/обновление конфигурации (частично, с валидацией)"""
+    global CONFIG
+    if request.method == 'GET':
+        # Не возвращаем потенциально чувствительные поля (на будущее)
+        return jsonify(CONFIG)
+
+    # PUT: обновление разрешенных полей
+    try:
+        payload = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({'error': 'Invalid JSON'}), 400
+
+    updated = {}
+
+    # Alerts thresholds (merged shallowly)
+    if 'alerts' in payload and isinstance(payload['alerts'], dict):
+        CONFIG['alerts'].update(payload['alerts'])
+        updated['alerts'] = CONFIG['alerts']
+
+    # Monitoring settings
+    mon = payload.get('monitoring', {}) if isinstance(payload.get('monitoring', {}), dict) else {}
+    if 'update_interval_seconds' in mon:
+        try:
+            CONFIG['monitoring']['update_interval_seconds'] = int(mon['update_interval_seconds'])
+            updated.setdefault('monitoring', {})['update_interval_seconds'] = CONFIG['monitoring']['update_interval_seconds']
+        except (TypeError, ValueError):
+            return jsonify({'error': 'monitoring.update_interval_seconds must be int'}), 400
+    if 'history_maxlen' in mon:
+        try:
+            new_len = int(mon['history_maxlen'])
+            if new_len < 1:
+                return jsonify({'error': 'history_maxlen must be >= 1'}), 400
+            CONFIG['monitoring']['history_maxlen'] = new_len
+            # Rebuild deques with new maxlen
+            for dev_id, dq in list(timecard_monitor.metrics_history.items()):
+                new_dq = deque(maxlen=new_len)
+                # keep most recent entries
+                for item in list(dq)[-new_len:]:
+                    new_dq.append(item)
+                timecard_monitor.metrics_history[dev_id] = new_dq
+            updated.setdefault('monitoring', {})['history_maxlen'] = new_len
+        except (TypeError, ValueError):
+            return jsonify({'error': 'monitoring.history_maxlen must be int'}), 400
+
+    # Server CORS origins (runtime)
+    srv = payload.get('server', {}) if isinstance(payload.get('server', {}), dict) else {}
+    if 'cors_allowed_origins' in srv:
+        origins = srv['cors_allowed_origins']
+        if isinstance(origins, list) and all(isinstance(x, str) for x in origins):
+            CONFIG['server']['cors_allowed_origins'] = origins
+            updated.setdefault('server', {})['cors_allowed_origins'] = origins
+        else:
+            return jsonify({'error': 'server.cors_allowed_origins must be a list of strings'}), 400
+
+    return jsonify({'updated': updated, 'timestamp': time.time()})
+
+
+@app.route('/health')
+def api_health():
+    """Простой healthcheck эндпоинт"""
+    return jsonify({
+        'status': 'ok',
+        'up': True,
+        'devices': len(timecard_monitor.devices),
+        'version': CONFIG.get('version', '1.0.1'),
+        'timestamp': time.time(),
+    })
+
+
+@app.route('/version')
+def api_version():
+    return jsonify({
+        'version': CONFIG.get('version', '1.0.1'),
     })
 
 @app.route('/')
@@ -438,6 +612,13 @@ def simple_dashboard():
 @app.route('/web/<path:filename>')
 def web_files(filename):
     """Статические файлы из папки web"""
+    # Security: allow only whitelisted extensions and prevent directory traversal
+    if not filename or '..' in filename or filename.startswith('/'):
+        return jsonify({'error': 'invalid path'}), 403
+    allowed_exts = set(CONFIG.get('static', {}).get('allowed_extensions', []))
+    _, ext = os.path.splitext(filename)
+    if ext not in allowed_exts:
+        return jsonify({'error': 'forbidden extension'}), 403
     return send_from_directory('web', filename)
 
 # === WEBSOCKET EVENTS ===
@@ -516,4 +697,5 @@ if __name__ == '__main__':
     print("="*80)
     
     # Запуск веб-сервера
-    socketio.run(app, host='0.0.0.0', port=8080, debug=True, allow_unsafe_werkzeug=True) 
+    port = int(CONFIG.get('server', {}).get('port', 8080))
+    socketio.run(app, host='0.0.0.0', port=port, debug=True, allow_unsafe_werkzeug=True)

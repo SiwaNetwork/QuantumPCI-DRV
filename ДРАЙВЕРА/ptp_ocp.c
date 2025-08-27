@@ -1,9 +1,69 @@
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
+static int ptp_ocp_suspend(struct device *dev)
+{
+    struct ptp_ocp *bp = dev_get_drvdata(dev);
+    unsigned long flags;
+    int i;
+
+    if (!bp)
+        return 0;
+
+    /* Remember and disable generators */
+    for (i = 0; i < 4; i++) {
+        bp->signal_enabled_before_suspend[i] = bp->signal[i].running;
+        if (bp->signal[i].running) {
+            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, false);
+        }
+    }
+
+    /* Mask MSI/IRQs if applicable */
+    spin_lock_irqsave(&bp->lock, flags);
+    if (bp->msi)
+        iowrite32(0, &bp->msi->mask);
+    spin_unlock_irqrestore(&bp->lock, flags);
+
+    return 0;
+}
+
+static int ptp_ocp_resume(struct device *dev)
+{
+    struct ptp_ocp *bp = dev_get_drvdata(dev);
+    unsigned long flags;
+    int i;
+
+    if (!bp)
+        return 0;
+
+    /* Unmask MSI/IRQs if applicable */
+    spin_lock_irqsave(&bp->lock, flags);
+    if (bp->msi)
+        iowrite32(~0, &bp->msi->mask);
+    spin_unlock_irqrestore(&bp->lock, flags);
+
+    /* Restore generators state */
+    for (i = 0; i < 4; i++) {
+        if (bp->signal_enabled_before_suspend[i]) {
+            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, true);
+        }
+    }
+
+    return 0;
+}
+
+static const struct dev_pm_ops ptp_ocp_pm_ops = {
+    .suspend = ptp_ocp_suspend,
+    .resume  = ptp_ocp_resume,
+};
+#endif
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/init.h>
 #include <linux/pci.h>
+#include <linux/pm.h>
+#include <linux/sysfs.h>
+#include <linux/kobject.h>
 #include <linux/serial_8250.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
@@ -24,6 +84,17 @@
 #include <linux/timekeeping.h>
 #include <linux/workqueue.h>
 #include <asm/tsc.h>
+
+/* Helper to notify userspace and udev about sysfs attribute changes */
+static void ptp_ocp_attr_changed(struct device *dev, const char *name)
+{
+    if (!dev)
+        return;
+    /* sysfs_notify wakes up pollers */
+    sysfs_notify(&dev->kobj, NULL, name);
+    /* uevent allows udev rules to react */
+    kobject_uevent(&dev->kobj, KOBJ_CHANGE);
+}
 
 /*---------------------------------------------------------------------------*/
 #ifndef MRO50_IOCTL_H
@@ -471,6 +542,8 @@ struct ptp_ocp {
 	struct system_time_snapshot snapshot;
 	u64			ptm_t1_prev;
 	u64			ptm_t4_prev;
+	/* PM: remember which generators were enabled before suspend */
+	bool			signal_enabled_before_suspend[4];
 };
 
 #define OCP_REQ_TIMESTAMP	BIT(0)
@@ -3834,6 +3907,12 @@ signal_store(struct device *dev, struct device_attribute *attr,
 	err = ptp_ocp_signal_enable(bp->signal_out[gen],
 				    NULL, gen, s.period != 0);
 
+	if (!err) {
+		char name[24];
+		scnprintf(name, sizeof(name), "gen%d/signal", gen + 1);
+		ptp_ocp_attr_changed(dev, name);
+	}
+
 out:
 	argv_free(argv);
 	return err ? err : count;
@@ -4070,6 +4149,8 @@ utc_tai_offset_store(struct device *dev,
 
 	ptp_ocp_utc_distribute(bp, val);
 
+	ptp_ocp_attr_changed(dev, "utc_tai_offset");
+
 	return count;
 }
 static DEVICE_ATTR_RW(utc_tai_offset);
@@ -4103,6 +4184,8 @@ external_pps_cable_delay_store(struct device *dev,
 	iowrite32(val, &bp->pps_to_ext->cable_delay);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
+	ptp_ocp_attr_changed(dev, "external_pps_cable_delay");
+
 	return count;
 }
 static DEVICE_ATTR_RW(external_pps_cable_delay);
@@ -4135,6 +4218,8 @@ internal_pps_cable_delay_store(struct device *dev,
 	spin_lock_irqsave(&bp->lock, flags);
 	iowrite32(val, &bp->pps_to_clk->cable_delay);
 	spin_unlock_irqrestore(&bp->lock, flags);
+
+	ptp_ocp_attr_changed(dev, "internal_pps_cable_delay");
 
 	return count;
 }
@@ -4176,6 +4261,8 @@ holdover_store(struct device *dev, struct device_attribute *attr,
 	reg = (reg & ~0x3) | val;
 	iowrite32(val, &bp->pps_select->gpio2);
 	spin_unlock_irqrestore(&bp->lock, flags);
+
+	ptp_ocp_attr_changed(dev, "holdover");
 
 	return count;
 }
@@ -4291,6 +4378,7 @@ mac_i2c_store(struct device *dev, struct device_attribute *attr,
 		return err;
 
 out:
+	ptp_ocp_attr_changed(dev, "mac_i2c");
 	return count;
 }
 static DEVICE_ATTR_RW(mac_i2c);
@@ -4318,6 +4406,8 @@ ts_window_adjust_store(struct device *dev,
 		return err;
 
 	bp->ts_window_adjust = val;
+
+	ptp_ocp_attr_changed(dev, "ts_window_adjust");
 
 	return count;
 }
@@ -4359,6 +4449,8 @@ irig_b_mode_store(struct device *dev,
 	iowrite32(reg | IRIG_M_CTRL_ENABLE, &bp->irig_out->ctrl);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
+	ptp_ocp_attr_changed(dev, "irig_b_mode");
+
 	return count;
 }
 static DEVICE_ATTR_RW(irig_b_mode);
@@ -4391,6 +4483,8 @@ clock_source_store(struct device *dev, struct device_attribute *attr,
 	spin_lock_irqsave(&bp->lock, flags);
 	iowrite32(val, &bp->reg->select);
 	spin_unlock_irqrestore(&bp->lock, flags);
+
+	ptp_ocp_attr_changed(dev, "clock_source");
 
 	return count;
 }
@@ -4469,6 +4563,8 @@ tod_protocol_store(struct device *dev, struct device_attribute *attr,
 	iowrite32(ctrl_reg, &bp->tod->ctrl);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
+	ptp_ocp_attr_changed(dev, "tod_protocol");
+
 	return count;
 }
 static DEVICE_ATTR_RW(tod_protocol);
@@ -4529,6 +4625,8 @@ tod_baud_rate_store(struct device *dev, struct device_attribute *attr,
 	iowrite32(ctrl_reg, &bp->tod->ctrl);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
+	ptp_ocp_attr_changed(dev, "tod_baud_rate");
+
 	return count;
 }
 static DEVICE_ATTR_RW(tod_baud_rate);
@@ -4576,6 +4674,8 @@ tod_correction_store(struct device *dev, struct device_attribute *attr,
 	spin_lock_irqsave(&bp->lock, flags);
 	iowrite32(val, &bp->tod->adj_sec);
 	spin_unlock_irqrestore(&bp->lock, flags);
+
+	ptp_ocp_attr_changed(dev, "tod_correction");
 
 	return count;
 }
@@ -5865,6 +5965,11 @@ static struct pci_driver ptp_ocp_driver = {
 	.id_table	= ptp_ocp_pcidev_id,
 	.probe		= ptp_ocp_probe,
 	.remove		= ptp_ocp_remove,
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
+	.driver		= {
+		.pm = &ptp_ocp_pm_ops,
+	},
+#endif
 };
 
 static int

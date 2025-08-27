@@ -27,14 +27,14 @@
 ├── gnss_sync                    # (r) Статус синхронизации GNSS
 ├── internal_pps_cable_delay     # (rw) Задержка внутреннего PPS кабеля (нс)
 ├── irig_b_mode                  # (rw) Режим работы IRIG-B
-├── ts_window_adjust            # (rw) Коррекция окна временной метки (нс)
+├── ts_window_adjust             # (rw) Коррекция окна временной метки (нс)
 ├── power/                       # Директория управления питанием
 ├── ptp -> ../../ptp/ptp4        # Ссылка на PTP устройство
 ├── serialnum                    # (r) Серийный номер устройства
-├── sma1_in                      # (rw) Конфигурация входа SMA1
-├── sma2_in                      # (rw) Конфигурация входа SMA2
-├── sma3_out                     # (rw) Конфигурация выхода SMA3
-├── sma4_out                     # (rw) Конфигурация выхода SMA4
+├── sma1                          # (rw) Конфигурация SMA1 (IN:/OUT: <signal>)
+├── sma2                          # (rw) Конфигурация SMA2 (IN:/OUT: <signal>)
+├── sma3                          # (rw) Конфигурация SMA3 (IN:/OUT: <signal>)
+├── sma4                          # (rw) Конфигурация SMA4 (IN:/OUT: <signal>)
 ├── subsystem -> ../../../../../../class/timecard  # Ссылка на класс
 ├── ttyGNSS -> ../../tty/ttyS5   # Ссылка на GNSS порт
 ├── ttyMAC -> ../../tty/ttyS6    # Ссылка на MAC порт
@@ -62,7 +62,14 @@
 ### Атрибуты SMA коннекторов
 
 #### `sma[1-4]` (rw)
-Конфигурация SMA коннекторов. Направление и сигнал указываются значением атрибута; списки допустимых значений см. в `available_sma_inputs`/`available_sma_outputs`.
+Конфигурация SMA коннекторов. Формат значения:
+
+```
+IN: <signal>
+OUT: <signal>
+```
+
+Списки допустимых значений см. в `available_sma_inputs`/`available_sma_outputs`.
 
 Возможные входные сигналы:
 - `10MHz` - опорная частота 10 МГц
@@ -89,21 +96,23 @@
 ### Атрибуты калибровки задержек
 
 #### `external_pps_cable_delay` (rw)
-Задержка внешнего PPS кабеля в наносекундах. Используется для компенсации задержки распространения сигнала по кабелю.
+Задержка внешнего PPS кабеля в наносекундах (ns). Используется для компенсации задержки распространения сигнала по кабелю.
 
 #### `internal_pps_cable_delay` (rw)
-Задержка внутреннего PPS сигнала в наносекундах.
+Задержка внутреннего PPS сигнала в наносекундах (ns).
 
 #### `ts_window_adjust` (rw)
-Коррекция окна временной метки в наносекундах (компенсация оценки задержки PCIe).
+Коррекция окна временной метки в наносекундах (ns) — компенсация оценки задержки PCIe.
 
 ### Атрибуты синхронизации
 
 #### `gnss_sync` (r)
-Статус синхронизации с GNSS. Возможные значения:
-- `locked` - синхронизация установлена
-- `unlocked` - нет синхронизации
-- `holdover` - режим удержания
+Статус синхронизации с GNSS. Возможные значения и формат:
+
+```
+SYNC
+LOST @ <timestamp>
+```
 
 #### `utc_tai_offset` (rw)
 Смещение UTC относительно TAI (Международное атомное время) в секундах.
@@ -148,41 +157,42 @@ fi
 
 # Настройка
 echo "GNSS" > "$TIMECARD/clock_source"
-echo "10MHz" > "$TIMECARD/sma1_in"  
-echo "PPS" > "$TIMECARD/sma3_out"
+echo "IN: 10MHz" > "$TIMECARD/sma1"
+echo "OUT: PPS" > "$TIMECARD/sma3"
 echo "100" > "$TIMECARD/external_pps_cable_delay"
 
 echo "TimeCard configured successfully"
 ```
 
+### Дополнительные примеры
+
+#### Настройка TOD
+
+```bash
+# Протокол TOD (выбор из available_tod_protocols)
+echo "NMEA" > /sys/class/timecard/ocp0/tod_protocol
+
+# Скорость UART для TOD (выбор из available_tod_baud_rates)
+echo "9600" > /sys/class/timecard/ocp0/tod_baud_rate
+
+# Коррекция TOD в секундах (может быть отрицательной)
+echo "-1" > /sys/class/timecard/ocp0/tod_correction
+```
+
+#### Режим IRIG-B
+
+```bash
+# Режим IRIG-B, см. доступные значения (0..7)
+echo "3" > /sys/class/timecard/ocp0/irig_b_mode
+```
+
+#### Holdover
+
+```bash
+# Установка режима удержания (0..3)
+echo "1" > /sys/class/timecard/ocp0/holdover
+```
+
 ### Мониторинг изменений
 
-Можно отслеживать изменения атрибутов с помощью inotify:
-
-```bash
-# Мониторинг изменений статуса GNSS
-inotifywait -m /sys/class/timecard/ocp0/gnss_sync
-
-# Или использовать systemd для создания триггеров
-```
-
-### Проверка состояния
-
-```bash
-# Проверка всех атрибутов
-for attr in /sys/class/timecard/ocp0/*; do
-    if [ -f "$attr" ] && [ -r "$attr" ]; then
-        echo "$(basename $attr): $(cat $attr 2>/dev/null || echo 'not readable')"
-    fi
-done
-```
-
-### Логи и отладка
-
-```bash
-# Проверка сообщений драйвера
-dmesg | grep -i ptp_ocp
-
-# Проверка состояния модуля
-lsmod | grep ptp_ocp
-```
+Можно отслеживать изменения атрибутов с помощью inotify или udev правил. 

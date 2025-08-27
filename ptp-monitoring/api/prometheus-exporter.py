@@ -24,6 +24,8 @@ class TimeCardPrometheusExporter:
         self.port = port
         self.registry = CollectorRegistry()
         self.setup_metrics()
+        # Previous packet counters to compute deltas for Counter
+        self._prev_packet_counts = {}
         
     def setup_metrics(self):
         """Настройка метрик Prometheus"""
@@ -293,16 +295,30 @@ class TimeCardPrometheusExporter:
         
         logger.info("✅ Prometheus metrics configured")
     
+    def check_health(self):
+        """Проверка состояния API перед сбором метрик."""
+        try:
+            response = requests.get(f"{self.api_url}/health", timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('up', False) is True
+        except requests.exceptions.RequestException:
+            return False
+        return False
+
     def fetch_timecard_data(self):
         """Получение данных от TimeCard API"""
         try:
-            # Получаем расширенные метрики
+            # Сначала пробуем расширенный endpoint
             response = requests.get(f"{self.api_url}/api/metrics/extended", timeout=10)
             if response.status_code == 200:
                 return response.json()
-            else:
-                logger.error(f"API returned status {response.status_code}")
-                return None
+            # Фолбэк на реальный (упрощенный) endpoint
+            response = requests.get(f"{self.api_url}/api/metrics/real", timeout=10)
+            if response.status_code == 200:
+                return response.json()
+            logger.error(f"API returned status {response.status_code}")
+            return None
                 
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to fetch data from API: {e}")
@@ -354,12 +370,20 @@ class TimeCardPrometheusExporter:
             }
             
             for key, (packet_type, direction) in packet_types.items():
-                count = packet_stats.get(key, 0)
-                self.ptp_packets.labels(
-                    device_id=device_id, 
-                    packet_type=packet_type, 
-                    direction=direction
-                )._value._value = count
+                new_val = int(packet_stats.get(key, 0) or 0)
+                metric_key = (device_id, packet_type, direction)
+                prev_val = int(self._prev_packet_counts.get(metric_key, 0))
+                delta = new_val - prev_val
+                if delta < 0:
+                    # counter reset
+                    delta = new_val
+                if delta > 0:
+                    self.ptp_packets.labels(
+                        device_id=device_id,
+                        packet_type=packet_type,
+                        direction=direction
+                    ).inc(delta)
+                self._prev_packet_counts[metric_key] = new_val
         
         self.ptp_performance_score.labels(device_id=device_id).set(
             ptp_data.get('performance_score', 0)
@@ -641,6 +665,10 @@ class TimeCardPrometheusExporter:
     
     def collect_metrics(self):
         """Сбор всех метрик"""
+        # Проверяем здоровье API
+        if not self.check_health():
+            logger.warning("API healthcheck failed; skipping metrics collection")
+            return
         data = self.fetch_timecard_data()
         if not data:
             logger.warning("No data received from TimeCard API")
