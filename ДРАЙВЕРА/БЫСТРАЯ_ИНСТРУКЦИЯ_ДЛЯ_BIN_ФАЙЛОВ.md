@@ -32,48 +32,6 @@ sudo ./convert_firmware.sh flash my_firmware_quantum.bin "Quantum Platforms"
 sudo ./convert_firmware.sh flash my_firmware_meta.bin "Meta Platforms"
 ```
 
-## 📋 Полный пример
-
-Предположим, у вас есть файл `my_custom_firmware.bin`:
-
-```bash
-# 1. Создаем Quantum Platforms версию
-sudo ./convert_firmware.sh quantum my_custom_firmware.bin
-
-# 2. Создаем Meta Platforms версию
-sudo ./convert_firmware.sh meta my_custom_firmware.bin
-
-# 3. Проверяем созданные файлы
-ls -la my_custom_firmware_*.bin
-
-# 4. Прошиваем Quantum Platforms версией
-sudo ./convert_firmware.sh flash my_custom_firmware_quantum.bin "Quantum Platforms"
-```
-
-## 🔍 Проверка результата
-
-### Проверка заголовка прошивки:
-
-```bash
-# Проверить заголовок Quantum Platforms
-dd if=my_firmware_quantum.bin bs=1 count=4 | hexdump -C
-# Ожидаемый результат: 53 48 49 57 (SHIW)
-
-# Проверить заголовок Meta Platforms
-dd if=my_firmware_meta.bin bs=1 count=4 | hexdump -C
-# Ожидаемый результат: 4f 43 50 43 (OCPC)
-```
-
-### Проверка устройства:
-
-```bash
-# Проверить состояние устройства
-lspci | grep "01:00.0"
-
-# Проверить заголовок прошивки на устройстве
-sudo dd if=/dev/mtd0 bs=1 count=4 | hexdump -C
-```
-
 ## ⚙️ Параметры по умолчанию
 
 - **Vendor ID**: 0x1d9b
@@ -119,31 +77,4 @@ pwd
 - Проверьте Vendor ID и Device ID в заголовке
 - Убедитесь, что размер образа указан правильно
 
-## 📝 Примеры использования
-
-### Пример 1: Работа с прошивкой из интернета
-```bash
-# Скачали прошивку firmware_v1.2.bin
-sudo ./convert_firmware.sh quantum firmware_v1.2.bin
-sudo ./convert_firmware.sh flash firmware_v1.2_quantum.bin "Quantum Platforms"
-```
-
-### Пример 2: Работа с прошивкой от производителя
-```bash
-# Получили прошивку от Meta Platforms
-sudo ./convert_firmware.sh meta meta_official_firmware.bin
-sudo ./convert_firmware.sh flash meta_official_firmware_meta.bin "Meta Platforms"
-```
-
-### Пример 3: Создание обеих версий
-```bash
-# Создаем обе версии для тестирования
-sudo ./convert_firmware.sh quantum test_firmware.bin
-sudo ./convert_firmware.sh meta test_firmware.bin
-
-# Тестируем Quantum версию
-sudo ./convert_firmware.sh flash test_firmware_quantum.bin "Quantum Platforms"
-
-# Тестируем Meta версию
-sudo ./convert_firmware.sh flash test_firmware_meta.bin "Meta Platforms"
-```
+ 

@@ -25,27 +25,43 @@ int fd = open("/dev/ptp0", O_RDWR);
 **Основные атрибуты:**
 - `clock_source` - текущий источник синхронизации (GNSS, MAC, IRIG-B, external)
 - `available_clock_sources` - список доступных источников времени
-- `sma[1-4]_in/out` - конфигурация SMA коннекторов
+- `sma[1-4]` - конфигурация SMA коннекторов (вход/выход)
 - `available_sma_inputs/outputs` - доступные сигналы для SMA портов
 
 **Атрибуты синхронизации:**
 - `gnss_sync` - статус синхронизации GNSS (locked/unlocked/holdover)
 - `external_pps_cable_delay` - задержка внешнего PPS кабеля (нс)
 - `internal_pps_cable_delay` - задержка внутреннего PPS кабеля (нс)
-- `pci_delay` - задержка PCIe шины (нс)
 - `utc_tai_offset` - смещение UTC относительно TAI (секунды)
+- `holdover` - режим holdover (включен/выключен)
+- `tod_protocol` - протокол TOD (NMEA/GPSTM)
+- `available_tod_protocols` - список доступных TOD протоколов
+- `tod_baud_rate` - скорость UART для TOD (нс)
+- `available_tod_baud_rates` - список доступных скоростей TOD
+- `tod_correction` - коррекция TOD (нс)
 
 **Служебные атрибуты:**
 - `serialnum` - серийный номер устройства
 - `irig_b_mode` - режим работы IRIG-B
+- `mac_i2c` - управление I2C для MAC (атомных часов)
+- `ts_window_adjust` - коррекция окна временных меток (нс)
+- `clock_status_drift` - статус дрейфа часов (ppb)
+- `clock_status_offset` - статус смещения часов (нс)
 - `uevent` - события устройства
+
+**Бинарные файлы:**
+- `config` - конфигурация устройства (OCP_CONFIG_SIZE байт)
+- `disciplining_config` - конфигурация дисциплинирования (OCP_ART_CONFIG_SIZE байт)
+- `temperature_table` - температурная таблица (OCP_ART_TEMP_TABLE_SIZE байт)
 
 **Символические ссылки:**
 - `device` -> `../../../XXXX:XX:XX.X` - ссылка на PCI устройство
 - `ptp` -> `../../ptp/ptpX` - ссылка на PTP устройство
 - `ttyGNSS` -> `../../tty/ttyX` - ссылка на GNSS порт
+- `ttyGNSS2` -> `../../tty/ttyX` - ссылка на вторичный GNSS порт (опционально)
 - `ttyMAC` -> `../../tty/ttyX` - ссылка на MAC порт
 - `ttyNMEA` -> `../../tty/ttyX` - ссылка на NMEA порт
+- `i2c` -> `../../i2c/i2c-X` - ссылка на I2C шину (если доступна)
 
 #### /sys/class/ptp/ptp*/
 

@@ -79,17 +79,10 @@ go build -o quantum-pci-ft
 
 ### 3. Обновление базы данных PCI ID
 
-Изменена запись в `/usr/share/misc/pci.ids`:
+Измените запись в `/usr/share/misc/pci.ids`:
 
 ```bash
 sudo sed -i 's/1d9b  Meta Platforms, Inc./1d9b  Quantum Platforms, Inc./' /usr/share/misc/pci.ids
-```
-
-Результат:
-```
-1d9b  Quantum Platforms, Inc.
-        0010  Networking DOM Engine
-        0011  IO Bridge
 ```
 
 ### 4. Обновление прошивки устройства
@@ -109,15 +102,10 @@ sudo modprobe /lib/modules/$(uname -r)/kernel/drivers/ptp/ptp_ocp.ko.zst
 
 ### 5. Проверка результата
 
-После обновления прошивки и драйвера, устройство должно отображаться как:
+После обновления прошивки и драйвера проверьте отображение устройства:
 
 ```bash
-lspci -vvv | grep "01:00.0"
-```
-
-Результат:
-```
-01:00.0 Memory controller: Quantum Platforms, Inc. Device 0400
+lspci -vvv | grep -i 'quantum\|meta\|ocp'
 ```
 
 ## Важные замечания
