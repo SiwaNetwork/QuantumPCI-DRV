@@ -43,7 +43,6 @@ def main():
             spec.loader.exec_module(quantum_pci_api)
             
             print("📊 Real Dashboard: http://localhost:8080/dashboard")
-            print("📱 Real PWA:      http://localhost:8080/pwa")
             print("🔧 Real API:      http://localhost:8080/api/")
             print("🏠 Main Page:     http://localhost:8080/")
             print("="*80)
