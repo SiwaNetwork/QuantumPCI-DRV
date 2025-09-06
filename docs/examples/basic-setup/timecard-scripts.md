@@ -36,16 +36,16 @@ configure_basic() {
     log "Clock source set to GNSS"
     
     # Настройка SMA коннекторов
-    echo "10MHz" > "$TIMECARD_BASE/sma1_in" 2>/dev/null || true
-    echo "PPS" > "$TIMECARD_BASE/sma2_in" 2>/dev/null || true
-    echo "10MHz" > "$TIMECARD_BASE/sma3_out" 2>/dev/null || true
-    echo "PPS" > "$TIMECARD_BASE/sma4_out" 2>/dev/null || true
+    echo "10MHz" > "$TIMECARD_BASE/sma1" 2>/dev/null || true
+    echo "PPS" > "$TIMECARD_BASE/sma2" 2>/dev/null || true
+    echo "10MHz" > "$TIMECARD_BASE/sma3" 2>/dev/null || true
+    echo "PPS" > "$TIMECARD_BASE/sma4" 2>/dev/null || true
     log "SMA connectors configured"
     
     # Калибровка задержек
     echo "100" > "$TIMECARD_BASE/external_pps_cable_delay"
     echo "50" > "$TIMECARD_BASE/internal_pps_cable_delay"
-    echo "25" > "$TIMECARD_BASE/pci_delay"
+    echo "25" > "$TIMECARD_BASE/# pci_delay  # НЕ_ПОДДЕРЖИВАЕТСЯ"
     echo "37" > "$TIMECARD_BASE/utc_tai_offset"
     log "Delays calibrated"
 }
@@ -154,17 +154,17 @@ show_status() {
 
     # SMA конфигурация
     echo "=== SMA Configuration ==="
-    echo "SMA1 (in):  $(cat $TIMECARD_BASE/sma1_in 2>/dev/null || echo 'N/A')"
-    echo "SMA2 (in):  $(cat $TIMECARD_BASE/sma2_in 2>/dev/null || echo 'N/A')"
-    echo "SMA3 (out): $(cat $TIMECARD_BASE/sma3_out 2>/dev/null || echo 'N/A')"
-    echo "SMA4 (out): $(cat $TIMECARD_BASE/sma4_out 2>/dev/null || echo 'N/A')"
+    echo "SMA1 (in):  $(cat $TIMECARD_BASE/sma1 2>/dev/null || echo 'N/A')"
+    echo "SMA2 (in):  $(cat $TIMECARD_BASE/sma2 2>/dev/null || echo 'N/A')"
+    echo "SMA3 (out): $(cat $TIMECARD_BASE/sma3 2>/dev/null || echo 'N/A')"
+    echo "SMA4 (out): $(cat $TIMECARD_BASE/sma4 2>/dev/null || echo 'N/A')"
     echo
 
     # Задержки
     echo "=== Delay Configuration ==="
     echo "External PPS delay: $(cat $TIMECARD_BASE/external_pps_cable_delay 2>/dev/null || echo 'N/A') ns"
     echo "Internal PPS delay: $(cat $TIMECARD_BASE/internal_pps_cable_delay 2>/dev/null || echo 'N/A') ns"
-    echo "PCI delay: $(cat $TIMECARD_BASE/pci_delay 2>/dev/null || echo 'N/A') ns"
+    echo "PCI delay: $(cat $TIMECARD_BASE/# pci_delay  # НЕ_ПОДДЕРЖИВАЕТСЯ 2>/dev/null || echo 'N/A') ns"
     echo "UTC-TAI offset: $(cat $TIMECARD_BASE/utc_tai_offset 2>/dev/null || echo 'N/A') s"
     echo
 
@@ -308,7 +308,7 @@ check_timecard() {
 check_sma() {
     report "=== SMA Configuration ==="
     
-    for sma in sma1_in sma2_in sma3_out sma4_out; do
+    for sma in sma1 sma2 sma3 sma4; do
         if [ -f "$TIMECARD_BASE/$sma" ]; then
             local value=$(cat "$TIMECARD_BASE/$sma" 2>/dev/null || echo "error")
             report "  $sma: $value"
@@ -331,7 +331,7 @@ check_sma() {
 check_delays() {
     report "=== Delay Configuration ==="
     
-    for delay in external_pps_cable_delay internal_pps_cable_delay pci_delay utc_tai_offset; do
+    for delay in external_pps_cable_delay internal_pps_cable_delay # pci_delay  # НЕ_ПОДДЕРЖИВАЕТСЯ utc_tai_offset; do
         if [ -f "$TIMECARD_BASE/$delay" ]; then
             local value=$(cat "$TIMECARD_BASE/$delay" 2>/dev/null || echo "error")
             local unit="ns"
@@ -470,16 +470,16 @@ reset_configuration() {
     echo "Clock source reset to GNSS"
     
     # Сброс SMA коннекторов к базовым настройкам
-    echo "10MHz" > "$TIMECARD_BASE/sma1_in" 2>/dev/null || true
-    echo "PPS" > "$TIMECARD_BASE/sma2_in" 2>/dev/null || true
-    echo "10MHz" > "$TIMECARD_BASE/sma3_out" 2>/dev/null || true
-    echo "PPS" > "$TIMECARD_BASE/sma4_out" 2>/dev/null || true
+    echo "10MHz" > "$TIMECARD_BASE/sma1" 2>/dev/null || true
+    echo "PPS" > "$TIMECARD_BASE/sma2" 2>/dev/null || true
+    echo "10MHz" > "$TIMECARD_BASE/sma3" 2>/dev/null || true
+    echo "PPS" > "$TIMECARD_BASE/sma4" 2>/dev/null || true
     echo "SMA connectors reset to default"
     
     # Сброс задержек к нулю
     echo "0" > "$TIMECARD_BASE/external_pps_cable_delay" 2>/dev/null || true
     echo "0" > "$TIMECARD_BASE/internal_pps_cable_delay" 2>/dev/null || true
-    echo "0" > "$TIMECARD_BASE/pci_delay" 2>/dev/null || true
+    echo "0" > "$TIMECARD_BASE/# pci_delay  # НЕ_ПОДДЕРЖИВАЕТСЯ" 2>/dev/null || true
     echo "Delays reset to zero"
     
     # Сброс UTC-TAI offset

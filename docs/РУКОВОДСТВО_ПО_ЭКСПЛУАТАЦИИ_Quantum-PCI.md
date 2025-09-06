@@ -115,14 +115,14 @@ cat /sys/class/timecard/ocp0/available_sma_inputs
 cat /sys/class/timecard/ocp0/available_sma_outputs
 
 # Настройка SMA1 как вход для 10MHz
-echo "10MHz" > /sys/class/timecard/ocp0/sma1_in
+echo "10MHz" > /sys/class/timecard/ocp0/sma1
 
 # Настройка SMA4 как выход PPS
-echo "PPS" > /sys/class/timecard/ocp0/sma4_out
+echo "PPS" > /sys/class/timecard/ocp0/sma4
 
 # Проверка текущей конфигурации
-cat /sys/class/timecard/ocp0/sma1_in
-cat /sys/class/timecard/ocp0/sma4_out
+cat /sys/class/timecard/ocp0/sma1
+cat /sys/class/timecard/ocp0/sma4
 ```
 
 #### Рекомендации по подключению
@@ -232,8 +232,8 @@ cat /sys/class/timecard/ocp0/clock_source
 cat /sys/class/timecard/ocp0/available_clock_sources
 
 # Проверка конфигурации SMA
-cat /sys/class/timecard/ocp0/sma3_out  # должно показать "10MHz"
-cat /sys/class/timecard/ocp0/sma4_out  # должно показать "PPS"
+cat /sys/class/timecard/ocp0/sma3  # должно показать "10MHz"
+cat /sys/class/timecard/ocp0/sma4  # должно показать "PPS"
 
 # Проверка статуса PPS генератора
 cat /sys/class/timecard/ocp0/pps_generator_enable 2>/dev/null || echo "PPS generator status not available"
@@ -249,8 +249,8 @@ cat /sys/class/timecard/ocp0/pps_generator_enable 2>/dev/null || echo "PPS gener
 echo "GNSS" > /sys/class/timecard/ocp0/clock_source
 
 # Переназначение SMA выходов
-echo "IRIG" > /sys/class/timecard/ocp0/sma3_out
-echo "DCF" > /sys/class/timecard/ocp0/sma4_out
+echo "IRIG" > /sys/class/timecard/ocp0/sma3
+echo "DCF" > /sys/class/timecard/ocp0/sma4
 ```
 
 2. **Через модификацию прошивки** (постоянно):
@@ -1040,10 +1040,10 @@ BASE="/sys/class/timecard/ocp0"
 [ -d "$BASE" ] || exit 0
 cat $BASE/available_clock_sources
 echo "GNSS" > $BASE/clock_source
-echo "10MHz" > $BASE/sma1_in
-echo "PPS"   > $BASE/sma2_in
-echo "10MHz" > $BASE/sma3_out
-echo "PPS"   > $BASE/sma4_out
+echo "10MHz" > $BASE/sma1
+echo "PPS"   > $BASE/sma2
+echo "10MHz" > $BASE/sma3
+echo "PPS"   > $BASE/sma4
 echo "100"   > $BASE/external_pps_cable_delay
 echo "37"    > $BASE/utc_tai_offset
 ```
@@ -1200,7 +1200,7 @@ sudo testptp -d /dev/$PTP_DEV -k
 if [ -d "/sys/class/timecard/ocp0" ]; then
     echo "Configuring TimeCard..."
     echo "GNSS" > /sys/class/timecard/ocp0/clock_source
-    echo "PPS" > /sys/class/timecard/ocp0/sma3_out
+    echo "PPS" > /sys/class/timecard/ocp0/sma3
     echo "TimeCard configured"
 fi
 
@@ -2477,7 +2477,7 @@ LinuxPTP предоставляет мощные инструменты для �
 - `gnss_sync` - статус синхронизации с GNSS спутниками
 - `external_pps_cable_delay` - задержка внешнего PPS кабеля (нс)
 - `internal_pps_cable_delay` - задержка внутреннего PPS кабеля (нс)
-- `pci_delay` - задержка PCIe шины (нс)
+- ~~`pci_delay`~~ - задержка PCIe шины (**НЕ ПОДДЕРЖИВАЕТСЯ** в текущем драйвере)
 - `utc_tai_offset` - смещение UTC относительно TAI (секунды)
 
 ### Служебные атрибуты:
@@ -3271,13 +3271,13 @@ cat $TIMECARD_BASE/available_sma_outputs
 echo "10MHz" > $TIMECARD_BASE/sma1_in
 
 # Настройка SMA2 как вход для PPS
-echo "PPS" > $TIMECARD_BASE/sma2_in
+echo "PPS" > $TIMECARD_BASE/sma2
 
 # Настройка SMA3 как выход 10MHz
-echo "10MHz" > $TIMECARD_BASE/sma3_out
+echo "10MHz" > $TIMECARD_BASE/sma3
 
 # Настройка SMA4 как выход PPS
-echo "PPS" > $TIMECARD_BASE/sma4_out
+echo "PPS" > $TIMECARD_BASE/sma4
 ```
 
 #### Калибровка задержек
@@ -3290,7 +3290,7 @@ echo "100" > $TIMECARD_BASE/external_pps_cable_delay
 echo "50" > $TIMECARD_BASE/internal_pps_cable_delay
 
 # Установка задержки PCIe
-echo "25" > $TIMECARD_BASE/pci_delay
+# echo "25" > $TIMECARD_BASE/pci_delay  # НЕ ПОДДЕРЖИВАЕТСЯ
 
 # Установка смещения UTC-TAI (в секундах)
 echo "37" > $TIMECARD_BASE/utc_tai_offset
@@ -3385,14 +3385,14 @@ fi
 # Базовая конфигурация
 echo "GNSS" > $TIMECARD_BASE/clock_source
 echo "10MHz" > $TIMECARD_BASE/sma1_in
-echo "PPS" > $TIMECARD_BASE/sma2_in
-echo "10MHz" > $TIMECARD_BASE/sma3_out
-echo "PPS" > $TIMECARD_BASE/sma4_out
+echo "PPS" > $TIMECARD_BASE/sma2
+echo "10MHz" > $TIMECARD_BASE/sma3
+echo "PPS" > $TIMECARD_BASE/sma4
 
 # Калибровка задержек (настройте под ваши кабели)
 echo "100" > $TIMECARD_BASE/external_pps_cable_delay
 echo "50" > $TIMECARD_BASE/internal_pps_cable_delay
-echo "25" > $TIMECARD_BASE/pci_delay
+# echo "25" > $TIMECARD_BASE/pci_delay  # НЕ ПОДДЕРЖИВАЕТСЯ
 echo "37" > $TIMECARD_BASE/utc_tai_offset
 
 # Настройка IRIG-B

@@ -152,8 +152,8 @@ echo "GNSS" > /sys/class/timecard/ocp0/clock_source
 cat /sys/class/timecard/ocp0/gnss_sync
 
 # Настройка SMA коннекторов
-echo "10MHz" > /sys/class/timecard/ocp0/sma1_in
-echo "PPS" > /sys/class/timecard/ocp0/sma3_out
+echo "10MHz" > /sys/class/timecard/ocp0/sma1
+echo "PPS" > /sys/class/timecard/ocp0/sma3
 
 # Получение PTP устройства из TimeCard
 PTP_DEV=$(basename $(readlink /sys/class/timecard/ocp0/ptp))

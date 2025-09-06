@@ -108,7 +108,7 @@ ls /sys/class/timecard/
 
 # Базовая настройка
 echo "GNSS" > /sys/class/timecard/ocp0/clock_source
-echo "PPS" > /sys/class/timecard/ocp0/sma3_out
+echo "PPS" > /sys/class/timecard/ocp0/sma3
 
 # Проверка синхронизации
 cat /sys/class/timecard/ocp0/gnss_sync

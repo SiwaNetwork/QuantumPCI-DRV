@@ -100,7 +100,7 @@ sudo testptp -d /dev/$PTP_DEV -k
 if [ -d "/sys/class/timecard/ocp0" ]; then
     echo "Configuring TimeCard..."
     echo "GNSS" > /sys/class/timecard/ocp0/clock_source
-    echo "PPS" > /sys/class/timecard/ocp0/sma3_out
+    echo "PPS" > /sys/class/timecard/ocp0/sma3
     echo "TimeCard configured"
 fi
 

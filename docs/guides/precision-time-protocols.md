@@ -173,8 +173,8 @@ done
 echo " Синхронизация GNSS установлена"
 
 # Настройка SMA выходов
-echo "PPS" > $TIMECARD_DEV/sma1_out
-echo "10MHz" > $TIMECARD_DEV/sma2_out
+echo "PPS" > $TIMECARD_DEV/sma1
+echo "10MHz" > $TIMECARD_DEV/sma2
 
 # Установка начального времени в PHC
 TIMECARD_TIME=$(cat $TIMECARD_DEV/time_ns)
@@ -429,18 +429,18 @@ static int wr_timecard_calibrate(struct wr_timecard_device *dev)
 TIMECARD_DEV="/sys/class/timecard/ocp0"
 
 # SMA1: PPS выход с субнаносекундной точностью
-echo "wr_pps" > $TIMECARD_DEV/sma1_out
+echo "wr_pps" > $TIMECARD_DEV/sma1
 echo "1000000000" > $TIMECARD_DEV/sma1_period_ps  # 1 секунда
 
 # SMA2: 125MHz White Rabbit clock
-echo "wr_clk" > $TIMECARD_DEV/sma2_out  
+echo "wr_clk" > $TIMECARD_DEV/sma2  
 echo "8000" > $TIMECARD_DEV/sma2_period_ps       # 8 нс = 125 МГц
 
 # SMA3: Калибровочный сигнал
-echo "wr_cal" > $TIMECARD_DEV/sma3_out
+echo "wr_cal" > $TIMECARD_DEV/sma3
 
 # SMA4: Диагностический выход
-echo "wr_diag" > $TIMECARD_DEV/sma4_out
+echo "wr_diag" > $TIMECARD_DEV/sma4
 ```
 
 ## 4. SMPTE timecode для вещательных применений

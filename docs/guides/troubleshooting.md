@@ -426,19 +426,19 @@ cat /sys/class/timecard/ocp0/available_sma_inputs
 cat /sys/class/timecard/ocp0/available_sma_outputs
 
 # Проверка текущей конфигурации
-cat /sys/class/timecard/ocp0/sma1_in
-cat /sys/class/timecard/ocp0/sma2_in
-cat /sys/class/timecard/ocp0/sma3_out
-cat /sys/class/timecard/ocp0/sma4_out
+cat /sys/class/timecard/ocp0/sma1
+cat /sys/class/timecard/ocp0/sma2
+cat /sys/class/timecard/ocp0/sma3
+cat /sys/class/timecard/ocp0/sma4
 ```
 
 **Решения:**
 ```bash
 # Настройка SMA коннекторов
-echo "10MHz" > /sys/class/timecard/ocp0/sma1_in
-echo "PPS" > /sys/class/timecard/ocp0/sma2_in
-echo "10MHz" > /sys/class/timecard/ocp0/sma3_out
-echo "PPS" > /sys/class/timecard/ocp0/sma4_out
+echo "10MHz" > /sys/class/timecard/ocp0/sma1
+echo "PPS" > /sys/class/timecard/ocp0/sma2
+echo "10MHz" > /sys/class/timecard/ocp0/sma3
+echo "PPS" > /sys/class/timecard/ocp0/sma4
 
 # Проверка кабельных соединений
 # Убедитесь, что SMA кабели правильно подключены
@@ -457,7 +457,7 @@ offset from CLOCK_REALTIME is 12345678ns
 # Проверка задержек кабелей
 cat /sys/class/timecard/ocp0/external_pps_cable_delay
 cat /sys/class/timecard/ocp0/internal_pps_cable_delay
-cat /sys/class/timecard/ocp0/pci_delay
+# cat /sys/class/timecard/ocp0/pci_delay  # НЕ ПОДДЕРЖИВАЕТСЯ
 
 # Проверка UTC-TAI offset
 cat /sys/class/timecard/ocp0/utc_tai_offset
@@ -469,7 +469,7 @@ cat /sys/class/timecard/ocp0/utc_tai_offset
 # Измерьте длину кабелей и используйте ~5ns на метр для коаксиальных кабелей
 echo "100" > /sys/class/timecard/ocp0/external_pps_cable_delay
 echo "50" > /sys/class/timecard/ocp0/internal_pps_cable_delay
-echo "25" > /sys/class/timecard/ocp0/pci_delay
+# echo "25" > /sys/class/timecard/ocp0/pci_delay  # НЕ ПОДДЕРЖИВАЕТСЯ
 
 # Обновление UTC-TAI offset (37 секунд на 2024 год)
 echo "37" > /sys/class/timecard/ocp0/utc_tai_offset
@@ -501,16 +501,16 @@ echo "GNSS sync: $(cat $TIMECARD_BASE/gnss_sync)"
 
 echo
 echo "=== SMA Configuration ==="
-echo "SMA1 in: $(cat $TIMECARD_BASE/sma1_in 2>/dev/null || echo 'N/A')"
-echo "SMA2 in: $(cat $TIMECARD_BASE/sma2_in 2>/dev/null || echo 'N/A')"
-echo "SMA3 out: $(cat $TIMECARD_BASE/sma3_out 2>/dev/null || echo 'N/A')"
-echo "SMA4 out: $(cat $TIMECARD_BASE/sma4_out 2>/dev/null || echo 'N/A')"
+echo "SMA1: $(cat $TIMECARD_BASE/sma1 2>/dev/null || echo 'N/A')"
+echo "SMA2: $(cat $TIMECARD_BASE/sma2 2>/dev/null || echo 'N/A')"
+echo "SMA3: $(cat $TIMECARD_BASE/sma3 2>/dev/null || echo 'N/A')"
+echo "SMA4: $(cat $TIMECARD_BASE/sma4 2>/dev/null || echo 'N/A')"
 
 echo
 echo "=== Delay Configuration ==="
 echo "External PPS delay: $(cat $TIMECARD_BASE/external_pps_cable_delay)ns"
 echo "Internal PPS delay: $(cat $TIMECARD_BASE/internal_pps_cable_delay)ns"
-echo "PCI delay: $(cat $TIMECARD_BASE/pci_delay)ns"
+# echo "PCI delay: $(cat $TIMECARD_BASE/pci_delay)ns"  # НЕ ПОДДЕРЖИВАЕТСЯ
 echo "UTC-TAI offset: $(cat $TIMECARD_BASE/utc_tai_offset)s"
 
 echo

@@ -117,7 +117,7 @@ EOF
             fi
             
             # Задержки кабелей
-            for delay_type in external_pps_cable_delay internal_pps_cable_delay pci_delay; do
+            for delay_type in external_pps_cable_delay internal_pps_cable_delay; do  # pci_delay НЕ ПОДДЕРЖИВАЕТСЯ
                 if [ -f "$timecard/$delay_type" ]; then
                     delay_value=$(cat "$timecard/$delay_type" 2>/dev/null || echo "0")
                     echo "timecard_delay_ns{device=\"$ocp_name\",type=\"$delay_type\"} $delay_value" >> "$TEMP_FILE"

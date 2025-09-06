@@ -142,16 +142,16 @@ cat $TIMECARD_BASE/available_sma_inputs
 cat $TIMECARD_BASE/available_sma_outputs
 
 # Настройка SMA1 как вход для 10MHz
-echo "10MHz" > $TIMECARD_BASE/sma1_in
+echo "10MHz" > $TIMECARD_BASE/sma1
 
 # Настройка SMA2 как вход для PPS
-echo "PPS" > $TIMECARD_BASE/sma2_in
+echo "PPS" > $TIMECARD_BASE/sma2
 
 # Настройка SMA3 как выход 10MHz
-echo "10MHz" > $TIMECARD_BASE/sma3_out
+echo "10MHz" > $TIMECARD_BASE/sma3
 
 # Настройка SMA4 как выход PPS
-echo "PPS" > $TIMECARD_BASE/sma4_out
+echo "PPS" > $TIMECARD_BASE/sma4
 ```
 
 #### Калибровка задержек
@@ -164,7 +164,7 @@ echo "100" > $TIMECARD_BASE/external_pps_cable_delay
 echo "50" > $TIMECARD_BASE/internal_pps_cable_delay
 
 # Установка задержки PCIe
-echo "25" > $TIMECARD_BASE/pci_delay
+# echo "25" > $TIMECARD_BASE/pci_delay  # НЕ ПОДДЕРЖИВАЕТСЯ в текущем драйвере
 
 # Установка смещения UTC-TAI
 echo "37" > $TIMECARD_BASE/utc_tai_offset
@@ -208,15 +208,15 @@ fi
 
 # Базовая конфигурация
 echo "GNSS" > $TIMECARD_BASE/clock_source
-echo "10MHz" > $TIMECARD_BASE/sma1_in
-echo "PPS" > $TIMECARD_BASE/sma2_in
-echo "10MHz" > $TIMECARD_BASE/sma3_out
-echo "PPS" > $TIMECARD_BASE/sma4_out
+echo "10MHz" > $TIMECARD_BASE/sma1
+echo "PPS" > $TIMECARD_BASE/sma2
+echo "10MHz" > $TIMECARD_BASE/sma3
+echo "PPS" > $TIMECARD_BASE/sma4
 
 # Калибровка задержек (настройте под ваши кабели)
 echo "100" > $TIMECARD_BASE/external_pps_cable_delay
 echo "50" > $TIMECARD_BASE/internal_pps_cable_delay
-echo "25" > $TIMECARD_BASE/pci_delay
+# echo "25" > $TIMECARD_BASE/pci_delay  # НЕ ПОДДЕРЖИВАЕТСЯ в текущем драйвере
 echo "37" > $TIMECARD_BASE/utc_tai_offset
 
 # Настройка IRIG-B

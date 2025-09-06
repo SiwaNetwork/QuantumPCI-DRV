@@ -39,13 +39,11 @@ echo "external" > /sys/class/timecard/ocp0/clock_source
 cat /sys/class/timecard/ocp0/available_sma_inputs
 cat /sys/class/timecard/ocp0/available_sma_outputs
 
-# Настройка входов
-echo "10MHz" > /sys/class/timecard/ocp0/sma1_in
-echo "PPS" > /sys/class/timecard/ocp0/sma2_in
-
-# Настройка выходов
-echo "10MHz" > /sys/class/timecard/ocp0/sma3_out
-echo "PPS" > /sys/class/timecard/ocp0/sma4_out
+# Настройка SMA разъёмов
+echo "10MHz" > /sys/class/timecard/ocp0/sma1
+echo "PPS" > /sys/class/timecard/ocp0/sma2
+echo "10MHz" > /sys/class/timecard/ocp0/sma3
+echo "PPS" > /sys/class/timecard/ocp0/sma4
 ```
 
 #### Калибровка задержек
@@ -54,7 +52,7 @@ echo "PPS" > /sys/class/timecard/ocp0/sma4_out
 # Установка задержек (в наносекундах)
 echo "100" > /sys/class/timecard/ocp0/external_pps_cable_delay
 echo "50" > /sys/class/timecard/ocp0/internal_pps_cable_delay
-echo "25" > /sys/class/timecard/ocp0/pci_delay
+# Примечание: pci_delay не поддерживается в текущей версии драйвера
 
 # UTC-TAI offset
 echo "37" > /sys/class/timecard/ocp0/utc_tai_offset
