@@ -18,26 +18,135 @@
 
 ---
 
-### 3. Требования
+### 3. Технические характеристики и требования
+
+#### Основные технические характеристики
+
+**Физические характеристики:**
+- **Форм-фактор**: PCIe x1 (механически совместим с x4/x8/x16)
+- **Размеры**: 120 × 68 мм (стандартная PCIe карта)
+- **Потребление**: 3.3V/5V, до 15W (зависит от конфигурации)
+- **Рабочая температура**: -40°C до +85°C
+- **Влажность**: 5% до 95% (без конденсации)
+
+**Временные характеристики:**
+- **Точность синхронизации**: ±100 нс (с GNSS), ±1 мкс (holdover)
+- **Дрейф часов**: < 1×10⁻¹² (с OCXO), < 1×10⁻⁹ (с TCXO)
+- **Время захвата GNSS**: < 30 сек (холодный старт), < 1 сек (горячий старт)
+- **Время удержания**: > 24 часа (OCXO), > 1 час (TCXO)
+
+**Интерфейсы и разъемы:**
+- **PCIe**: x1 электрически, Gen 1/2/3
+- **SMA разъемы**: 4× конфигурируемых + 1× GNSS антенна
+- **Последовательные порты**: GNSS, MAC, NMEA (UART)
+- **I2C**: для управления внешними устройствами
+- **SPI**: для работы с flash-памятью
 
 #### Системные требования
-- **ОС**: Ubuntu LTS 20.04/22.04/24.04 с ядром ≥ 5.4 (рекомендуется 5.15+)
-- **Аппаратура**: PCIe слот (x1 электрически, совместим с x4/x8/x16 механически)
-- **Права**: root/`sudo` для установки драйверов и конфигурации времени
 
-#### Настройки BIOS
-**Обязательно включите в BIOS:**
-- **Для Intel CPU**: VT-d (Virtualization Technology for Directed I/O) или VT-x
-- **Для AMD CPU**: IOMMU (Input-Output Memory Management Unit)
+**Операционные системы:**
+- **Ubuntu**: 20.04 LTS, 22.04 LTS, 24.04 LTS (рекомендуется)
+- **Debian**: 11 (Bullseye), 12 (Bookworm)
+- **CentOS/RHEL**: 8, 9
+- **Fedora**: 35+
+- **openSUSE**: Leap 15.4+
+- **Ядро**: Linux ≥ 5.4 (рекомендуется 5.15+)
 
-#### Пакеты для сборки
+**Аппаратные требования:**
+- **Процессор**: x86_64, ARM64
+- **Память**: минимум 512 МБ RAM
+- **Диск**: 100 МБ свободного места
+- **PCIe**: слот x1 (электрически), совместим с x4/x8/x16 (механически)
+- **Права**: root/`sudo` для установки драйверов и конфигурации
+
+**Сетевые требования:**
+- **Ethernet**: 1 Гбит/с (рекомендуется) с поддержкой hardware timestamping
+- **Порты**: UDP 319 (PTP Event), UDP 320 (PTP General)
+- **Multicast**: поддержка IGMP для PTP сообщений
+
+#### Настройки BIOS/UEFI
+
+**Обязательные настройки:**
+- **Для Intel CPU**: 
+  - VT-d (Virtualization Technology for Directed I/O)
+  - VT-x (Virtualization Technology)
+  - SR-IOV (Single Root I/O Virtualization)
+- **Для AMD CPU**: 
+  - IOMMU (Input-Output Memory Management Unit)
+  - AMD-V (Virtualization)
+
+**Рекомендуемые настройки:**
+- **Power Management**: отключить C-states, P-states
+- **CPU Frequency**: фиксированная частота (отключить Turbo Boost)
+- **PCIe**: включить ASPM (Active State Power Management)
+- **Secure Boot**: отключить для загрузки неподписанных модулей
+
+#### Пакеты для сборки и работы
+
+**Ubuntu/Debian:**
 ```bash
-# Ubuntu/Debian
-sudo apt-get install libncurses-dev flex bison openssl vim libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf zstd build-essential linux-headers-$(uname -r) linuxptp chrony ethtool pciutils kmod i2c-tools
+sudo apt-get update
+sudo apt-get install -y \
+    build-essential \
+    linux-headers-$(uname -r) \
+    libncurses-dev \
+    flex \
+    bison \
+    openssl \
+    vim \
+    libssl-dev \
+    dkms \
+    libelf-dev \
+    libudev-dev \
+    libpci-dev \
+    libiberty-dev \
+    autoconf \
+    zstd \
+    linuxptp \
+    chrony \
+    ethtool \
+    pciutils \
+    kmod \
+    i2c-tools \
+    gpsd \
+    gpsd-clients \
+    python3-gps \
+    tio \
+    python3-pip
+```
+
+**CentOS/RHEL/Fedora:**
+```bash
+sudo yum groupinstall -y "Development Tools"
+sudo yum install -y \
+    kernel-devel \
+    kernel-headers \
+    ncurses-devel \
+    flex \
+    bison \
+    openssl-devel \
+    dkms \
+    elfutils-libelf-devel \
+    libudev-devel \
+    pciutils-devel \
+    autoconf \
+    zstd \
+    linuxptp \
+    chrony \
+    ethtool \
+    pciutils \
+    kmod \
+    i2c-tools \
+    gpsd \
+    gpsd-clients \
+    python3-gps \
+    tio \
+    python3-pip
 ```
 
 #### Конфигурация ядра (для оптимальной работы)
-Рекомендуемые опции ядра:
+
+**Обязательные модули ядра:**
 ```
 CONFIG_I2C_XILINX=m
 CONFIG_MTD=y
@@ -52,11 +161,48 @@ CONFIG_I2C=y
 CONFIG_I2C_OCORES=m
 CONFIG_IKCONFIG=y
 CONFIG_EEPROM_AT24=m
-CONFIG_PTP_INTEL_PMC_TGPIO=y  # для TGPIO поддержки
-CONFIG_PCIE_PTM=y             # для PTM поддержки
 ```
 
-Примечание: Поддержка Windows в рамках данного руководства не рассматривается.
+**PTP и временная синхронизация:**
+```
+CONFIG_PTP_INTEL_PMC_TGPIO=y    # TGPIO поддержка
+CONFIG_PCIE_PTM=y               # PTM поддержка
+CONFIG_PTP_1588_CLOCK=y         # PTP подсистема
+CONFIG_PPS=y                    # Pulse Per Second
+CONFIG_PPS_CLIENT_LDISC=y       # PPS line discipline
+```
+
+**Сетевые возможности:**
+```
+CONFIG_NETWORK_FILESYSTEMS=y
+CONFIG_NFS_FS=y
+CONFIG_CIFS=y
+CONFIG_IP_MULTICAST=y
+CONFIG_IP_MROUTE=y
+```
+
+**Real-time возможности:**
+```
+CONFIG_PREEMPT=y                # Preemptible kernel
+CONFIG_HIGH_RES_TIMERS=y        # High resolution timers
+CONFIG_NO_HZ=y                  # Tickless system
+CONFIG_CPU_FREQ_GOV_PERFORMANCE=y
+```
+
+#### Совместимость и ограничения
+
+**Поддерживаемые стандарты:**
+- **PTP**: IEEE 1588-2008, IEEE 1588-2019
+- **NTP**: RFC 5905, RFC 5906, RFC 5907
+- **GNSS**: GPS, GLONASS, Galileo, BeiDou
+- **Временные коды**: IRIG-B, DCF77, SMPTE
+- **Сетевые**: Ethernet 10/100/1000 Мбит/с
+
+**Ограничения:**
+- Поддержка Windows не рассматривается в данном руководстве
+- Максимум 4 SMA разъема на карту
+- Один GNSS приемник на карту
+- Ограниченная поддержка IPv6 (только IPv4 рекомендуется)
 
 ---
 
@@ -766,15 +912,1476 @@ sudo systemctl disable systemd-timesyncd
 
 ---
 
-### 19. Эксплуатация и обслуживание
+### 19. Диагностика и мониторинг
 
-- Обеспечивайте охлаждение и чистоту разъёмов.
-- Обновляйте драйвер и прошивку планово, тестируйте в стенде.
-- Ведите журнал изменений конфигураций PTP/NTP.
+#### Система мониторинга Quantum-PCI
+
+В репозитории предоставляется комплексная система мониторинга для отслеживания состояния карты Quantum-PCI в реальном времени.
+
+**Запуск системы мониторинга:**
+```bash
+cd ptp-monitoring
+python3 quantum-pci-monitor.py
+```
+
+**Доступ к веб-интерфейсу:**
+- **Основной дашборд**: http://localhost:8080/realistic-dashboard
+- **API**: http://localhost:8080/api/
+- **Roadmap**: http://localhost:8080/api/roadmap
+
+#### Мониторинг аппаратного состояния
+
+**Проверка состояния карты:**
+```bash
+# Проверка обнаружения устройства
+sudo lspci -nn | grep -i '1d9b:0400'
+
+# Проверка загрузки драйвера
+lsmod | grep ptp_ocp
+
+# Проверка sysfs интерфейса
+ls -la /sys/class/timecard/ocp*/
+
+# Проверка PTP устройств
+ls -la /dev/ptp*
+```
+
+**Мониторинг через sysfs:**
+```bash
+#!/bin/bash
+# Скрипт мониторинга состояния TimeCard
+
+TIMECARD_BASE="/sys/class/timecard/ocp0"
+
+if [ ! -d "$TIMECARD_BASE" ]; then
+    echo "❌ TimeCard устройство не найдено"
+    exit 1
+fi
+
+echo "=== Мониторинг TimeCard ==="
+echo "📅 Время: $(date)"
+echo
+
+# Основная информация
+echo "🔧 Основная информация:"
+echo "  Серийный номер: $(cat $TIMECARD_BASE/serialnum 2>/dev/null || echo 'N/A')"
+echo "  Источник времени: $(cat $TIMECARD_BASE/clock_source 2>/dev/null || echo 'N/A')"
+echo "  GNSS синхронизация: $(cat $TIMECARD_BASE/gnss_sync 2>/dev/null || echo 'N/A')"
+echo
+
+# Статус часов
+echo "⏰ Статус часов:"
+echo "  Смещение: $(cat $TIMECARD_BASE/clock_status_offset 2>/dev/null || echo 'N/A') нс"
+echo "  Дрейф: $(cat $TIMECARD_BASE/clock_status_drift 2>/dev/null || echo 'N/A') ppb"
+echo "  Режим удержания: $(cat $TIMECARD_BASE/holdover 2>/dev/null || echo 'N/A')"
+echo
+
+# Конфигурация SMA
+echo "🔌 Конфигурация SMA:"
+for i in {1..4}; do
+    if [ -f "$TIMECARD_BASE/sma$i" ]; then
+        echo "  SMA$i: $(cat $TIMECARD_BASE/sma$i)"
+    fi
+done
+echo
+
+# Связанные устройства
+echo "🔗 Связанные устройства:"
+if [ -L "$TIMECARD_BASE/ptp" ]; then
+    PTP_DEV=$(basename $(readlink $TIMECARD_BASE/ptp))
+    echo "  PTP: /dev/$PTP_DEV"
+fi
+
+if [ -L "$TIMECARD_BASE/ttyGNSS" ]; then
+    GNSS_TTY=$(basename $(readlink $TIMECARD_BASE/ttyGNSS))
+    echo "  GNSS: /dev/$GNSS_TTY"
+fi
+echo
+
+# Проверка PTP синхронизации
+if [ -c "/dev/ptp0" ]; then
+    echo "📡 PTP синхронизация:"
+    sudo phc_ctl /dev/ptp0 cmp 2>/dev/null | head -3
+fi
+```
+
+#### Мониторинг производительности
+
+**Мониторинг точности синхронизации:**
+```bash
+#!/bin/bash
+# Скрипт мониторинга точности PTP
+
+PTP_DEV="/dev/ptp0"
+LOG_FILE="/var/log/ptp_accuracy.log"
+
+if [ ! -c "$PTP_DEV" ]; then
+    echo "PTP устройство не найдено"
+    exit 1
+fi
+
+echo "Мониторинг точности PTP - $PTP_DEV"
+echo "Лог: $LOG_FILE"
+echo "Нажмите Ctrl+C для остановки"
+echo
+
+while true; do
+    TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # Получение offset между системным временем и PHC
+    OFFSET=$(sudo phc_ctl $PTP_DEV cmp 2>/dev/null | grep "offset" | awk '{print $2}')
+    
+    # Получение частоты
+    FREQ=$(sudo phc_ctl $PTP_DEV freq 2>/dev/null | grep "frequency" | awk '{print $2}')
+    
+    # Статус ptp4l (если запущен)
+    PTP4L_STATUS=""
+    if pgrep ptp4l > /dev/null; then
+        PTP4L_STATUS="running"
+    else
+        PTP4L_STATUS="stopped"
+    fi
+    
+    # Запись в лог
+    echo "$TIMESTAMP,offset=$OFFSET,freq=$FREQ,ptp4l=$PTP4L_STATUS" >> $LOG_FILE
+    
+    # Вывод на экран
+    printf "\r%s | Offset: %8s ns | Freq: %8s ppb | PTP4L: %s" \
+           "$TIMESTAMP" "$OFFSET" "$FREQ" "$PTP4L_STATUS"
+    
+    sleep 1
+done
+```
+
+**Мониторинг сетевого трафика PTP:**
+```bash
+#!/bin/bash
+# Мониторинг PTP трафика
+
+INTERFACE="eth0"
+DURATION=60
+
+echo "Мониторинг PTP трафика на интерфейсе $INTERFACE"
+echo "Длительность: $DURATION секунд"
+echo
+
+# Запуск tcpdump в фоне
+sudo tcpdump -i $INTERFACE -n -c 1000 \
+    'port 319 or port 320' \
+    -tt \
+    > /tmp/ptp_traffic.log 2>/dev/null &
+TCPDUMP_PID=$!
+
+sleep $DURATION
+
+# Остановка tcpdump
+sudo kill $TCPDUMP_PID 2>/dev/null
+
+# Анализ трафика
+echo "=== Анализ PTP трафика ==="
+echo "Общее количество пакетов: $(wc -l < /tmp/ptp_traffic.log)"
+
+echo
+echo "Типы PTP сообщений:"
+grep -o "port 319\|port 320" /tmp/ptp_traffic.log | sort | uniq -c
+
+echo
+echo "Источники PTP трафика:"
+awk '{print $3}' /tmp/ptp_traffic.log | cut -d. -f1-4 | sort | uniq -c | head -10
+
+echo
+echo "Назначения PTP трафика:"
+awk '{print $5}' /tmp/ptp_traffic.log | cut -d. -f1-4 | sort | uniq -c | head -10
+
+# Очистка
+rm -f /tmp/ptp_traffic.log
+```
+
+#### Мониторинг GNSS
+
+**Мониторинг GNSS статуса:**
+```bash
+#!/bin/bash
+# Мониторинг GNSS приемника
+
+GNSS_PORT="/dev/ttyS5"
+GPSD_HOST="localhost"
+GPSD_PORT="2947"
+
+echo "=== Мониторинг GNSS ==="
+
+# Проверка gpsd
+if pgrep gpsd > /dev/null; then
+    echo "✅ gpsd запущен"
+    
+    # Получение статуса через gpsmon
+    timeout 10s gpsmon -n 1 2>/dev/null | head -20
+else
+    echo "❌ gpsd не запущен"
+fi
+
+# Проверка GNSS порта
+if [ -c "$GNSS_PORT" ]; then
+    echo "✅ GNSS порт доступен: $GNSS_PORT"
+    
+    # Проверка NMEA сообщений
+    echo "Проверка NMEA сообщений (5 секунд)..."
+    timeout 5s tio -b 115200 $GNSS_PORT 2>/dev/null | head -5
+else
+    echo "❌ GNSS порт недоступен: $GNSS_PORT"
+fi
+
+# Проверка через sysfs
+if [ -d "/sys/class/timecard/ocp0" ]; then
+    echo
+    echo "=== Статус через sysfs ==="
+    echo "GNSS синхронизация: $(cat /sys/class/timecard/ocp0/gnss_sync 2>/dev/null || echo 'N/A')"
+    echo "Источник времени: $(cat /sys/class/timecard/ocp0/clock_source 2>/dev/null || echo 'N/A')"
+fi
+```
+
+#### Системный мониторинг
+
+**Мониторинг системных ресурсов:**
+```bash
+#!/bin/bash
+# Мониторинг системных ресурсов для PTP
+
+echo "=== Системный мониторинг ==="
+echo "Время: $(date)"
+echo
+
+# CPU и память
+echo "💻 Ресурсы системы:"
+echo "  CPU загрузка: $(uptime | awk -F'load average:' '{print $2}')"
+echo "  Память: $(free -h | grep '^Mem:' | awk '{print $3"/"$2}')"
+echo "  Диск: $(df -h / | tail -1 | awk '{print $3"/"$2" ("$5")"}')"
+echo
+
+# Сетевые интерфейсы
+echo "🌐 Сетевые интерфейсы:"
+for iface in $(ip link show | grep -o 'eth[0-9]*'); do
+    if [ -d "/sys/class/net/$iface" ]; then
+        speed=$(cat /sys/class/net/$iface/speed 2>/dev/null || echo "unknown")
+        duplex=$(cat /sys/class/net/$iface/duplex 2>/dev/null || echo "unknown")
+        echo "  $iface: ${speed}Mbps, $duplex"
+    fi
+done
+echo
+
+# PTP процессы
+echo "⚙️ PTP процессы:"
+ps aux | grep -E "(ptp4l|phc2sys|ts2phc)" | grep -v grep | while read line; do
+    echo "  $line"
+done
+echo
+
+# IRQ статистика
+echo "🔧 IRQ статистика:"
+grep -E "(eth0|ptp)" /proc/interrupts | head -5
+echo
+
+# Температура (если доступно)
+if [ -f "/sys/class/thermal/thermal_zone0/temp" ]; then
+    temp=$(cat /sys/class/thermal/thermal_zone0/temp)
+    temp_c=$((temp / 1000))
+    echo "🌡️ Температура CPU: ${temp_c}°C"
+fi
+```
+
+#### Автоматизированный мониторинг
+
+**Создание systemd сервиса для мониторинга:**
+```bash
+# Создание сервиса мониторинга
+sudo tee /etc/systemd/system/quantum-pci-monitor.service << 'EOF'
+[Unit]
+Description=Quantum-PCI Monitoring Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/quantum-pci-monitor.sh
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Создание скрипта мониторинга
+sudo tee /usr/local/bin/quantum-pci-monitor.sh << 'EOF'
+#!/bin/bash
+
+LOG_DIR="/var/log/quantum-pci"
+mkdir -p $LOG_DIR
+
+while true; do
+    TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # Проверка состояния TimeCard
+    if [ -d "/sys/class/timecard/ocp0" ]; then
+        STATUS="OK"
+        GNSS_SYNC=$(cat /sys/class/timecard/ocp0/gnss_sync 2>/dev/null || echo "unknown")
+        CLOCK_SOURCE=$(cat /sys/class/timecard/ocp0/clock_source 2>/dev/null || echo "unknown")
+    else
+        STATUS="ERROR"
+        GNSS_SYNC="N/A"
+        CLOCK_SOURCE="N/A"
+    fi
+    
+    # Проверка PTP
+    if [ -c "/dev/ptp0" ]; then
+        PTP_STATUS="OK"
+        OFFSET=$(sudo phc_ctl /dev/ptp0 cmp 2>/dev/null | grep "offset" | awk '{print $2}' || echo "N/A")
+    else
+        PTP_STATUS="ERROR"
+        OFFSET="N/A"
+    fi
+    
+    # Запись в лог
+    echo "$TIMESTAMP,$STATUS,$GNSS_SYNC,$CLOCK_SOURCE,$PTP_STATUS,$OFFSET" >> $LOG_DIR/monitor.log
+    
+    sleep 60
+done
+EOF
+
+sudo chmod +x /usr/local/bin/quantum-pci-monitor.sh
+
+# Включение сервиса
+sudo systemctl daemon-reload
+sudo systemctl enable quantum-pci-monitor
+sudo systemctl start quantum-pci-monitor
+```
 
 ---
 
-### 20. Приложение: примеры systemd‑юнитов
+### 20. Эксплуатация и обслуживание
+
+#### Плановое обслуживание
+
+**Ежедневные проверки:**
+- Мониторинг статуса синхронизации GNSS
+- Проверка точности PTP синхронизации
+- Контроль системных ресурсов
+- Анализ логов на наличие ошибок
+
+**Еженедельные проверки:**
+- Проверка целостности прошивки
+- Калибровка задержек кабелей
+- Обновление логов мониторинга
+- Проверка резервных копий конфигураций
+
+**Ежемесячные проверки:**
+- Полная диагностика системы
+- Проверка температурных характеристик
+- Анализ производительности
+- Обновление документации
+
+#### Резервное копирование
+
+**Автоматическое резервное копирование конфигураций:**
+```bash
+#!/bin/bash
+# Скрипт резервного копирования
+
+BACKUP_DIR="/backup/quantum-pci"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p $BACKUP_DIR
+
+# Резервное копирование конфигураций
+if [ -d "/sys/class/timecard/ocp0" ]; then
+    TIMECARD_BASE="/sys/class/timecard/ocp0"
+    
+    # Конфигурация устройства
+    if [ -f "$TIMECARD_BASE/config" ]; then
+        cp $TIMECARD_BASE/config $BACKUP_DIR/config_$DATE.bin
+    fi
+    
+    # Конфигурация дисциплинирования
+    if [ -f "$TIMECARD_BASE/disciplining_config" ]; then
+        cp $TIMECARD_BASE/disciplining_config $BACKUP_DIR/disciplining_config_$DATE.bin
+    fi
+    
+    # Температурная таблица
+    if [ -f "$TIMECARD_BASE/temperature_table" ]; then
+        cp $TIMECARD_BASE/temperature_table $BACKUP_DIR/temperature_table_$DATE.bin
+    fi
+fi
+
+# Резервное копирование конфигураций PTP
+if [ -f "/etc/ptp4l.conf" ]; then
+    cp /etc/ptp4l.conf $BACKUP_DIR/ptp4l_$DATE.conf
+fi
+
+# Резервное копирование конфигураций Chrony
+if [ -f "/etc/chrony/chrony.conf" ]; then
+    cp /etc/chrony/chrony.conf $BACKUP_DIR/chrony_$DATE.conf
+fi
+
+# Очистка старых резервных копий (старше 30 дней)
+find $BACKUP_DIR -name "*.bin" -o -name "*.conf" | xargs ls -t | tail -n +31 | xargs rm -f
+
+echo "Резервное копирование завершено: $BACKUP_DIR"
+```
+
+#### Обновления и модернизация
+
+**Процедура обновления драйвера:**
+1. Остановка всех PTP сервисов
+2. Создание резервной копии текущей конфигурации
+3. Выгрузка старого драйвера
+4. Установка нового драйвера
+5. Восстановление конфигурации
+6. Тестирование функциональности
+7. Запуск сервисов
+
+**Процедура обновления прошивки:**
+1. Проверка совместимости новой прошивки
+2. Создание полной резервной копии
+3. Остановка всех сервисов
+4. Прошивка новой версии
+5. Перезагрузка системы
+6. Проверка работоспособности
+7. Восстановление конфигураций
+
+#### Документирование
+
+**Ведение журнала изменений:**
+- Дата и время изменений
+- Описание изменений
+- Версии компонентов
+- Результаты тестирования
+- Контакты ответственных лиц
+
+**Документирование инцидентов:**
+- Описание проблемы
+- Время обнаружения
+- Принятые меры
+- Время восстановления
+- Анализ причин
+- Превентивные меры
+
+---
+
+### 21. Интеграция с различными системами
+
+#### Интеграция с Kubernetes
+
+**Создание DaemonSet для PTP синхронизации:**
+```yaml
+# ptp-daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ptp-sync
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: ptp-sync
+  template:
+    metadata:
+      labels:
+        name: ptp-sync
+    spec:
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: ptp4l
+        image: quantum-pci/ptp4l:latest
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: dev
+          mountPath: /dev
+        - name: sys
+          mountPath: /sys
+        - name: config
+          mountPath: /etc/ptp4l.conf
+          subPath: ptp4l.conf
+        command: ["/usr/sbin/ptp4l"]
+        args: ["-f", "/etc/ptp4l.conf", "-i", "eth0"]
+      - name: phc2sys
+        image: quantum-pci/phc2sys:latest
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: dev
+          mountPath: /dev
+        command: ["/usr/sbin/phc2sys"]
+        args: ["-s", "/dev/ptp0", "-c", "CLOCK_REALTIME", "-O", "0"]
+      volumes:
+      - name: dev
+        hostPath:
+          path: /dev
+      - name: sys
+        hostPath:
+          path: /sys
+      - name: config
+        configMap:
+          name: ptp-config
+```
+
+#### Интеграция с Docker
+
+**Docker Compose для PTP стека:**
+```yaml
+# docker-compose.ptp.yml
+version: '3.8'
+
+services:
+  ptp4l:
+    build:
+      context: .
+      dockerfile: Dockerfile.ptp
+    container_name: ptp4l
+    privileged: true
+    network_mode: host
+    volumes:
+      - /dev:/dev
+      - /sys:/sys
+    environment:
+      - PTP_INTERFACE=eth0
+      - PTP_DOMAIN=0
+    command: ["ptp4l", "-i", "eth0", "-f", "/etc/ptp4l.conf"]
+
+  phc2sys:
+    build:
+      context: .
+      dockerfile: Dockerfile.ptp
+    container_name: phc2sys
+    privileged: true
+    network_mode: host
+    volumes:
+      - /dev:/dev
+    depends_on:
+      - ptp4l
+    command: ["phc2sys", "-s", "/dev/ptp0", "-c", "CLOCK_REALTIME", "-O", "0"]
+```
+
+#### Интеграция с Prometheus/Grafana
+
+**Prometheus конфигурация:**
+```yaml
+# prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'quantum-pci'
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: '/api/metrics'
+    scrape_interval: 5s
+
+  - job_name: 'ptp4l'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 10s
+```
+
+#### Интеграция с Ansible
+
+**Ansible playbook для развертывания:**
+```yaml
+# quantum-pci-deploy.yml
+---
+- name: Deploy Quantum-PCI TimeCard
+  hosts: timecard_servers
+  become: yes
+  vars:
+    ptp_domain: 0
+    ptp_interface: eth0
+
+  tasks:
+    - name: Install dependencies
+      apt:
+        name:
+          - build-essential
+          - linux-headers-{{ ansible_kernel }}
+          - linuxptp
+          - chrony
+          - ethtool
+          - pciutils
+        state: present
+
+    - name: Load PTP driver
+      modprobe:
+        name: ptp_ocp
+        state: present
+
+    - name: Start and enable PTP services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - ptp4l
+        - phc2sys
+        - chrony
+```
+
+---
+
+### 22. Расширенное устранение неполадок
+
+#### Диагностическая матрица проблем
+
+| Проблема | Симптомы | Возможные причины | Решения |
+|----------|----------|-------------------|---------|
+| **Карта не обнаружена** | `lspci` не показывает устройство | Неправильная установка, проблемы с питанием, BIOS | Проверить установку, питание, BIOS настройки |
+| **Драйвер не загружается** | `lsmod \| grep ptp_ocp` пустой | Несовместимость ядра, отсутствие зависимостей | Обновить ядро, установить зависимости |
+| **PTP не синхронизируется** | Большой offset, нестабильная работа | Проблемы с сетью, неправильная конфигурация | Проверить сеть, конфигурацию PTP |
+| **GNSS не работает** | Нет NMEA сообщений, статус "unlocked" | Проблемы с антенной, портом, питанием | Проверить антенну, порт, питание |
+| **Низкая точность** | Высокий джиттер, нестабильный offset | Проблемы с кабелями, температурой, питанием | Калибровка, стабилизация условий |
+
+#### Автоматизированная диагностика
+
+**Скрипт полной диагностики:**
+```bash
+#!/bin/bash
+# full-diagnostics.sh
+
+LOG_FILE="/var/log/quantum-pci-diagnostics.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+echo "=== Полная диагностика Quantum-PCI ===" | tee -a $LOG_FILE
+echo "Время: $TIMESTAMP" | tee -a $LOG_FILE
+
+# Проверка аппаратуры
+if lspci -nn | grep -q "1d9b:0400"; then
+    echo "✅ Аппаратура: TimeCard обнаружена" | tee -a $LOG_FILE
+else
+    echo "❌ Аппаратура: TimeCard не обнаружена" | tee -a $LOG_FILE
+fi
+
+# Проверка драйвера
+if lsmod | grep -q "ptp_ocp"; then
+    echo "✅ Драйвер: ptp_ocp загружен" | tee -a $LOG_FILE
+else
+    echo "❌ Драйвер: ptp_ocp не загружен" | tee -a $LOG_FILE
+fi
+
+# Проверка PTP устройств
+if [ -c "/dev/ptp0" ]; then
+    echo "✅ PTP устройство: /dev/ptp0 доступен" | tee -a $LOG_FILE
+else
+    echo "❌ PTP устройство: /dev/ptp0 недоступен" | tee -a $LOG_FILE
+fi
+
+# Проверка GNSS
+if [ -c "/dev/ttyS5" ]; then
+    GNSS_STATUS=$(cat /sys/class/timecard/ocp0/gnss_sync 2>/dev/null || echo "unknown")
+    echo "✅ GNSS: Порт доступен, статус: $GNSS_STATUS" | tee -a $LOG_FILE
+else
+    echo "❌ GNSS: Порт недоступен" | tee -a $LOG_FILE
+fi
+
+# Проверка PTP процессов
+if pgrep ptp4l > /dev/null; then
+    echo "✅ PTP4L: Процесс запущен" | tee -a $LOG_FILE
+else
+    echo "❌ PTP4L: Процесс не запущен" | tee -a $LOG_FILE
+fi
+
+# Проверка точности
+if [ -c "/dev/ptp0" ]; then
+    OFFSET=$(sudo phc_ctl /dev/ptp0 cmp 2>/dev/null | grep "offset" | awk '{print $2}' || echo "N/A")
+    if [ "$OFFSET" != "N/A" ] && [ "${OFFSET#-}" -lt 1000000 ]; then
+        echo "✅ Точность: Offset: ${OFFSET}ns" | tee -a $LOG_FILE
+    else
+        echo "⚠️  Точность: Offset: ${OFFSET}ns (высокий)" | tee -a $LOG_FILE
+    fi
+else
+    echo "❌ Точность: PTP устройство недоступно" | tee -a $LOG_FILE
+fi
+
+echo "Полный лог сохранен в: $LOG_FILE" | tee -a $LOG_FILE
+```
+
+#### Частые проблемы и решения
+
+**1. Карта не обнаружена системой:**
+```bash
+# Проверка BIOS настроек
+# - Включить VT-d/IOMMU
+# - Отключить Secure Boot
+# - Проверить PCIe слот
+
+# Проверка физической установки
+lspci -nn | grep -i time
+dmesg | grep -i ptp
+```
+
+**2. Драйвер не загружается:**
+```bash
+# Проверка зависимостей
+sudo modprobe --show-depends ptp_ocp
+
+# Принудительная загрузка
+sudo insmod /path/to/ptp_ocp.ko
+
+# Проверка версии ядра
+uname -r
+```
+
+**3. PTP не синхронизируется:**
+```bash
+# Проверка сетевого интерфейса
+ethtool -T eth0
+
+# Проверка firewall
+sudo ufw status | grep -E "(319|320)"
+
+# Проверка PTP трафика
+sudo tcpdump -i eth0 port 319 or port 320
+```
+
+**4. GNSS не работает:**
+```bash
+# Проверка антенны
+# - Подключена к GNSS разъему
+# - Имеет питание (активная антенна)
+# - Хороший обзор неба
+
+# Проверка порта
+sudo stty -F /dev/ttyS5 speed 115200
+tio -b 115200 /dev/ttyS5
+```
+
+**5. Низкая точность синхронизации:**
+```bash
+# Калибровка задержек кабелей
+echo "100" > /sys/class/timecard/ocp0/external_pps_cable_delay
+
+# Проверка температуры
+cat /sys/class/thermal/thermal_zone0/temp
+
+# Оптимизация сети
+sudo ethtool -s eth0 speed 1000 duplex full autoneg off
+```
+
+---
+
+### 23. Производительность и оптимизация
+
+#### Оптимизация системы для максимальной точности
+
+**Настройка ядра для real-time работы:**
+```bash
+# /etc/default/grub
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash isolcpus=1,2 nohz_full=1,2 rcu_nocbs=1,2"
+
+# Обновление grub
+sudo update-grub
+```
+
+**Оптимизация CPU:**
+```bash
+# Отключение энергосбережения
+echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+
+# Отключение C-states
+echo 1 | sudo tee /sys/devices/system/cpu/cpu*/cpuidle/state*/disable
+
+# Привязка IRQ к определенным CPU
+echo 2 > /proc/irq/$(grep eth0 /proc/interrupts | cut -d: -f1 | tr -d ' ')/smp_affinity
+```
+
+**Оптимизация сети:**
+```bash
+# Настройка сетевого интерфейса
+sudo ethtool -s eth0 speed 1000 duplex full autoneg off
+sudo ethtool -G eth0 rx 4096 tx 4096
+sudo ethtool -C eth0 rx-usecs 1 tx-usecs 1
+
+# Отключение offloading
+sudo ethtool -K eth0 gro off gso off tso off
+```
+
+#### Профили производительности
+
+**Высокая точность (для критичных применений):**
+```ini
+# /etc/ptp4l.conf - High Accuracy Profile
+[global]
+time_stamping         hardware
+twoStepFlag           1
+domainNumber          0
+priority1             128
+priority2             128
+clockClass            6
+clockAccuracy         0x20
+offsetScaledLogVariance 0x436A
+free_running          0
+freq_est_interval     1
+assume_two_step       0
+tx_timestamp_timeout  1
+check_fup_sync        0
+clock_servo           pi
+step_threshold        0.000000002
+first_step_threshold  0.000000020
+max_frequency         900000000
+pi_proportional_const 0.0
+pi_integral_const     0.0
+pi_proportional_scale 0.0
+pi_proportional_exponent -0.3
+pi_proportional_norm_max 0.7
+pi_integral_scale     0.0
+pi_integral_exponent  0.4
+pi_integral_norm_max  0.3
+servo_num_offset_values 10
+servo_offset_threshold 0
+write_phase_mode      0
+network_transport     UDPv4
+delay_mechanism       E2E
+summary_interval      0
+kernel_leap           1
+check_fup_sync        0
+
+[eth0]
+logAnnounceInterval   -2
+logSyncInterval       -5
+logMinDelayReqInterval -5
+announceReceiptTimeout 3
+syncReceiptTimeout    3
+delay_mechanism       E2E
+network_transport     UDPv4
+```
+
+**Сбалансированная производительность:**
+```ini
+# /etc/ptp4l.conf - Balanced Profile
+[global]
+time_stamping         hardware
+twoStepFlag           1
+domainNumber          0
+priority1             128
+priority2             128
+clockClass            248
+clockAccuracy         0xFE
+offsetScaledLogVariance 0xFFFF
+free_running          0
+freq_est_interval     1
+assume_two_step       0
+tx_timestamp_timeout  10
+check_fup_sync        0
+clock_servo           pi
+step_threshold        0.000002
+first_step_threshold  0.000020
+max_frequency         900000000
+pi_proportional_const 0.0
+pi_integral_const     0.0
+pi_proportional_scale 0.0
+pi_proportional_exponent -0.3
+pi_proportional_norm_max 0.7
+pi_integral_scale     0.0
+pi_integral_exponent  0.4
+pi_integral_norm_max  0.3
+servo_num_offset_values 10
+servo_offset_threshold 0
+write_phase_mode      0
+network_transport     UDPv4
+delay_mechanism       E2E
+summary_interval      0
+kernel_leap           1
+check_fup_sync        0
+
+[eth0]
+logAnnounceInterval   1
+logSyncInterval       0
+logMinDelayReqInterval 0
+announceReceiptTimeout 3
+syncReceiptTimeout    0
+delay_mechanism       E2E
+network_transport     UDPv4
+```
+
+#### Мониторинг производительности
+
+**Скрипт мониторинга производительности:**
+```bash
+#!/bin/bash
+# performance-monitor.sh
+
+LOG_FILE="/var/log/ptp-performance.log"
+INTERVAL=1
+
+echo "Мониторинг производительности PTP (нажмите Ctrl+C для остановки)"
+echo "Лог: $LOG_FILE"
+echo
+
+while true; do
+    TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S.%3N')
+    
+    # PTP offset
+    OFFSET=$(sudo phc_ctl /dev/ptp0 cmp 2>/dev/null | grep "offset" | awk '{print $2}' || echo "N/A")
+    
+    # PTP frequency
+    FREQ=$(sudo phc_ctl /dev/ptp0 freq 2>/dev/null | grep "frequency" | awk '{print $2}' || echo "N/A")
+    
+    # CPU загрузка
+    CPU_LOAD=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | tr -d ',')
+    
+    # Память
+    MEM_USED=$(free | grep '^Mem:' | awk '{printf "%.1f", $3/$2*100}')
+    
+    # Сетевая статистика
+    RX_PACKETS=$(cat /proc/net/dev | grep eth0 | awk '{print $2}')
+    TX_PACKETS=$(cat /proc/net/dev | grep eth0 | awk '{print $10}')
+    
+    # Запись в лог
+    echo "$TIMESTAMP,$OFFSET,$FREQ,$CPU_LOAD,$MEM_USED,$RX_PACKETS,$TX_PACKETS" >> $LOG_FILE
+    
+    # Вывод на экран
+    printf "\r%s | Offset: %8s ns | Freq: %8s ppb | CPU: %5s%% | Mem: %5s%%" \
+           "$TIMESTAMP" "$OFFSET" "$FREQ" "$CPU_LOAD" "$MEM_USED"
+    
+    sleep $INTERVAL
+done
+```
+
+#### Бенчмарки и тестирование
+
+**Скрипт тестирования точности:**
+```bash
+#!/bin/bash
+# accuracy-benchmark.sh
+
+DURATION=300  # 5 минут
+LOG_FILE="/var/log/ptp-accuracy-benchmark.log"
+
+echo "Тестирование точности PTP в течение $DURATION секунд"
+echo "Лог: $LOG_FILE"
+echo
+
+# Очистка предыдущего лога
+> $LOG_FILE
+
+# Запуск мониторинга в фоне
+{
+    for ((i=0; i<$DURATION; i++)); do
+        TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S.%3N')
+        OFFSET=$(sudo phc_ctl /dev/ptp0 cmp 2>/dev/null | grep "offset" | awk '{print $2}' || echo "N/A")
+        echo "$TIMESTAMP,$OFFSET" >> $LOG_FILE
+        sleep 1
+    done
+} &
+
+MONITOR_PID=$!
+
+# Ожидание завершения
+wait $MONITOR_PID
+
+# Анализ результатов
+echo
+echo "=== Анализ результатов ==="
+
+# Статистика offset
+if [ -f "$LOG_FILE" ]; then
+    # Среднее значение
+    AVG_OFFSET=$(awk -F',' '{sum+=$2; count++} END {if(count>0) print sum/count; else print "N/A"}' $LOG_FILE)
+    
+    # Минимальное значение
+    MIN_OFFSET=$(awk -F',' '$2 != "N/A" {print $2}' $LOG_FILE | sort -n | head -1)
+    
+    # Максимальное значение
+    MAX_OFFSET=$(awk -F',' '$2 != "N/A" {print $2}' $LOG_FILE | sort -n | tail -1)
+    
+    # Стандартное отклонение
+    STD_DEV=$(awk -F',' -v avg="$AVG_OFFSET" '$2 != "N/A" {sum+=($2-avg)^2; count++} END {if(count>0) print sqrt(sum/count); else print "N/A"}' $LOG_FILE)
+    
+    echo "Средний offset: ${AVG_OFFSET} нс"
+    echo "Минимальный offset: ${MIN_OFFSET} нс"
+    echo "Максимальный offset: ${MAX_OFFSET} нс"
+    echo "Стандартное отклонение: ${STD_DEV} нс"
+    
+    # Оценка качества
+    if [ "$AVG_OFFSET" != "N/A" ] && [ "${AVG_OFFSET#-}" -lt 1000 ]; then
+        echo "✅ Отличная точность (< 1 мкс)"
+    elif [ "$AVG_OFFSET" != "N/A" ] && [ "${AVG_OFFSET#-}" -lt 10000 ]; then
+        echo "✅ Хорошая точность (< 10 мкс)"
+    elif [ "$AVG_OFFSET" != "N/A" ] && [ "${AVG_OFFSET#-}" -lt 100000 ]; then
+        echo "⚠️  Удовлетворительная точность (< 100 мкс)"
+    else
+        echo "❌ Низкая точность (> 100 мкс)"
+    fi
+else
+    echo "❌ Лог файл не найден"
+fi
+```
+
+#### Оптимизация для различных сценариев
+
+**Телекоммуникационные применения:**
+```bash
+# Настройки для телекома
+echo "Настройка для телекоммуникационных применений..."
+
+# Отключение всех ненужных сервисов
+sudo systemctl stop bluetooth
+sudo systemctl disable bluetooth
+sudo systemctl stop cups
+sudo systemctl disable cups
+
+# Оптимизация сети
+sudo ethtool -s eth0 speed 1000 duplex full autoneg off
+sudo ethtool -G eth0 rx 8192 tx 8192
+sudo ethtool -C eth0 rx-usecs 1 tx-usecs 1
+
+# Настройка PTP для телекома
+sudo tee /etc/ptp4l.conf << 'EOF'
+[global]
+dataset_comparison         G.8275.x
+G.8275.defaultDS.localPriority 128
+domainNumber               24
+priority1                  128
+priority2                  128
+clockClass                 165
+clockAccuracy              0x21
+offsetScaledLogVariance    0x4E5D
+free_running               0
+freq_est_interval          1
+assume_two_step            0
+tx_timestamp_timeout       10
+check_fup_sync             0
+clock_servo                linreg
+step_threshold             0.000002
+first_step_threshold       0.000020
+max_frequency              900000000
+sanity_freq_limit          200000000
+network_transport          L2
+ptp_dst_mac                01:1B:19:00:00:00
+p2p_dst_mac                01:80:C2:00:00:0E
+verbose                    0
+use_syslog                 1
+logging_level              6
+
+[eth0]
+logAnnounceInterval        0
+logSyncInterval           -4
+logMinDelayReqInterval    -4
+logMinPdelayReqInterval   -4
+announceReceiptTimeout     3
+syncReceiptTimeout         3
+delay_mechanism            P2P
+network_transport          L2
+masterOnly                 0
+G.8275.portDS.localPriority 128
+EOF
+```
+
+**Промышленные применения:**
+```bash
+# Настройки для промышленности
+echo "Настройка для промышленных применений..."
+
+# Отключение GUI и ненужных сервисов
+sudo systemctl set-default multi-user.target
+
+# Оптимизация для стабильности
+echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
+echo 'vm.dirty_ratio=15' | sudo tee -a /etc/sysctl.conf
+echo 'vm.dirty_background_ratio=5' | sudo tee -a /etc/sysctl.conf
+
+# Настройка PTP для промышленности
+sudo tee /etc/ptp4l.conf << 'EOF'
+[global]
+dataset_comparison         ieee1588
+domainNumber               0
+priority1                  128
+priority2                  128
+clockClass                 248
+clockAccuracy              0xFE
+offsetScaledLogVariance    0xFFFF
+free_running               0
+freq_est_interval          1
+assume_two_step            0
+tx_timestamp_timeout       50
+check_fup_sync             0
+clock_servo                pi
+step_threshold             0.000002
+first_step_threshold       0.000020
+max_frequency              900000000
+pi_proportional_const      0.0
+pi_integral_const          0.0
+pi_proportional_scale      0.0
+pi_proportional_exponent   -0.3
+pi_proportional_norm_max   0.7
+pi_integral_scale          0.0
+pi_integral_exponent       0.4
+pi_integral_norm_max       0.3
+servo_num_offset_values    10
+servo_offset_threshold     0
+write_phase_mode           0
+network_transport          UDPv4
+delay_mechanism            E2E
+verbose                    1
+use_syslog                 1
+summary_interval           0
+kernel_leap                1
+check_fup_sync             0
+
+[eth0]
+logAnnounceInterval        1
+logSyncInterval            0
+logMinDelayReqInterval     0
+announceReceiptTimeout     3
+syncReceiptTimeout         0
+delay_mechanism            E2E
+network_transport          UDPv4
+EOF
+```
+
+---
+
+### 24. Безопасность и соответствие стандартам
+
+#### Соответствие стандартам
+
+**Поддерживаемые стандарты:**
+- **IEEE 1588-2008**: Precision Time Protocol (PTP) v2
+- **IEEE 1588-2019**: Precision Time Protocol (PTP) v2.1
+- **ITU-T G.8275.1**: PTP Profile for Phase/Timing Applications with Full Timing Support from the Network
+- **ITU-T G.8275.2**: PTP Profile for Phase/Timing Applications with Partial Timing Support from the Network
+- **RFC 5905**: Network Time Protocol Version 4: Protocol and Algorithms Specification
+- **RFC 5906**: Network Time Protocol Version 4: Autokey Specification
+- **RFC 5907**: Definitions of Managed Objects for Network Time Protocol Version 4 (NTPv4)
+
+**Сертификации и соответствие:**
+- **CE Marking**: Соответствие европейским директивам
+- **FCC Part 15**: Соответствие требованиям FCC для цифровых устройств
+- **RoHS**: Соответствие директиве RoHS по ограничению опасных веществ
+- **ISO 9001**: Система менеджмента качества
+
+#### Безопасность системы
+
+**Физическая безопасность:**
+```bash
+# Ограничение физического доступа к серверу
+# - Размещение в защищенном помещении
+# - Контроль доступа к серверной комнате
+# - Видеонаблюдение
+# - Защита от электромагнитных помех
+```
+
+**Сетевая безопасность:**
+```bash
+# Настройка firewall для PTP
+sudo ufw allow 319/udp comment "PTP Event"
+sudo ufw allow 320/udp comment "PTP General"
+
+# Ограничение доступа к PTP портам
+sudo iptables -A INPUT -p udp --dport 319 -s 192.168.1.0/24 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 320 -s 192.168.1.0/24 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 319 -j DROP
+sudo iptables -A INPUT -p udp --dport 320 -j DROP
+
+# Настройка VPN для удаленного доступа
+sudo openvpn --config /etc/openvpn/server.conf
+```
+
+**Контроль доступа:**
+```bash
+# Создание группы для PTP администраторов
+sudo groupadd ptp-admin
+sudo usermod -a -G ptp-admin ptp-user
+
+# Настройка sudo для PTP команд
+sudo tee /etc/sudoers.d/ptp-admin << 'EOF'
+%ptp-admin ALL=(ALL) NOPASSWD: /usr/sbin/ptp4l, /usr/sbin/phc2sys, /usr/sbin/ts2phc
+%ptp-admin ALL=(ALL) NOPASSWD: /bin/cat /sys/class/timecard/ocp*/*
+%ptp-admin ALL=(ALL) NOPASSWD: /bin/echo * > /sys/class/timecard/ocp*/*
+EOF
+
+# Ограничение доступа к sysfs
+sudo chmod 640 /sys/class/timecard/ocp0/*
+sudo chown root:ptp-admin /sys/class/timecard/ocp0/*
+```
+
+#### Аудит и логирование
+
+**Настройка аудита:**
+```bash
+# Установка auditd
+sudo apt install auditd audispd-plugins
+
+# Настройка правил аудита
+sudo tee /etc/audit/rules.d/ptp.rules << 'EOF'
+# Аудит PTP операций
+-w /usr/sbin/ptp4l -p x -k ptp
+-w /usr/sbin/phc2sys -p x -k ptp
+-w /usr/sbin/ts2phc -p x -k ptp
+
+# Аудит доступа к sysfs
+-w /sys/class/timecard/ocp0/ -p rwxa -k timecard
+
+# Аудит конфигурационных файлов
+-w /etc/ptp4l.conf -p wa -k ptp-config
+-w /etc/chrony/chrony.conf -p wa -k chrony-config
+EOF
+
+# Перезапуск auditd
+sudo systemctl restart auditd
+```
+
+**Централизованное логирование:**
+```bash
+# Настройка rsyslog для централизованного логирования
+sudo tee /etc/rsyslog.d/50-ptp.conf << 'EOF'
+# PTP логи
+:programname, isequal, "ptp4l" /var/log/ptp/ptp4l.log
+:programname, isequal, "phc2sys" /var/log/ptp/phc2sys.log
+:programname, isequal, "ts2phc" /var/log/ptp/ts2phc.log
+
+# TimeCard логи
+:programname, isequal, "ptp_ocp" /var/log/ptp/timecard.log
+EOF
+
+# Создание директорий для логов
+sudo mkdir -p /var/log/ptp
+sudo chown syslog:syslog /var/log/ptp
+
+# Перезапуск rsyslog
+sudo systemctl restart rsyslog
+```
+
+#### Резервное копирование и восстановление
+
+**Автоматическое резервное копирование:**
+```bash
+#!/bin/bash
+# backup-security.sh
+
+BACKUP_DIR="/backup/quantum-pci-security"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p $BACKUP_DIR
+
+# Резервное копирование конфигураций
+sudo cp /etc/ptp4l.conf $BACKUP_DIR/ptp4l_$DATE.conf
+sudo cp /etc/chrony/chrony.conf $BACKUP_DIR/chrony_$DATE.conf
+sudo cp /etc/udev/rules.d/99-ptp.rules $BACKUP_DIR/udev-rules_$DATE.rules
+
+# Резервное копирование ключей и сертификатов
+sudo cp -r /etc/ssl/private $BACKUP_DIR/ssl-private_$DATE/
+sudo cp -r /etc/ssl/certs $BACKUP_DIR/ssl-certs_$DATE/
+
+# Резервное копирование логов аудита
+sudo cp /var/log/audit/audit.log $BACKUP_DIR/audit_$DATE.log
+
+# Создание архива
+tar -czf $BACKUP_DIR/quantum-pci-security-backup_$DATE.tar.gz -C $BACKUP_DIR .
+
+# Очистка старых резервных копий (старше 30 дней)
+find $BACKUP_DIR -name "*.tar.gz" -mtime +30 -delete
+
+echo "Резервное копирование безопасности завершено: $BACKUP_DIR"
+```
+
+#### Мониторинг безопасности
+
+**Скрипт мониторинга безопасности:**
+```bash
+#!/bin/bash
+# security-monitor.sh
+
+LOG_FILE="/var/log/quantum-pci-security.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+echo "=== Мониторинг безопасности Quantum-PCI ===" | tee -a $LOG_FILE
+echo "Время: $TIMESTAMP" | tee -a $LOG_FILE
+echo | tee -a $LOG_FILE
+
+# Проверка целостности файлов
+echo "🔍 Проверка целостности файлов:" | tee -a $LOG_FILE
+if [ -f "/var/lib/dpkg/info/ptp4l.md5sums" ]; then
+    if md5sum -c /var/lib/dpkg/info/ptp4l.md5sums >/dev/null 2>&1; then
+        echo "✅ PTP4L: Файлы не изменены" | tee -a $LOG_FILE
+    else
+        echo "❌ PTP4L: Обнаружены изменения в файлах" | tee -a $LOG_FILE
+    fi
+else
+    echo "⚠️  PTP4L: Не удалось проверить целостность" | tee -a $LOG_FILE
+fi
+
+# Проверка прав доступа
+echo "🔍 Проверка прав доступа:" | tee -a $LOG_FILE
+if [ -d "/sys/class/timecard/ocp0" ]; then
+    PERMS=$(ls -la /sys/class/timecard/ocp0/ | head -5)
+    echo "Права доступа к sysfs:" | tee -a $LOG_FILE
+    echo "$PERMS" | tee -a $LOG_FILE
+else
+    echo "❌ TimeCard sysfs недоступен" | tee -a $LOG_FILE
+fi
+
+# Проверка сетевых подключений
+echo "🔍 Проверка сетевых подключений:" | tee -a $LOG_FILE
+PTP_CONNECTIONS=$(netstat -tuln | grep -E ":319|:320" | wc -l)
+echo "Активные PTP подключения: $PTP_CONNECTIONS" | tee -a $LOG_FILE
+
+# Проверка процессов
+echo "🔍 Проверка процессов:" | tee -a $LOG_FILE
+PTP_PROCESSES=$(ps aux | grep -E "(ptp4l|phc2sys|ts2phc)" | grep -v grep | wc -l)
+echo "Активные PTP процессы: $PTP_PROCESSES" | tee -a $LOG_FILE
+
+# Проверка логов на подозрительную активность
+echo "🔍 Проверка логов:" | tee -a $LOG_FILE
+SUSPICIOUS_ACTIVITY=$(grep -i -E "(error|fail|denied|unauthorized)" /var/log/syslog | grep -i ptp | wc -l)
+echo "Подозрительная активность в логах: $SUSPICIOUS_ACTIVITY" | tee -a $LOG_FILE
+
+echo | tee -a $LOG_FILE
+echo "Мониторинг безопасности завершен" | tee -a $LOG_FILE
+```
+
+#### Соответствие требованиям
+
+**Проверка соответствия стандартам:**
+```bash
+#!/bin/bash
+# compliance-check.sh
+
+echo "=== Проверка соответствия стандартам ==="
+echo "Время: $(date)"
+echo
+
+# Проверка IEEE 1588 соответствия
+echo "🔍 IEEE 1588 соответствие:"
+if [ -c "/dev/ptp0" ]; then
+    echo "✅ PTP устройство доступно"
+    
+    # Проверка двухступенчатого режима
+    if grep -q "twoStepFlag.*1" /etc/ptp4l.conf; then
+        echo "✅ Двухступенчатый режим включен"
+    else
+        echo "❌ Двухступенчатый режим не включен"
+    fi
+    
+    # Проверка аппаратных временных меток
+    if grep -q "time_stamping.*hardware" /etc/ptp4l.conf; then
+        echo "✅ Аппаратные временные метки включены"
+    else
+        echo "❌ Аппаратные временные метки не включены"
+    fi
+else
+    echo "❌ PTP устройство недоступно"
+fi
+
+# Проверка NTP соответствия
+echo
+echo "🔍 NTP соответствие:"
+if systemctl is-active --quiet chronyd; then
+    echo "✅ Chrony активен"
+    
+    # Проверка использования PHC
+    if grep -q "refclock PHC" /etc/chrony/chrony.conf; then
+        echo "✅ PHC используется как источник времени"
+    else
+        echo "❌ PHC не используется как источник времени"
+    fi
+else
+    echo "❌ Chrony не активен"
+fi
+
+# Проверка безопасности
+echo
+echo "🔍 Безопасность:"
+if [ -f "/etc/audit/rules.d/ptp.rules" ]; then
+    echo "✅ Аудит настроен"
+else
+    echo "❌ Аудит не настроен"
+fi
+
+if ufw status | grep -q "319.*ALLOW"; then
+    echo "✅ Firewall настроен для PTP"
+else
+    echo "❌ Firewall не настроен для PTP"
+fi
+
+echo
+echo "Проверка соответствия завершена"
+```
+
+#### Документирование для аудита
+
+**Создание отчета о соответствии:**
+```bash
+#!/bin/bash
+# compliance-report.sh
+
+REPORT_FILE="/var/log/quantum-pci-compliance-report.txt"
+DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
+echo "=== Отчет о соответствии стандартам Quantum-PCI ===" > $REPORT_FILE
+echo "Дата: $DATE" >> $REPORT_FILE
+echo "Система: $(hostname)" >> $REPORT_FILE
+echo "Версия ядра: $(uname -r)" >> $REPORT_FILE
+echo >> $REPORT_FILE
+
+# Информация о системе
+echo "=== Информация о системе ===" >> $REPORT_FILE
+echo "ОС: $(lsb_release -d | cut -f2)" >> $REPORT_FILE
+echo "Архитектура: $(uname -m)" >> $REPORT_FILE
+echo "Время работы: $(uptime -p)" >> $REPORT_FILE
+echo >> $REPORT_FILE
+
+# Информация о TimeCard
+echo "=== Информация о TimeCard ===" >> $REPORT_FILE
+if [ -d "/sys/class/timecard/ocp0" ]; then
+    echo "Серийный номер: $(cat /sys/class/timecard/ocp0/serialnum 2>/dev/null || echo 'N/A')" >> $REPORT_FILE
+    echo "Источник времени: $(cat /sys/class/timecard/ocp0/clock_source 2>/dev/null || echo 'N/A')" >> $REPORT_FILE
+    echo "GNSS статус: $(cat /sys/class/timecard/ocp0/gnss_sync 2>/dev/null || echo 'N/A')" >> $REPORT_FILE
+else
+    echo "TimeCard не обнаружена" >> $REPORT_FILE
+fi
+echo >> $REPORT_FILE
+
+# Конфигурация PTP
+echo "=== Конфигурация PTP ===" >> $REPORT_FILE
+if [ -f "/etc/ptp4l.conf" ]; then
+    echo "Конфигурационный файл: /etc/ptp4l.conf" >> $REPORT_FILE
+    echo "Основные параметры:" >> $REPORT_FILE
+    grep -E "(domainNumber|priority1|priority2|clockClass|time_stamping|twoStepFlag)" /etc/ptp4l.conf >> $REPORT_FILE
+else
+    echo "Конфигурационный файл PTP не найден" >> $REPORT_FILE
+fi
+echo >> $REPORT_FILE
+
+# Конфигурация NTP
+echo "=== Конфигурация NTP ===" >> $REPORT_FILE
+if [ -f "/etc/chrony/chrony.conf" ]; then
+    echo "Конфигурационный файл: /etc/chrony/chrony.conf" >> $REPORT_FILE
+    echo "Источники времени:" >> $REPORT_FILE
+    grep -E "(server|refclock)" /etc/chrony/chrony.conf >> $REPORT_FILE
+else
+    echo "Конфигурационный файл Chrony не найден" >> $REPORT_FILE
+fi
+echo >> $REPORT_FILE
+
+# Статус сервисов
+echo "=== Статус сервисов ===" >> $REPORT_FILE
+systemctl is-active ptp4l >> $REPORT_FILE
+systemctl is-active phc2sys >> $REPORT_FILE
+systemctl is-active chrony >> $REPORT_FILE
+echo >> $REPORT_FILE
+
+# Безопасность
+echo "=== Безопасность ===" >> $REPORT_FILE
+echo "Firewall статус:" >> $REPORT_FILE
+ufw status >> $REPORT_FILE
+echo >> $REPORT_FILE
+
+echo "Отчет сохранен в: $REPORT_FILE"
+```
+
+---
+
+### 25. Приложение: примеры systemd‑юнитов
 
 `/etc/systemd/system/ptp4l.service`:
 
