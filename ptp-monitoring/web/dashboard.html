@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PTP OCP Monitor</title>
+    <title>TimeCard Real Monitor</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -43,6 +43,10 @@
         .status-ok { color: #28a745; }
         .status-warning { color: #ffc107; }
         .status-error { color: #dc3545; }
+        .status-critical { color: #dc3545; }
+        .status-normal { color: #28a745; }
+        .status-unknown { color: #6c757d; }
+        
         #log {
             height: 300px;
             overflow-y: scroll;
@@ -74,6 +78,22 @@
             text-align: right;
             margin-top: 10px;
         }
+        .alert {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #f5c6cb;
+        }
+        .alert.critical {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .alert.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
     </style>
     <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
@@ -81,49 +101,74 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🕐 PTP OCP Monitoring Dashboard</h1>
+            <h1>🕐 TimeCard Real Monitor</h1>
             <div class="last-update" id="last-update">Last update: Never</div>
         </div>
         
         <div class="card">
-            <h2>System Status</h2>
+            <h2>📡 PTP Status</h2>
             <div class="metric">
-                <div class="metric-value" id="driver-status">Loading...</div>
-                <div class="metric-label">Driver Status</div>
+                <div class="metric-value" id="ptp-offset">Loading...</div>
+                <div class="metric-label">Offset (ns)</div>
             </div>
             <div class="metric">
-                <div class="metric-value" id="port-state">Loading...</div>
-                <div class="metric-label">Port State</div>
+                <div class="metric-value" id="ptp-drift">Loading...</div>
+                <div class="metric-label">Drift (ppb)</div>
             </div>
             <div class="metric">
-                <div class="metric-value" id="sync-status">Loading...</div>
-                <div class="metric-label">Sync Status</div>
+                <div class="metric-value" id="ptp-source">Loading...</div>
+                <div class="metric-label">Clock Source</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="ptp-status">Loading...</div>
+                <div class="metric-label">Status</div>
             </div>
         </div>
 
         <div class="card">
-            <h2>PTP Metrics</h2>
+            <h2>🛰️ GNSS Status</h2>
             <div class="metric">
-                <div class="metric-value" id="offset">Loading...</div>
-                <div class="metric-label">Offset (ns)</div>
+                <div class="metric-value" id="gnss-status">Loading...</div>
+                <div class="metric-label">Sync Status</div>
             </div>
             <div class="metric">
-                <div class="metric-value" id="frequency">Loading...</div>
-                <div class="metric-label">Frequency (ppb)</div>
+                <div class="metric-value" id="gnss-fix">Loading...</div>
+                <div class="metric-label">Fix Type</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔌 SMA Connectors</h2>
+            <div class="metric">
+                <div class="metric-value" id="sma1-status">Loading...</div>
+                <div class="metric-label">SMA1</div>
             </div>
             <div class="metric">
-                <div class="metric-value" id="path-delay">Loading...</div>
-                <div class="metric-label">Path Delay (ns)</div>
+                <div class="metric-value" id="sma2-status">Loading...</div>
+                <div class="metric-label">SMA2</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="sma3-status">Loading...</div>
+                <div class="metric-label">SMA3</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="sma4-status">Loading...</div>
+                <div class="metric-label">SMA4</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🚨 Active Alerts</h2>
+            <div id="alerts-container">
+                <div class="alert">No alerts</div>
             </div>
         </div>
 
         <div class="card">
             <h2>Configuration & Control</h2>
-            <button onclick="restartPTP()">🔄 Restart PTP4L</button>
-            <button onclick="restartPHC2SYS()">🔄 Restart PHC2SYS</button>
-            <button onclick="showConfig()">⚙️ Show Config</button>
-            <button onclick="exportLogs()">📋 Export Logs</button>
             <button onclick="refreshData()">🔃 Refresh Data</button>
+            <button onclick="showDeviceInfo()">📋 Device Info</button>
+            <button onclick="showRealMetrics()">📊 Real Metrics</button>
         </div>
 
         <div class="card">
@@ -138,95 +183,110 @@
         // Функции для обновления данных
         async function updateMetrics() {
             try {
-                // Получение метрик из API
-                const response = await fetch('/api/metrics');
+                // Получение реальных метрик
+                const response = await fetch('/api/metrics/real');
                 const data = await response.json();
                 
-                // Обновление элементов
-                document.getElementById('driver-status').textContent = 
-                    data.driver_status === 1 ? 'OK' : 'ERROR';
-                document.getElementById('driver-status').className = 
-                    'metric-value ' + (data.driver_status === 1 ? 'status-ok' : 'status-error');
-                
-                document.getElementById('offset').textContent = data.offset || 'N/A';
-                document.getElementById('frequency').textContent = data.frequency || 'N/A';
-                document.getElementById('path-delay').textContent = data.path_delay || 'N/A';
-                
-                // Обновление статуса порта
-                const portStates = {
-                    1: 'INITIALIZING',
-                    2: 'FAULTY',
-                    3: 'DISABLED',
-                    4: 'LISTENING',
-                    5: 'PRE_MASTER',
-                    6: 'MASTER',
-                    7: 'PASSIVE',
-                    8: 'UNCALIBRATED',
-                    9: 'SLAVE'
-                };
-                document.getElementById('port-state').textContent = 
-                    portStates[data.port_state] || 'UNKNOWN';
-                
-                // Обновление статуса синхронизации
-                const syncStatus = Math.abs(data.offset || 0) < 1000 ? 'SYNCHRONIZED' : 'SYNCHRONIZING';
-                document.getElementById('sync-status').textContent = syncStatus;
-                document.getElementById('sync-status').className = 
-                    'metric-value ' + (syncStatus === 'SYNCHRONIZED' ? 'status-ok' : 'status-warning');
-                
-                // Обновление времени последнего обновления
-                document.getElementById('last-update').textContent = 
-                    'Last update: ' + new Date().toLocaleString();
+                if (data && Object.keys(data).length > 0) {
+                    const deviceId = Object.keys(data)[0];
+                    const deviceData = data[deviceId];
+                    
+                    // PTP данные
+                    const ptp = deviceData.ptp || {};
+                    document.getElementById('ptp-offset').textContent = ptp.offset_ns || 'N/A';
+                    document.getElementById('ptp-drift').textContent = ptp.drift_ppb || 'N/A';
+                    document.getElementById('ptp-source').textContent = ptp.clock_source || 'N/A';
+                    
+                    // PTP статус
+                    const ptpStatus = ptp.status || 'unknown';
+                    document.getElementById('ptp-status').textContent = ptpStatus.toUpperCase();
+                    document.getElementById('ptp-status').className = 'metric-value status-' + ptpStatus;
+                    
+                    // GNSS данные
+                    const gnss = deviceData.gnss || {};
+                    document.getElementById('gnss-status').textContent = gnss.sync_status || 'UNKNOWN';
+                    document.getElementById('gnss-fix').textContent = gnss.fix_type || 'UNKNOWN';
+                    
+                    // GNSS статус
+                    const gnssStatus = gnss.status || 'unknown';
+                    document.getElementById('gnss-status').className = 'metric-value status-' + gnssStatus;
+                    document.getElementById('gnss-fix').className = 'metric-value status-' + gnssStatus;
+                    
+                    // SMA данные
+                    const sma = deviceData.sma || {};
+                    updateSMAStatus('sma1', sma.sma1);
+                    updateSMAStatus('sma2', sma.sma2);
+                    updateSMAStatus('sma3', sma.sma3);
+                    updateSMAStatus('sma4', sma.sma4);
+                    
+                    // Обновление времени
+                    document.getElementById('last-update').textContent = 
+                        'Last update: ' + new Date().toLocaleString();
+                        
+                    addLog('✅ Real data updated successfully');
+                } else {
+                    addLog('⚠️ No device data available');
+                }
                 
             } catch (error) {
                 console.error('Error updating metrics:', error);
-                addLog('Error updating metrics: ' + error.message);
+                addLog('❌ Error updating metrics: ' + error.message);
+            }
+        }
+
+        function updateSMAStatus(elementId, smaData) {
+            const element = document.getElementById(elementId + '-status');
+            if (smaData) {
+                element.textContent = smaData.status || 'UNKNOWN';
+                element.className = 'metric-value status-' + (smaData.status || 'unknown');
+            } else {
+                element.textContent = 'N/A';
+                element.className = 'metric-value status-unknown';
+            }
+        }
+
+        // Обновление алертов
+        async function updateAlerts() {
+            try {
+                const response = await fetch('/api/alerts');
+                const data = await response.json();
+                
+                const alertsContainer = document.getElementById('alerts-container');
+                
+                if (data.count > 0) {
+                    alertsContainer.innerHTML = '';
+                    data.alerts.forEach(alert => {
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = `alert ${alert.severity}`;
+                        alertDiv.innerHTML = `
+                            <strong>${alert.severity.toUpperCase()}:</strong> ${alert.message}
+                            <br><small>${new Date(alert.timestamp * 1000).toLocaleString()}</small>
+                        `;
+                        alertsContainer.appendChild(alertDiv);
+                    });
+                } else {
+                    alertsContainer.innerHTML = '<div class="alert">No active alerts</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error updating alerts:', error);
+                addLog('❌ Error updating alerts: ' + error.message);
             }
         }
 
         // Функции управления
-        async function restartPTP() {
-            if (confirm('Restart PTP4L service?')) {
-                try {
-                    const response = await fetch('/api/restart/ptp4l', {method: 'POST'});
-                    const result = await response.json();
-                    if (response.ok) {
-                        addLog('✅ PTP4L restart initiated: ' + result.message);
-                    } else {
-                        addLog('❌ Error restarting PTP4L: ' + result.error);
-                    }
-                } catch (error) {
-                    addLog('❌ Error restarting PTP4L: ' + error.message);
-                }
-            }
-        }
-
-        async function restartPHC2SYS() {
-            if (confirm('Restart PHC2SYS service?')) {
-                try {
-                    const response = await fetch('/api/restart/phc2sys', {method: 'POST'});
-                    const result = await response.json();
-                    if (response.ok) {
-                        addLog('✅ PHC2SYS restart initiated: ' + result.message);
-                    } else {
-                        addLog('❌ Error restarting PHC2SYS: ' + result.error);
-                    }
-                } catch (error) {
-                    addLog('❌ Error restarting PHC2SYS: ' + error.message);
-                }
-            }
-        }
-
-        function showConfig() {
-            window.open('/api/config', '_blank');
-        }
-
-        function exportLogs() {
-            window.open('/api/logs/export', '_blank');
-        }
-
         function refreshData() {
             updateMetrics();
+            updateAlerts();
             addLog('🔃 Data refreshed manually');
+        }
+
+        function showDeviceInfo() {
+            window.open('/api/devices', '_blank');
+        }
+
+        function showRealMetrics() {
+            window.open('/api/metrics/real', '_blank');
         }
 
         // Функция добавления сообщений в лог
@@ -243,22 +303,21 @@
             }
         }
 
-        // WebSocket для real-time логов
+        // WebSocket для real-time обновлений
         function connectWebSocket() {
             try {
                 socket = io();
                 
                 socket.on('connect', function() {
-                    addLog('🔗 Connected to real-time logs');
+                    addLog('🔗 Connected to real-time updates');
                 });
                 
-                socket.on('log', function(data) {
-                    addLog('📝 ' + data);
+                socket.on('device_update', function(data) {
+                    addLog(`📡 Device update: PTP offset ${data.ptp_offset}ns, GNSS: ${data.gnss_status}`);
                 });
                 
                 socket.on('disconnect', function() {
-                    addLog('❌ Disconnected from real-time logs');
-                    // Попытка переподключения через 5 секунд
+                    addLog('❌ Disconnected from real-time updates');
                     setTimeout(connectWebSocket, 5000);
                 });
                 
@@ -274,13 +333,15 @@
 
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
-            addLog('🚀 PTP Monitor Dashboard initialized');
+            addLog('🚀 TimeCard Real Monitor initialized');
             updateMetrics();
+            updateAlerts();
             connectWebSocket();
             
             // Автообновление каждые 5 секунд
             setInterval(updateMetrics, 5000);
+            setInterval(updateAlerts, 10000);
         });
     </script>
 </body>
-</html>
+</html> 

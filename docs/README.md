@@ -1,8 +1,8 @@
-﻿# Документация PTP OCP драйвера
+﻿# Документация Quantum-PCI
 
 ## Обзор
 
-Комплексная документация для драйвера PTP OCP (Precision Time Protocol Open Compute Project), включающая поддержку устройств TimeCard и веб-систему мониторинга.
+Комплексная документация для продукта Quantum-PCI - высокоточной карты синхронизации времени с поддержкой PTP OCP (Precision Time Protocol Open Compute Project) и веб-системой мониторинга.
 
 > 📊 **Основная инструкция**: См. [TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md](../TIMECARD_ИНСТРУКЦИЯ_ОПТИМИЗИРОВАННАЯ.md) для быстрого старта и базовой настройки
 
@@ -29,9 +29,9 @@
 - **📈 Исторические данные** и анализ трендов
 - **🔋 WebSocket обновления** в реальном времени
 
-### TimeCard sysfs интерфейс
+### Quantum-PCI sysfs интерфейс
 
-Драйвер создает расширенный интерфейс `/sys/class/timecard/ocpN/` для управления устройствами TimeCard:
+Драйвер создает расширенный интерфейс `/sys/class/timecard/ocpN/` для управления устройствами Quantum-PCI:
 
 - **Настройка источников времени** - GNSS, MAC, IRIG-B, external
 - **Управление SMA коннекторами** - конфигурация входов и выходов
@@ -52,34 +52,34 @@
 
 ### Руководства пользователя
 
-- [`guides/quick-start.md`](guides/quick-start.md) - Быстрый старт с поддержкой Quantum-PCI TimeCard
+- [`guides/quick-start.md`](guides/quick-start.md) - Быстрый старт с Quantum-PCI
 - [`guides/installation.md`](guides/installation.md) - Установка драйвера
-- [`guides/configuration.md`](guides/configuration.md) - Детальная конфигурация включая TimeCard
+- [`guides/configuration.md`](guides/configuration.md) - Детальная конфигурация Quantum-PCI
 - [`guides/precision-time-protocols.md`](guides/precision-time-protocols.md) - **Комплексное руководство по протоколам точного времени** (NTP, PTP)
-- [`guides/troubleshooting.md`](guides/troubleshooting.md) - Устранение неполадок с TimeCard
+- [`guides/troubleshooting.md`](guides/troubleshooting.md) - Устранение неполадок с Quantum-PCI
 
 ### API документация
 
-- [`api/userspace-api.md`](api/userspace-api.md) - API пользователя с TimeCard sysfs
+- [`api/userspace-api.md`](api/userspace-api.md) - API пользователя с Quantum-PCI sysfs
 - [`api/kernel-api.md`](api/kernel-api.md) - API ядра
 - [`api/web-api.md`](api/web-api.md) - **Веб API для мониторинга** (новое)
 
 ### Инструменты
 
-- [`tools/cli-tools.md`](tools/cli-tools.md) - Команды CLI включая работу с TimeCard
+- [`tools/cli-tools.md`](tools/cli-tools.md) - Команды CLI для работы с Quantum-PCI
 - [`tools/gui-manual.md`](tools/gui-manual.md) - Графические интерфейсы
 - [`tools/web-monitoring.md`](tools/web-monitoring.md) - **Руководство по веб-мониторингу** (новое)
 
 ### Примеры и интеграция
 
-- [`examples/basic-setup/`](examples/basic-setup/) - Базовая настройка включая TimeCard скрипты
+- [`examples/basic-setup/`](examples/basic-setup/) - Базовая настройка Quantum-PCI
 - [`examples/basic-setup/timecard-integration-scripts.md`](examples/basic-setup/timecard-integration-scripts.md) - **Готовые скрипты интеграции** для всех протоколов времени
-- [`examples/integration/`](examples/integration/) - Интеграция с мониторингом TimeCard
+- [`examples/integration/`](examples/integration/) - Интеграция с мониторингом Quantum-PCI
 - [`examples/advanced-config/`](examples/advanced-config/) - Продвинутые конфигурации
 - [`examples/advanced-config/atomic-clock-ntp.conf`](examples/advanced-config/atomic-clock-ntp.conf) - Конфигурация chrony для атомных часов
 - [`examples/advanced-config/ieee1588-2019.conf`](examples/advanced-config/ieee1588-2019.conf) - Конфигурация PTP v2.1 с новыми функциями
 
-## Быстрый старт с TimeCard
+## Быстрый старт с Quantum-PCI
 
 ### 🛠 Запуск веб-мониторинга (1 минута)
 
@@ -90,20 +90,20 @@ cd ptp-monitoring
 # 2. Устанавливаем зависимости
 pip install --break-system-packages -r requirements.txt
 
-# 3. Запускаем расширенную систему
-python3 demo-extended.py
+# 3. Запускаем систему мониторинга
+python3 quantum-pci-monitor.py
 ```
 
 После запуска система будет доступна по адресам:
-- **📉 Extended Dashboard**: http://localhost:8080/dashboard
+- **📉 Dashboard**: http://localhost:8080/dashboard
 - **📱 Mobile PWA**: http://localhost:8080/pwa
 - **🔧 API Documentation**: http://localhost:8080/api/
 - **🏠 Main Page**: http://localhost:8080/
 
-### 🔧 Базовая настройка TimeCard
+### 🔧 Базовая настройка Quantum-PCI
 
 ```bash
-# Проверка устройств TimeCard
+# Проверка устройств Quantum-PCI
 ls /sys/class/timecard/
 
 # Базовая настройка
@@ -170,7 +170,7 @@ echo "PTP device: /dev/$PTP_DEV"
 ## Мониторинг
 
 ### Веб-мониторинг
-Интеграция с системами мониторинга теперь включает метрики TimeCard через веб-интерфейс:
+Интеграция с системами мониторинга теперь включает метрики Quantum-PCI через веб-интерфейс:
 
 ```bash
 # Проверка API
@@ -185,10 +185,10 @@ curl http://localhost:8080/api/alerts
 
 ### Prometheus метрики
 ```bash
-# Prometheus метрики TimeCard
-timecard_device_info{device="ocp0",serial="12345"} 1
-timecard_gnss_locked{device="ocp0"} 1
-timecard_clock_source_info{device="ocp0",source="GNSS"} 1
+# Prometheus метрики Quantum-PCI
+quantum_pci_device_info{device="ocp0",serial="12345"} 1
+quantum_pci_gnss_locked{device="ocp0"} 1
+quantum_pci_clock_source_info{device="ocp0",source="GNSS"} 1
 ```
 
 ## Устранение неполадок
@@ -216,24 +216,24 @@ sudo diagnose-timecard
 3. **API не отвечает** - проверьте логи: `tail -f monitoring.log`
 4. **Дашборд не загружается** - проверьте консоль браузера на ошибки JavaScript
 
-### Типичные проблемы TimeCard
+### Типичные проблемы Quantum-PCI
 
-1. **TimeCard не обнаружено** - проверьте загрузку драйвера и PCI устройств
+1. **Quantum-PCI не обнаружено** - проверьте загрузку драйвера и PCI устройств
 2. **GNSS не синхронизируется** - проверьте антенну и подождите до 15 минут
 3. **SMA не работают** - проверьте конфигурацию и кабельные соединения
 4. **Высокая задержка** - откалибруйте задержки кабелей
 
 ## Поддерживаемые устройства
 
-- Quantum-PCI TimeCard (PCI ID: 1d9b:0400)
-- Orolia ART Card (PCI ID: 1ad7:a000)
+- Quantum-PCI (PCI ID: 1d9b:0400)
+- Orolia ART Card (PCI ID: 1ad7:a000)  
 - ADVA Timecard (PCI ID: 0b0b:0410)
 
 ## Системные требования
 
 - Linux ядро 5.4+ (рекомендуется 5.15+)
 - Root права для настройки
-- PCI устройство TimeCard
+- PCI устройство Quantum-PCI
 - GNSS антенна (для синхронизации GNSS)
 - Python 3.8+ (для веб-мониторинга)
 - Современный веб-браузер (для дашбордов)
