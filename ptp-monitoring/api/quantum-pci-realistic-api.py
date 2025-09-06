@@ -435,6 +435,11 @@ def dashboard():
     """Основной дашборд"""
     return send_from_directory('.', 'dashboard.html')
 
+@app.route('/realistic-dashboard')
+def realistic_dashboard():
+    """Реалистичный дашборд с честными возможностями"""
+    return send_from_directory('.', 'realistic-dashboard.html')
+
 @app.route('/web/<path:filename>')
 def web_files(filename):
     """Статические веб-файлы"""
@@ -495,9 +500,9 @@ if __name__ == '__main__':
     print("   🛰️  Детальный GNSS (спутники, качество)")
     print("   🔧 Состояние LED/FPGA/аппаратуры")
     print("="*80)
-    print(f"📊 Dashboard: http://localhost:8080/dashboard")
+    print(f"📊 Realistic Dashboard: http://localhost:8080/realistic-dashboard")
     print(f"🔧 API: http://localhost:8080/api/")
-    print(f"⚠️  Limitations: http://localhost:8080/api/limitations")
+    print(f"🗺️  Roadmap: http://localhost:8080/api/roadmap")
     print("="*80)
     print(f"📦 Обнаружено устройств: {len(monitor.devices)}")
     for device in monitor.devices:
