@@ -16,37 +16,40 @@ def main():
     print("🚀 Quantum-PCI Real Monitoring v2.0")
     print("="*80)
     
-    # Проверяем наличие реального API
-    real_api_path = api_path / 'quantum-pci-api.py'
+    # Проверяем наличие реалистичного API
+    realistic_api_path = api_path / 'quantum-pci-realistic-api.py'
     
-    if real_api_path.exists():
-        print("✅ Real Quantum-PCI API found - starting real hardware monitoring")
+    if realistic_api_path.exists():
+        print("✅ Realistic Quantum-PCI API found - starting realistic hardware monitoring")
         print("="*80)
-        print("🔧 Real Hardware Features:")
-        print("   🌡️  Real thermal sensors from sysfs/hwmon")
-        print("   ⚡  Real power monitoring from device registers")
-        print("   🛰️  Real GNSS status from device interface")
-        print("   ⚡  Real PTP metrics from ptp4l")
-        print("   📡  Real hardware status from sysfs")
-        print("   🔧  Direct device communication")
-        print("   📊  Real-time data from actual TimeCard")
-        print("   🚨  Real alerting based on actual thresholds")
-        print("   📈  Real historical data from device")
-        print("   🔌  Real WebSocket updates from hardware")
+        print("⚠️  ВНИМАНИЕ: Мониторинг ограничен возможностями ptp_ocp драйвера")
+        print("")
+        print("✅ ДОСТУПНЫЕ функции:")
+        print("   📊  PTP offset/drift из sysfs")
+        print("   🛰️  Базовый GNSS статус")
+        print("   🔌  SMA конфигурация")
+        print("   📋  Информация об устройстве")
+        print("")
+        print("❌ НЕ ДОСТУПНЫЕ функции:")
+        print("   🌡️  Детальный мониторинг температуры")
+        print("   ⚡  Мониторинг питания")
+        print("   🛰️  Детальный GNSS (спутники)")
+        print("   🔧  Состояние LED/FPGA")
         print("="*80)
         
-        # Запускаем реальный API
+        # Запускаем реалистичный API
         try:
             import importlib.util
-            spec = importlib.util.spec_from_file_location("quantum_pci_api", str(real_api_path))
+            spec = importlib.util.spec_from_file_location("quantum_pci_realistic_api", str(realistic_api_path))
             quantum_pci_api = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(quantum_pci_api)
             
-            print("📊 Real Dashboard: http://localhost:8080/dashboard")
-            print("🔧 Real API:      http://localhost:8080/api/")
-            print("🏠 Main Page:     http://localhost:8080/")
+            print("📊 Realistic Dashboard: http://localhost:8080/dashboard")
+            print("🔧 Realistic API:       http://localhost:8080/api/")
+            print("⚠️  Limitations:        http://localhost:8080/api/limitations")
+            print("🏠 Main Page:           http://localhost:8080/")
             print("="*80)
-            print("🎯 Starting real hardware monitoring...")
+            print("🎯 Starting realistic hardware monitoring...")
             
             # Запускаем сервер
             quantum_pci_api.socketio.run(
@@ -66,8 +69,9 @@ def main():
             sys.exit(1)
             
     else:
-        print("❌ Quantum-PCI API not found!")
-        print("❌ Please ensure the API file exists at: api/quantum-pci-api.py")
+        print("❌ Realistic Quantum-PCI API not found!")
+        print("❌ Please ensure the API file exists at: api/quantum-pci-realistic-api.py")
+        print("💡 Run this to create it: check the repository for the realistic API file")
         sys.exit(1)
 
 

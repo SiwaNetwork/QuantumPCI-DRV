@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum-PCI Realistic Monitoring</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .disclaimer {
+            background: rgba(255, 193, 7, 0.9);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 5px solid #ffc107;
+        }
+        
+        .disclaimer h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .disclaimer ul {
+            color: #856404;
+            margin-left: 20px;
+        }
+        
+        .disclaimer li {
+            margin-bottom: 5px;
+        }
+        
+        .status-bar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-light.warning { background: #ffc107; }
+        .status-light.critical { background: #dc3545; }
+        .status-light.unknown { background: #6c757d; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .metric-card h3 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .metric-unit {
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+        
+        .metric-status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+        
+        .metric-status.ok { background: rgba(40, 167, 69, 0.3); }
+        .metric-status.warning { background: rgba(255, 193, 7, 0.3); }
+        .metric-status.critical { background: rgba(220, 53, 69, 0.3); }
+        .metric-status.unknown { background: rgba(108, 117, 125, 0.3); }
+        
+        .limitations-section {
+            background: rgba(220, 53, 69, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: white;
+        }
+        
+        .limitations-section h3 {
+            color: #ff6b6b;
+            margin-bottom: 15px;
+        }
+        
+        .limitations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .limitation-item {
+            background: rgba(220, 53, 69, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .limitation-item h4 {
+            color: #ff6b6b;
+            margin-bottom: 8px;
+        }
+        
+        .device-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            color: white;
+        }
+        
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .last-update {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕐 Quantum-PCI Monitoring</h1>
+            <div class="subtitle">Realistic Hardware Monitoring (Limited by ptp_ocp driver)</div>
+        </div>
+        
+        <div class="disclaimer">
+            <h3>⚠️ Важное уведомление об ограничениях</h3>
+            <p><strong>Эта система мониторинга ограничена возможностями ptp_ocp драйвера.</strong></p>
+            <p>Доступны только базовые метрики:</p>
+            <ul>
+                <li>PTP offset и drift из sysfs</li>
+                <li>Базовый GNSS статус синхронизации</li>
+                <li>Конфигурация SMA разъемов</li>
+                <li>Серийный номер устройства</li>
+            </ul>
+            <p><strong>НЕ доступны:</strong> детальный мониторинг температуры, питания, спутников GNSS, состояния LED/FPGA</p>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-light" id="connection-status"></div>
+                <span id="connection-text">Подключение...</span>
+            </div>
+            <div>
+                <button class="refresh-btn" onclick="refreshData()">🔄 Обновить</button>
+            </div>
+            <div class="last-update" id="last-update">
+                Последнее обновление: загрузка...
+            </div>
+        </div>
+        
+        <div class="metrics-grid">
+            <!-- PTP Metrics -->
+            <div class="metric-card">
+                <h3>📊 PTP Offset</h3>
+                <div class="metric-value" id="ptp-offset">--</div>
+                <div class="metric-unit">наносекунды</div>
+                <div class="metric-status" id="ptp-offset-status">unknown</div>
+            </div>
+            
+            <div class="metric-card">
+                <h3>📈 PTP Drift</h3>
+                <div class="metric-value" id="ptp-drift">--</div>
+                <div class="metric-unit">ppb (parts per billion)</div>
+                <div class="metric-status" id="ptp-drift-status">unknown</div>
+            </div>
+            
+            <div class="metric-card">
+                <h3>🕐 Clock Source</h3>
+                <div class="metric-value" id="clock-source">--</div>
+                <div class="metric-unit">источник синхронизации</div>
+                <div class="metric-status ok">active</div>
+            </div>
+            
+            <!-- GNSS Status -->
+            <div class="metric-card">
+                <h3>🛰️ GNSS Status</h3>
+                <div class="metric-value" id="gnss-status">--</div>
+                <div class="metric-unit">статус синхронизации</div>
+                <div class="metric-status" id="gnss-status-indicator">unknown</div>
+            </div>
+            
+            <!-- SMA Configuration -->
+            <div class="metric-card">
+                <h3>🔌 SMA Connectors</h3>
+                <div id="sma-list">
+                    <div>SMA1: <span id="sma1-config">--</span></div>
+                    <div>SMA2: <span id="sma2-config">--</span></div>
+                    <div>SMA3: <span id="sma3-config">--</span></div>
+                    <div>SMA4: <span id="sma4-config">--</span></div>
+                </div>
+            </div>
+            
+            <!-- Device Info -->
+            <div class="metric-card">
+                <h3>📋 Device Info</h3>
+                <div>Serial: <span id="device-serial">--</span></div>
+                <div>Type: <span id="device-type">--</span></div>
+                <div>Driver: <span id="device-driver">ptp_ocp</span></div>
+            </div>
+        </div>
+        
+        <div class="limitations-section">
+            <h3>❌ Ограничения системы мониторинга</h3>
+            <div class="limitations-grid">
+                <div class="limitation-item">
+                    <h4>🌡️ Температурный мониторинг</h4>
+                    <p>Только temperature_table для ART Card. Нет hwmon интеграции, мониторинга FPGA, Board, Ambient температур.</p>
+                </div>
+                
+                <div class="limitation-item">
+                    <h4>⚡ Мониторинг питания</h4>
+                    <p>Полностью отсутствует. Нет мониторинга напряжений (3.3V, 1.8V, 1.2V, 12V), токов, мощности.</p>
+                </div>
+                
+                <div class="limitation-item">
+                    <h4>🛰️ Детальный GNSS</h4>
+                    <p>Только базовый gnss_sync статус. Нет информации о спутниках, качестве сигнала, точности.</p>
+                </div>
+                
+                <div class="limitation-item">
+                    <h4>🔧 Аппаратный статус</h4>
+                    <p>Нет мониторинга LED индикаторов, состояния FPGA, сетевых портов, калибровки.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="device-info">
+            <h3>📦 Обнаруженные устройства</h3>
+            <div id="devices-list">Загрузка...</div>
+        </div>
+    </div>
+    
+    <script>
+        let currentData = {};
+        
+        async function refreshData() {
+            try {
+                // Получение списка устройств
+                const devicesResponse = await fetch('/api/devices');
+                const devicesData = await devicesResponse.json();
+                
+                updateConnectionStatus('ok', `Подключено (${devicesData.count} устройств)`);
+                updateDevicesList(devicesData.devices);
+                
+                if (devicesData.devices.length > 0) {
+                    // Получение статуса первого устройства
+                    const deviceId = devicesData.devices[0].device_id;
+                    const statusResponse = await fetch(`/api/device/${deviceId}/status`);
+                    const statusData = await statusResponse.json();
+                    
+                    updateMetrics(statusData);
+                    currentData = statusData;
+                }
+                
+                updateLastUpdate();
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                updateConnectionStatus('critical', 'Ошибка подключения');
+            }
+        }
+        
+        function updateConnectionStatus(status, text) {
+            const statusLight = document.getElementById('connection-status');
+            const statusText = document.getElementById('connection-text');
+            
+            statusLight.className = `status-light ${status}`;
+            statusText.textContent = text;
+        }
+        
+        function updateMetrics(data) {
+            // PTP Metrics
+            if (data.ptp) {
+                document.getElementById('ptp-offset').textContent = data.ptp.offset_ns.toLocaleString();
+                document.getElementById('ptp-drift').textContent = data.ptp.drift_ppb.toLocaleString();
+                document.getElementById('clock-source').textContent = data.ptp.clock_source;
+                
+                updateStatusIndicator('ptp-offset-status', data.ptp.status);
+                updateStatusIndicator('ptp-drift-status', data.ptp.status);
+            }
+            
+            // GNSS Status
+            if (data.gnss) {
+                document.getElementById('gnss-status').textContent = data.gnss.sync_status;
+                updateStatusIndicator('gnss-status-indicator', data.gnss.status);
+            }
+            
+            // SMA Configuration
+            if (data.sma) {
+                for (let i = 1; i <= 4; i++) {
+                    const smaKey = `sma${i}`;
+                    if (data.sma[smaKey]) {
+                        document.getElementById(`sma${i}-config`).textContent = data.sma[smaKey].config;
+                    }
+                }
+            }
+            
+            // Device Info
+            if (data.device_info) {
+                document.getElementById('device-serial').textContent = data.device_info.serial_number;
+                document.getElementById('device-type').textContent = data.device_info.type;
+            }
+        }
+        
+        function updateStatusIndicator(elementId, status) {
+            const element = document.getElementById(elementId);
+            element.className = `metric-status ${status}`;
+            element.textContent = status;
+        }
+        
+        function updateDevicesList(devices) {
+            const devicesList = document.getElementById('devices-list');
+            if (devices.length === 0) {
+                devicesList.innerHTML = '<p>⚠️ Устройства не найдены. Проверьте что драйвер ptp_ocp загружен.</p>';
+                return;
+            }
+            
+            let html = '';
+            devices.forEach(device => {
+                html += `
+                    <div style="margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                        <strong>${device.device_id}</strong> - ${device.type}<br>
+                        Serial: ${device.serial_number}<br>
+                        Sources: ${device.available_clock_sources.join(', ')}
+                    </div>
+                `;
+            });
+            devicesList.innerHTML = html;
+        }
+        
+        function updateLastUpdate() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = 
+                `Последнее обновление: ${now.toLocaleTimeString()}`;
+        }
+        
+        // Автоматическое обновление каждые 10 секунд
+        setInterval(refreshData, 10000);
+        
+        // Первоначальная загрузка
+        refreshData();
+    </script>
+</body>
+</html>
