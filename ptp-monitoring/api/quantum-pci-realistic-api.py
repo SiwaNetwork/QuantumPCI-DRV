@@ -306,45 +306,52 @@ def api_index():
             'device_status': '/api/device/<device_id>/status', 
             'real_metrics': '/api/metrics/real',
             'alerts': '/api/alerts',
-            'limitations': '/api/limitations'
+            'roadmap': '/api/roadmap'
         },
         'detected_devices': len(monitor.devices),
         'timestamp': time.time()
     })
 
-@app.route('/api/limitations')
-def api_limitations():
-    """Эндпоинт с подробным описанием ограничений"""
+@app.route('/api/roadmap')
+def api_roadmap():
+    """Эндпоинт с дорожной картой развития проекта"""
     return jsonify({
-        'title': 'Ограничения системы мониторинга Quantum-PCI',
-        'driver_limitations': {
-            'thermal_monitoring': {
-                'available': 'Очень ограничено',
-                'details': 'Только temperature_table для ART Card, нет hwmon интеграции',
-                'missing': ['FPGA temperature', 'Board temperature', 'Ambient sensors', 'DDR temperature']
+        'title': 'Дорожная карта проекта Quantum-PCI Monitoring',
+        'current_version': '2.0 - Realistic Baseline',
+        'current_capabilities': {
+            'ptp_monitoring': 'Базовый мониторинг offset/drift',
+            'gnss_status': 'Статус синхронизации GNSS',
+            'sma_configuration': 'Конфигурация SMA разъемов',
+            'web_interface': 'Реалистичный веб-интерфейс',
+            'api': 'REST API с честной документацией'
+        },
+        'upcoming_releases': {
+            'v2.1': {
+                'timeline': '3-4 недели',
+                'features': ['Расширенная PTP аналитика', 'Улучшенная система алертов', 'Оптимизация производительности']
             },
-            'power_monitoring': {
-                'available': 'Отсутствует',
-                'details': 'ptp_ocp драйвер не предоставляет мониторинг питания',
-                'missing': ['Voltage rails (3.3V, 1.8V, 1.2V, 12V)', 'Current consumption', 'Power efficiency']
+            'v2.2': {
+                'timeline': '2-3 недели',
+                'features': ['Интерактивные графики', 'Dashboard customization', 'Mobile optimization']
             },
-            'gnss_monitoring': {
-                'available': 'Базовый',
-                'details': 'Только gnss_sync статус',
-                'missing': ['Satellite count per system', 'Signal strength', 'Position accuracy', 'Antenna status']
-            },
-            'hardware_status': {
-                'available': 'Отсутствует',
-                'details': 'Нет интерфейсов для мониторинга аппаратного состояния',
-                'missing': ['LED status', 'FPGA health', 'Network ports', 'Calibration status']
+            'v2.3': {
+                'timeline': '2-3 недели', 
+                'features': ['Prometheus integration', 'Configuration management', 'Authentication & Security']
             }
         },
-        'realistic_expectations': {
-            'primary_function': 'PTP синхронизация времени',
-            'secondary_function': 'Базовый GNSS статус',
-            'configuration': 'SMA разъемы и источники времени',
-            'not_a_replacement_for': 'Полноценные системы мониторинга оборудования'
+        'long_term_vision': {
+            'v3.0': 'Driver Enhancement Research',
+            'v3.1': 'Advanced GNSS Features',
+            'v3.2': 'Network Time Integration',
+            'v4.0+': 'Enterprise Features & Cloud Integration'
         },
+        'how_to_contribute': {
+            'bug_reports': 'GitHub Issues для багов и тестирования',
+            'code_contributions': 'Pull requests для новых фичей',
+            'documentation': 'Помощь с документацией и переводами',
+            'research': 'Исследование новых возможностей драйвера'
+        },
+        'roadmap_url': 'https://github.com/SiwaNetwork/QuantumPCI-DRV/blob/main/ptp-monitoring/ROADMAP.md',
         'timestamp': time.time()
     })
 

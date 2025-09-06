@@ -58,9 +58,9 @@ python3 quantum-pci-monitor.py
 
 ### Доступ
 После запуска система будет доступна:
-- **Realistic Dashboard**: http://localhost:8080/dashboard (с disclaimer об ограничениях)
+- **Realistic Dashboard**: http://localhost:8080/dashboard (с информацией о возможностях)
 - **Realistic API**: http://localhost:8080/api/
-- **Limitations**: http://localhost:8080/api/limitations (ВАЖНО прочитать!)
+- **Roadmap**: http://localhost:8080/api/roadmap (план развития проекта)
 - **WebSocket**: ws://localhost:8080/ws
 
 ## API Endpoints

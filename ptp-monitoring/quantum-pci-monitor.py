@@ -46,7 +46,7 @@ def main():
             
             print("📊 Realistic Dashboard: http://localhost:8080/dashboard")
             print("🔧 Realistic API:       http://localhost:8080/api/")
-            print("⚠️  Limitations:        http://localhost:8080/api/limitations")
+            print("🗺️  Roadmap:            http://localhost:8080/api/roadmap")
             print("🏠 Main Page:           http://localhost:8080/")
             print("="*80)
             print("🎯 Starting realistic hardware monitoring...")
