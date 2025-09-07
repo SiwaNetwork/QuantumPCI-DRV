@@ -2719,6 +2719,67 @@ phc2sys [18499.411]: ens1f0 phc offset 4 s2 freq +1041 delay 11904
 
 **Результат:** ✅ **ПРОЙДЕН**
 
+### 4.15 Тестирование PTM (Precision Time Measurement)
+
+**Требование:** Проверить работу PTM (Precision Time Measurement) для точного измерения времени через PCIe.
+
+**Предварительные условия:**
+- Хост-система должна поддерживать PTM
+- Установлена версия linuxptp v4.3 или новее
+- Остальные службы времени отключены
+
+**Метод тестирования:**
+
+1. **Проверка поддержки PTM:**
+   ```bash
+   # Проверка возможностей PTM через lspci
+   lspci -vvv | grep -A 20 "Precision Time Measurement"
+   ```
+
+2. **Остановка служб времени:**
+   ```bash
+   sudo systemctl stop systemd-timesyncd.service
+   ```
+
+3. **Синхронизация хоста:**
+   ```bash
+   # Установка времени PHC
+   sudo phc_ctl /dev/ptp2 set
+   
+   # Синхронизация системного времени с PHC
+   sudo phc2sys -c CLOCK_REALTIME -s /dev/ptp2 -O 0 -R 16 -u 8 -m
+   ```
+
+**Критерии оценки:**
+
+| Параметр | Требование | Критерий прохождения |
+|----------|------------|---------------------|
+| PTM задержка | 0 ± 0 | delay 0+/- 0 |
+| RMS отклонение | < 50 нс | rms < 50 |
+| Максимальное отклонение | < 100 нс | max < 100 |
+
+**Пример успешного вывода PTM:**
+```
+phc2sys[4503.063]: CLOCK_REALTIME rms 26 max 40 freq -17250 +/- 17 delay 0+/- 0
+phc2sys[4503.564]: CLOCK_REALTIME rms 46 max 85 freq -17346 +/- 17 delay 0+/- 0
+phc2sys[4504.066]: CLOCK_REALTIME rms 25 max 54 freq -17316 +/- 25 delay 0+/- 0
+phc2sys[4504.567]: CLOCK_REALTIME rms 29 max 53 freq -17277 +/- 24 delay 0+/- 0
+phc2sys[4505.069]: CLOCK_REALTIME rms 29 max 63 freq -17219 +/- 20 delay 0+/- 0
+```
+
+**Интерпретация результатов:**
+- ✅ **PTM работает корректно**: если `delay 0+/- 0` стабильно отображается
+- ✅ **Высокая точность**: RMS < 50 нс, max < 100 нс
+- ❌ **PTM не работает**: если задержка не равна 0 или нестабильна
+
+**Конфигурация PTM:**
+- **PTMCap**: Requester:+, Responder:-, Root:-
+- **PTMClockGranularity**: 8 нс
+- **PTMControl**: Enabled:+, RootSelected:-
+- **PTMEffectiveGranularity**: 4 нс
+
+**Результат:** ✅ **ПРОЙДЕН** (PTM обеспечивает точность измерения времени с задержкой 0 ± 0)
+
 **Скрипт тестирования точности:**
 ```bash
 #!/bin/bash
