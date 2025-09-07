@@ -1081,7 +1081,7 @@ sudo apt install tio
 tio -b 115200 /dev/ttyS5
 
 # Проверка NMEA сообщений от FPGA
-tio -b 115200 /dev/ttyS0
+tio -b 115200 /dev/ttyS7
 ```
 
 **Пример NMEA сообщений:**
