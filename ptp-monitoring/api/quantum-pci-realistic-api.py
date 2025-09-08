@@ -279,8 +279,13 @@ monitor = QuantumPCIRealisticMonitor()
 # === API ROUTES ===
 
 @app.route('/')
+def main_page():
+    """Главная страница - красивый дашборд"""
+    return send_from_directory('api', 'realistic-dashboard.html')
+
+@app.route('/api/')
 def api_index():
-    """Главная страница API с disclaimer"""
+    """API информация с disclaimer"""
     return jsonify({
         'api_name': 'Quantum-PCI Realistic Monitoring API',
         'version': CONFIG['version'],
@@ -433,12 +438,12 @@ def api_alerts():
 @app.route('/dashboard')
 def dashboard():
     """Основной дашборд"""
-    return send_from_directory('.', 'dashboard.html')
+    return send_from_directory('api', 'dashboard.html')
 
 @app.route('/realistic-dashboard')
 def realistic_dashboard():
     """Реалистичный дашборд с честными возможностями"""
-    return send_from_directory('.', 'realistic-dashboard.html')
+    return send_from_directory('api', 'realistic-dashboard.html')
 
 @app.route('/web/<path:filename>')
 def web_files(filename):

@@ -1555,6 +1555,14 @@ makestep 1.0 3
 
 **Вариант 2: Использование локального PHC как референс** (при наличии GNSS/точного PHC):
 
+**⚠️ ВАЖНО: Перед настройкой chrony с PHC необходимо настроить права доступа:**
+
+```bash
+# Настройка прав доступа для PTP устройств
+sudo usermod -a -G ptp _chrony
+sudo chgrp ptp /dev/ptp1
+```
+
 ```conf
 refclock PHC /dev/ptp0 poll 2 dpoll -2 offset 0.0 prefer
 rtcsync
@@ -1595,6 +1603,170 @@ chronyc sources -v
 ```bash
 sudo systemctl stop systemd-timesyncd
 sudo systemctl disable systemd-timesyncd
+```
+
+---
+
+### 17.1. Настройка прав доступа для PTP устройств
+
+**Критически важно**: Для корректной работы chrony с PHC устройствами необходимо правильно настроить права доступа.
+
+#### Проверка текущих прав доступа
+
+```bash
+# Проверка прав доступа к PTP устройствам
+ls -la /dev/ptp*
+
+# Проверка групп пользователя _chrony
+id _chrony
+```
+
+**Ожидаемый результат:**
+```
+crw-rw---- 1 root ptp      246, 0 сен  8 11:59 /dev/ptp0
+crw-rw-r-- 1 root ptpusers 246, 1 сен  8 11:59 /dev/ptp1
+uid=122(_chrony) gid=124(_chrony) группы=124(_chrony),1001(ptpusers),1002(ptp)
+```
+
+#### Настройка прав доступа
+
+```bash
+# Добавление пользователя _chrony в группу ptp
+sudo usermod -a -G ptp _chrony
+
+# Изменение прав на PTP устройства (если необходимо)
+sudo chgrp ptp /dev/ptp1
+
+# Перезапуск chrony для применения изменений
+sudo systemctl restart chrony
+```
+
+#### Проверка доступа пользователя _chrony
+
+```bash
+# Проверка доступа к PTP устройствам от имени пользователя _chrony
+sudo -u _chrony testptp -d /dev/ptp0 -g
+sudo -u _chrony testptp -d /dev/ptp1 -g
+```
+
+**Ожидаемый результат:** Команды должны выполниться без ошибок и показать время.
+
+### 17.2. Выбор правильного PTP устройства
+
+#### Определение PTP устройства, создаваемого драйвером
+
+```bash
+# Проверка, какое PTP устройство создает драйвер
+sudo dmesg | grep ptp_ocp
+
+# Проверка соответствия через sysfs
+readlink /sys/class/timecard/ocp0/ptp
+```
+
+**Пример вывода dmesg:**
+```
+[   16.330257] ptp_ocp 0000:01:00.0: Version 1.4.0, clock TOD, device ptp1
+```
+
+**Пример вывода sysfs:**
+```
+../../ptp/ptp1
+```
+
+#### Рекомендации по выбору PTP устройства
+
+- **`/dev/ptp0`** - обычно работает лучше с chrony, рекомендуется для NTP синхронизации
+- **`/dev/ptp1`** - основное устройство, создаваемое драйвером, может требовать дополнительной настройки
+
+#### Тестирование PTP устройств
+
+```bash
+# Проверка возможностей PTP устройств
+sudo testptp -d /dev/ptp0 -c
+sudo testptp -d /dev/ptp1 -c
+
+# Проверка времени на PTP устройствах
+sudo testptp -d /dev/ptp0 -g
+sudo testptp -d /dev/ptp1 -g
+```
+
+### 17.3. Диагностика проблем с PHC в chrony
+
+#### Типичные проблемы и решения
+
+**Проблема 1: PHC показывает `?` (unusable) в `chronyc sources -v`**
+
+**Причины:**
+- Неправильные права доступа к PTP устройству
+- Пользователь `_chrony` не в группе `ptp`
+- Неправильный выбор PTP устройства
+
+**Решение:**
+```bash
+# 1. Проверка прав доступа
+ls -la /dev/ptp*
+id _chrony
+
+# 2. Настройка прав доступа
+sudo usermod -a -G ptp _chrony
+sudo chgrp ptp /dev/ptp1
+
+# 3. Проверка доступа
+sudo -u _chrony testptp -d /dev/ptp1 -g
+
+# 4. Перезапуск chrony
+sudo systemctl restart chrony
+```
+
+**Проблема 2: PHC не синхронизируется**
+
+**Причины:**
+- GNSS не синхронизирован
+- Неправильный источник часов
+
+**Решение:**
+```bash
+# 1. Проверка GNSS синхронизации
+cat /sys/class/timecard/ocp0/gnss_sync
+
+# 2. Проверка источника часов
+cat /sys/class/timecard/ocp0/clock_source
+
+# 3. Установка правильного источника часов
+echo "TOD" | sudo tee /sys/class/timecard/ocp0/clock_source
+```
+
+**Проблема 3: Высокий offset между системным и PHC временем**
+
+**Решение:**
+```bash
+# 1. Измерение смещения времени
+sudo testptp -d /dev/ptp0 -k 5
+
+# 2. Настройка offset в chrony.conf
+echo "refclock PHC /dev/ptp0 poll 3 dpoll -2 offset <измеренное_смещение> stratum 1 precision 1e-9 prefer" | sudo tee /etc/chrony/chrony.conf
+
+# 3. Перезапуск chrony
+sudo systemctl restart chrony
+```
+
+#### Команды для диагностики
+
+```bash
+# Проверка статуса chrony
+chronyc sources -v
+chronyc tracking
+
+# Проверка логов chrony
+sudo journalctl -u chrony -n 20 --no-pager
+
+# Проверка PTP устройств
+sudo testptp -d /dev/ptp0 -g
+sudo testptp -d /dev/ptp1 -g
+
+# Проверка GNSS статуса
+cat /sys/class/timecard/ocp0/gnss_sync
+cat /sys/class/timecard/ocp0/clock_source
 ```
 
 ---
@@ -3882,11 +4054,19 @@ ls /sys/class/timecard/
 # Проверка PTP статуса
 sudo pmc -u -b 0 'GET CURRENT_DATA_SET'
 
+# Проверка прав доступа к PTP устройствам
+ls -la /dev/ptp*
+id _chrony
+
 # Проверка NTP источников
 chronyc sources -v
 
 # Проверка системного времени
 timedatectl status
+
+# Проверка GNSS синхронизации
+cat /sys/class/timecard/ocp0/gnss_sync
+cat /sys/class/timecard/ocp0/clock_source
 ```
 
 ---
@@ -3909,8 +4089,10 @@ timedatectl status
 |---------------|----------|---------|-------------------|
 | Карта не обнаружена | Нет в lspci | Проблемы с PCIe | Проверить подключение |
 | Драйвер не загружается | Ошибки в dmesg | Несовместимость ядра | Обновить драйвер |
+| PHC показывает `?` в chrony | `chronyc sources -v` показывает `?` | Неправильные права доступа | `sudo usermod -a -G ptp _chrony` |
 | Нет синхронизации | Высокий offset | Проблемы с GNSS | Проверить антенну |
 | Низкая точность | Высокий джиттер | Проблемы с кабелями | Заменить кабели |
+| Chrony не может получить доступ к PHC | Ошибки доступа к `/dev/ptp*` | Пользователь `_chrony` не в группе `ptp` | Настроить права доступа |
 
 ---
 

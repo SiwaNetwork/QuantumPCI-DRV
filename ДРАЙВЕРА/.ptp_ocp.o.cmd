@@ -3,6 +3,8 @@ savedcmd_ptp_ocp.o := gcc-13 -Wp,-MMD,./.ptp_ocp.o.d -nostdinc -I/usr/src/linux-
 source_ptp_ocp.o := ptp_ocp.c
 
 deps_ptp_ocp.o := \
+    $(wildcard include/config/PM_SLEEP) \
+    $(wildcard include/config/PM) \
     $(wildcard include/config/PCIE_PTM) \
     $(wildcard include/config/X86_TSC) \
     $(wildcard include/config/UML) \
@@ -1109,7 +1111,6 @@ deps_ptp_ocp.o := \
     $(wildcard include/config/DMA_OPS_BYPASS) \
     $(wildcard include/config/DMA_NEED_SYNC) \
     $(wildcard include/config/IOMMU_DMA) \
-    $(wildcard include/config/PM_SLEEP) \
     $(wildcard include/config/DEVTMPFS) \
   /usr/src/linux-headers-6.14.0-24-generic/include/linux/dev_printk.h \
   /usr/src/linux-headers-6.14.0-24-generic/include/linux/energy_model.h \
@@ -1126,7 +1127,6 @@ deps_ptp_ocp.o := \
   /usr/src/linux-headers-6.14.0-24-generic/include/linux/pm.h \
     $(wildcard include/config/VT_CONSOLE_SLEEP) \
     $(wildcard include/config/CXL_SUSPEND) \
-    $(wildcard include/config/PM) \
     $(wildcard include/config/PM_CLK) \
     $(wildcard include/config/PM_GENERIC_DOMAINS) \
   /usr/src/linux-headers-6.14.0-24-generic/include/linux/device/bus.h \

@@ -13,7 +13,7 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 50%, #45b7d1 100%);
             min-height: 100vh;
             color: #333;
         }
@@ -145,6 +145,79 @@
         .metric-status.critical { background: rgba(220, 53, 69, 0.3); }
         .metric-status.unknown { background: rgba(108, 117, 125, 0.3); }
         
+        /* Стили для крупных часов устройства */
+        .device-clock-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .clock-title {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .device-clock {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .clock-time {
+            font-size: 72px;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+            font-family: 'Courier New', monospace;
+            letter-spacing: 4px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .clock-date {
+            font-size: 28px;
+            color: white;
+            font-weight: 500;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .clock-status {
+            font-size: 18px;
+            padding: 8px 20px;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        .clock-status.synced {
+            background: rgba(40, 167, 69, 0.3);
+            border: 2px solid rgba(40, 167, 69, 0.5);
+        }
+        
+        .clock-status.syncing {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid rgba(255, 193, 7, 0.5);
+        }
+        
+        .clock-status.error {
+            background: rgba(220, 53, 69, 0.3);
+            border: 2px solid rgba(220, 53, 69, 0.5);
+        }
+        
         .limitations-section {
             background: rgba(220, 53, 69, 0.1);
             border-radius: 10px;
@@ -227,19 +300,6 @@
             <div class="subtitle">Realistic Hardware Monitoring (Limited by ptp_ocp driver)</div>
         </div>
         
-        <div class="disclaimer">
-            <h3>🚀 Текущие возможности и планы развития</h3>
-            <p><strong>Версия 2.0 - Realistic Baseline:</strong> Система предоставляет базовые, но надежные возможности мониторинга.</p>
-            <p><strong>Доступно сейчас:</strong></p>
-            <ul>
-                <li>✅ PTP offset и drift из sysfs</li>
-                <li>✅ Базовый GNSS статус синхронизации</li>
-                <li>✅ Конфигурация SMA разъемов</li>
-                <li>✅ Информация об устройстве</li>
-            </ul>
-            <p><strong>В разработке:</strong> расширенная аналитика, интерактивные графики, Prometheus интеграция. 
-            <a href="/api/roadmap" target="_blank" style="color: #ffc107;">📋 Смотрите полный roadmap</a></p>
-        </div>
         
         <div class="status-bar">
             <div class="status-indicator">
@@ -305,36 +365,18 @@
             </div>
         </div>
         
-        <div class="limitations-section">
-            <h3>🗺️ Планы развития проекта</h3>
-            <div class="limitations-grid">
-                <div class="limitation-item">
-                    <h4>📊 v2.1 - Enhanced PTP (3-4 недели)</h4>
-                    <p>Расширенная PTP аналитика, исторические тренды, улучшенная система алертов, оптимизация производительности.</p>
-                </div>
-                
-                <div class="limitation-item">
-                    <h4>📈 v2.2 - Advanced Web Interface (2-3 недели)</h4>
-                    <p>Интерактивные графики с Chart.js, drag & drop виджеты, темная/светлая темы, mobile optimization.</p>
-                </div>
-                
-                <div class="limitation-item">
-                    <h4>🔧 v2.3 - Integration & APIs (2-3 недели)</h4>
-                    <p>Prometheus integration, YAML конфигурации, JWT authentication, HTTPS support, API rate limiting.</p>
-                </div>
-                
-                <div class="limitation-item">
-                    <h4>🚀 v3.0+ - Advanced Features (6+ месяцев)</h4>
-                    <p>Исследование расширения драйвера, продвинутые GNSS функции, NTP/Chrony интеграция, enterprise возможности.</p>
-                </div>
-            </div>
-            <div style="text-align: center; margin-top: 20px;">
-                <a href="/api/roadmap" target="_blank" style="color: #ffc107; text-decoration: none; font-weight: bold;">
-                    📋 Полная дорожная карта проекта →
-                </a>
+        
+        
+        <!-- Крупные часы устройства -->
+        <div class="device-clock-container">
+            <div class="clock-title">🕐 Время устройства Quantum-PCI</div>
+            <div class="device-clock" id="device-clock">
+                <div class="clock-time" id="clock-time">--:--:--</div>
+                <div class="clock-date" id="clock-date">-- -- ----</div>
+                <div class="clock-status" id="clock-status">Синхронизация...</div>
             </div>
         </div>
-        
+
         <div class="device-info">
             <h3>📦 Обнаруженные устройства</h3>
             <div id="devices-list">Загрузка...</div>
@@ -388,6 +430,7 @@
                 
                 updateStatusIndicator('ptp-offset-status', data.ptp.status);
                 updateStatusIndicator('ptp-drift-status', data.ptp.status);
+                
             }
             
             // GNSS Status
@@ -445,11 +488,69 @@
                 `Последнее обновление: ${now.toLocaleTimeString()}`;
         }
         
+        // Функция для обновления часов устройства
+        function updateDeviceClock() {
+            const now = new Date();
+            
+            // Форматируем время
+            const timeString = now.toLocaleTimeString('ru-RU', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // Форматируем дату
+            const dateString = now.toLocaleDateString('ru-RU', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            // Обновляем элементы
+            document.getElementById('clock-time').textContent = timeString;
+            document.getElementById('clock-date').textContent = dateString;
+            
+            // Обновляем статус синхронизации
+            updateClockStatus();
+        }
+        
+        // Функция для обновления статуса часов
+        function updateClockStatus() {
+            const statusElement = document.getElementById('clock-status');
+            
+            // Проверяем статус PTP синхронизации
+            if (currentData.ptp && currentData.ptp.status) {
+                const ptpStatus = currentData.ptp.status;
+                
+                if (ptpStatus === 'ok') {
+                    statusElement.textContent = '✅ Синхронизировано с PTP';
+                    statusElement.className = 'clock-status synced';
+                } else if (ptpStatus === 'warning') {
+                    statusElement.textContent = '⚠️ Синхронизация в процессе';
+                    statusElement.className = 'clock-status syncing';
+                } else {
+                    statusElement.textContent = '❌ Ошибка синхронизации';
+                    statusElement.className = 'clock-status error';
+                }
+            } else {
+                statusElement.textContent = '🔄 Получение данных...';
+                statusElement.className = 'clock-status syncing';
+            }
+        }
+        
+        
+        
         // Автоматическое обновление каждые 10 секунд
         setInterval(refreshData, 10000);
         
+        // Обновление часов каждую секунду
+        setInterval(updateDeviceClock, 1000);
+        
         // Первоначальная загрузка
         refreshData();
+        updateDeviceClock();
     </script>
 </body>
 </html>

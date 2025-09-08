@@ -1,60 +1,3 @@
-#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
-static int ptp_ocp_suspend(struct device *dev)
-{
-    struct ptp_ocp *bp = dev_get_drvdata(dev);
-    unsigned long flags;
-    int i;
-
-    if (!bp)
-        return 0;
-
-    /* Remember and disable generators */
-    for (i = 0; i < 4; i++) {
-        bp->signal_enabled_before_suspend[i] = bp->signal[i].running;
-        if (bp->signal[i].running) {
-            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, false);
-        }
-    }
-
-    /* Mask MSI/IRQs if applicable */
-    spin_lock_irqsave(&bp->lock, flags);
-    if (bp->msi)
-        iowrite32(0, &bp->msi->mask);
-    spin_unlock_irqrestore(&bp->lock, flags);
-
-    return 0;
-}
-
-static int ptp_ocp_resume(struct device *dev)
-{
-    struct ptp_ocp *bp = dev_get_drvdata(dev);
-    unsigned long flags;
-    int i;
-
-    if (!bp)
-        return 0;
-
-    /* Unmask MSI/IRQs if applicable */
-    spin_lock_irqsave(&bp->lock, flags);
-    if (bp->msi)
-        iowrite32(~0, &bp->msi->mask);
-    spin_unlock_irqrestore(&bp->lock, flags);
-
-    /* Restore generators state */
-    for (i = 0; i < 4; i++) {
-        if (bp->signal_enabled_before_suspend[i]) {
-            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, true);
-        }
-    }
-
-    return 0;
-}
-
-static const struct dev_pm_ops ptp_ocp_pm_ops = {
-    .suspend = ptp_ocp_suspend,
-    .resume  = ptp_ocp_resume,
-};
-#endif
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -546,6 +489,7 @@ struct ptp_ocp {
 	bool			signal_enabled_before_suspend[4];
 };
 
+
 #define OCP_REQ_TIMESTAMP	BIT(0)
 #define OCP_REQ_PPS		BIT(1)
 
@@ -583,6 +527,64 @@ static void ptp_ocp_link_child(struct ptp_ocp *bp, const char *name,
 			       const char *link);
 
 static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
+
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
+static int ptp_ocp_suspend(struct device *dev)
+{
+    struct ptp_ocp *bp = dev_get_drvdata(dev);
+    unsigned long flags;
+    int i;
+
+    if (!bp)
+        return 0;
+
+    /* Remember and disable generators */
+    for (i = 0; i < 4; i++) {
+        bp->signal_enabled_before_suspend[i] = bp->signal[i].running;
+        if (bp->signal[i].running) {
+            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, false);
+        }
+    }
+
+    /* Disable MSI/IRQs if applicable */
+    spin_lock_irqsave(&bp->lock, flags);
+    if (bp->msi)
+        iowrite32(0, &bp->msi->enable);
+    spin_unlock_irqrestore(&bp->lock, flags);
+
+    return 0;
+}
+
+static int ptp_ocp_resume(struct device *dev)
+{
+    struct ptp_ocp *bp = dev_get_drvdata(dev);
+    unsigned long flags;
+    int i;
+
+    if (!bp)
+        return 0;
+
+    /* Enable MSI/IRQs if applicable */
+    spin_lock_irqsave(&bp->lock, flags);
+    if (bp->msi)
+        iowrite32(1, &bp->msi->enable);
+    spin_unlock_irqrestore(&bp->lock, flags);
+
+    /* Restore generators state */
+    for (i = 0; i < 4; i++) {
+        if (bp->signal_enabled_before_suspend[i]) {
+            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, true);
+        }
+    }
+
+    return 0;
+}
+
+static const struct dev_pm_ops ptp_ocp_pm_ops = {
+    .suspend = ptp_ocp_suspend,
+    .resume  = ptp_ocp_resume,
+};
+#endif
 
 static const struct ocp_attr_group fb_timecard_groups[];
 static const struct ocp_sma_op ocp_fb_sma_op;

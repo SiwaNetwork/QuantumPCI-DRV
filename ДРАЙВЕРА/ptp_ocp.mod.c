@@ -18,6 +18,7 @@ __section(".gnu.linkonce.this_module") = {
 
 static const struct modversion_info ____versions[]
 __used __section("__versions") = {
+	{ 0xd272d446, "__put_user_4" },
 	{ 0x7851be11, "__get_user_4" },
 	{ 0x0feb1e94, "usleep_range_state" },
 	{ 0x6a9bd73f, "init_net" },
@@ -65,12 +66,9 @@ __used __section("__versions") = {
 	{ 0x7a6661ca, "ktime_get_real_seconds" },
 	{ 0xb311a158, "ns_to_timespec64" },
 	{ 0x749af2c6, "ptp_clock_event" },
-	{ 0xd09b06f5, "kstrtoint" },
 	{ 0x680628e7, "ktime_get_real_ts64" },
 	{ 0x680628e7, "ktime_get_raw_ts64" },
 	{ 0x680628e7, "ktime_get_ts64" },
-	{ 0x91f966bb, "kstrtou8" },
-	{ 0xf00d45ac, "kstrtou16" },
 	{ 0x5a844b26, "__x86_indirect_thunk_rax" },
 	{ 0x6a351207, "pci_free_irq" },
 	{ 0xcb8b6ec6, "kfree" },
@@ -151,22 +149,28 @@ __used __section("__versions") = {
 	{ 0x8ce83585, "queue_delayed_work_on" },
 	{ 0x5d0f6f9d, "sysfs_create_link" },
 	{ 0x2ca218f5, "device_match_name" },
-	{ 0x5373d78a, "kstrtobool" },
 	{ 0xdba98963, "devlink_info_version_running_put" },
 	{ 0xe84744e9, "devlink_info_serial_number_put" },
 	{ 0xdba98963, "devlink_info_version_fixed_put" },
 	{ 0x97acb853, "ktime_get" },
 	{ 0x12ca6142, "ktime_get_with_offset" },
 	{ 0x88fafe6b, "misc_register" },
+	{ 0x7844f2c4, "sysfs_notify" },
+	{ 0x35514f4d, "kobject_uevent" },
+	{ 0xd09b06f5, "kstrtoint" },
 	{ 0xbd069841, "kstrtoull" },
+	{ 0x5373d78a, "kstrtobool" },
+	{ 0x40a621c5, "scnprintf" },
 	{ 0x82fd7238, "__ubsan_handle_divrem_overflow" },
 	{ 0x41d51c3b, "i2c_smbus_write_byte_data" },
-	{ 0xd272d446, "__put_user_4" },
+	{ 0xf00d45ac, "kstrtou16" },
+	{ 0x91f966bb, "kstrtou8" },
 	{ 0xab006604, "module_layout" },
 };
 
 static const u32 ____version_ext_crcs[]
 __used __section("__version_ext_crcs") = {
+	0xd272d446,
 	0x7851be11,
 	0x0feb1e94,
 	0x6a9bd73f,
@@ -214,12 +218,9 @@ __used __section("__version_ext_crcs") = {
 	0x7a6661ca,
 	0xb311a158,
 	0x749af2c6,
-	0xd09b06f5,
 	0x680628e7,
 	0x680628e7,
 	0x680628e7,
-	0x91f966bb,
-	0xf00d45ac,
 	0x5a844b26,
 	0x6a351207,
 	0xcb8b6ec6,
@@ -300,21 +301,27 @@ __used __section("__version_ext_crcs") = {
 	0x8ce83585,
 	0x5d0f6f9d,
 	0x2ca218f5,
-	0x5373d78a,
 	0xdba98963,
 	0xe84744e9,
 	0xdba98963,
 	0x97acb853,
 	0x12ca6142,
 	0x88fafe6b,
+	0x7844f2c4,
+	0x35514f4d,
+	0xd09b06f5,
 	0xbd069841,
+	0x5373d78a,
+	0x40a621c5,
 	0x82fd7238,
 	0x41d51c3b,
-	0xd272d446,
+	0xf00d45ac,
+	0x91f966bb,
 	0xab006604,
 };
 static const char ____version_ext_names[]
 __used __section("__version_ext_names") =
+	"__put_user_4\0"
 	"__get_user_4\0"
 	"usleep_range_state\0"
 	"init_net\0"
@@ -362,12 +369,9 @@ __used __section("__version_ext_names") =
 	"ktime_get_real_seconds\0"
 	"ns_to_timespec64\0"
 	"ptp_clock_event\0"
-	"kstrtoint\0"
 	"ktime_get_real_ts64\0"
 	"ktime_get_raw_ts64\0"
 	"ktime_get_ts64\0"
-	"kstrtou8\0"
-	"kstrtou16\0"
 	"__x86_indirect_thunk_rax\0"
 	"pci_free_irq\0"
 	"kfree\0"
@@ -448,17 +452,22 @@ __used __section("__version_ext_names") =
 	"queue_delayed_work_on\0"
 	"sysfs_create_link\0"
 	"device_match_name\0"
-	"kstrtobool\0"
 	"devlink_info_version_running_put\0"
 	"devlink_info_serial_number_put\0"
 	"devlink_info_version_fixed_put\0"
 	"ktime_get\0"
 	"ktime_get_with_offset\0"
 	"misc_register\0"
+	"sysfs_notify\0"
+	"kobject_uevent\0"
+	"kstrtoint\0"
 	"kstrtoull\0"
+	"kstrtobool\0"
+	"scnprintf\0"
 	"__ubsan_handle_divrem_overflow\0"
 	"i2c_smbus_write_byte_data\0"
-	"__put_user_4\0"
+	"kstrtou16\0"
+	"kstrtou8\0"
 	"module_layout\0"
 ;
 
@@ -469,4 +478,4 @@ MODULE_ALIAS("pci:v00000B0Bd00000410sv*sd*bc*sc*i*");
 MODULE_ALIAS("pci:v00001AD7d0000A000sv*sd*bc*sc*i*");
 MODULE_ALIAS("pci:v00001D9Cd00000400sv*sd*bc*sc*i*");
 
-MODULE_INFO(srcversion, "8BD60CCCA9E88A9C3EFE9BC");
+MODULE_INFO(srcversion, "BF29BBA5139BE88405CDD1B");
