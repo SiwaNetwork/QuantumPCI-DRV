@@ -3566,178 +3566,10 @@ echo "Отчет сохранен в: $REPORT_FILE"
 
 ---
 
-### 4.25 Сводка: установка и обновление драйвера
 
-- Зависимости (Debian/Ubuntu):
 
-```bash
-sudo apt update && sudo apt install -y \
-  build-essential linux-headers-$(uname -r) git make gcc dkms pkg-config \
-  linuxptp chrony ethtool pciutils usbutils kmod
-```
 
-- Сборка и загрузка:
-
-```bash
-cd ДРАЙВЕРА
-make clean && make
-sudo insmod ptp_ocp.ko || sudo modprobe ptp_ocp
-lsmod | grep ptp_ocp || true
-dmesg -T | grep -i ptp_ocp || true
-```
-
-- Постоянная установка:
-
-```bash
-sudo make install && sudo depmod -a
-echo "ptp_ocp" | sudo tee -a /etc/modules
-sudo tee /etc/modprobe.d/ptp-ocp.conf << 'EOF'
-# PTP OCP driver configuration
-options ptp_ocp debug=0
-EOF
-```
-
-- Udev правила (доступ пользователям):
-
-```bash
-sudo tee /etc/udev/rules.d/99-ptp.rules << 'EOF'
-SUBSYSTEM=="ptp", GROUP="dialout", MODE="0664"
-KERNEL=="ptp[0-9]*", GROUP="dialout", MODE="0664"
-EOF
-sudo udevadm control --reload-rules && sudo udevadm trigger
-```
-
-- Systemd автозагрузка модуля (опционально):
-
-```bash
-sudo tee /etc/systemd/system/ptp-ocp.service << 'EOF'
-[Unit]
-Description=PTP OCP Driver
-After=multi-user.target
-
-[Service]
-Type=oneshot
-ExecStart=/sbin/modprobe ptp_ocp
-ExecStop=/sbin/rmmod ptp_ocp
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF
-sudo systemctl enable --now ptp-ocp.service
-```
-
-- Вариант через DKMS (обновления ядра):
-
-```bash
-sudo mkdir -p /usr/src/ptp-ocp-1.0
-sudo cp -r ДРАЙВЕРА/* /usr/src/ptp-ocp-1.0/
-sudo tee /usr/src/ptp-ocp-1.0/dkms.conf << 'EOF'
-PACKAGE_NAME="ptp-ocp"
-PACKAGE_VERSION="1.0"
-BUILT_MODULE_NAME[0]="ptp_ocp"
-DEST_MODULE_LOCATION[0]="/kernel/drivers/ptp/"
-AUTOINSTALL="yes"
-EOF
-sudo dkms add -m ptp-ocp -v 1.0
-sudo dkms build -m ptp-ocp -v 1.0
-sudo dkms install -m ptp-ocp -v 1.0
-```
-
----
-
-### 4.26 Сводка: LinuxPTP (ptp4l, phc2sys, ts2phc)
-
-- Установка:
-
-```bash
-sudo apt update && sudo apt install -y linuxptp
-```
-
-- Проверка поддержки аппаратных меток и PHC:
-
-```bash
-ethtool -T eth0
-ls /dev/ptp*
-```
-
-- Базовый запуск `ptp4l` и `phc2sys`:
-
-```bash
-sudo ptp4l -i eth0 -m            # авто-роль (OC)
-sudo ptp4l -i eth0 -s -m         # принудительно slaveOnly
-sudo phc2sys -s /dev/ptp0 -c CLOCK_REALTIME -O 0 -m
-```
-
-- Конфиг `ptp4l` (минимум):
-
-```ini
-[global]
-time_stamping         hardware
-twoStepFlag           1
-delay_mechanism       E2E
-network_transport     UDPv4
-```
-
-- `ts2phc` для внешнего PPS (GPS/генератор):
-
-```bash
-sudo tee /etc/ts2phc.conf << 'EOF'
-[global]
-verbose 1
-logging_level 6
-
-[/dev/ptp0]
-ts2phc.pin_index 0
-ts2phc.channel 0
-ts2phc.extts_polarity rising
-ts2phc.extts_correction 0
-
-[/dev/pps0]
-ts2phc.master 1
-EOF
-sudo ts2phc -f /etc/ts2phc.conf -m
-```
-
-- Профили (пример): телеком/высокая точность см. расширенные примеры в конфигурации PTP. 
-
----
-
-### 4.27 Сводка: Chrony (работа с PHC/PPS)
-
-- Установка:
-
-```bash
-sudo apt update && sudo apt install -y chrony
-```
-
-- Базовая конфигурация клиента `/etc/chrony/chrony.conf`:
-
-```conf
-pool pool.ntp.org iburst
-rtcsync
-makestep 1.0 3
-```
-
-- Использование PHC и (опционально) PPS как источников:
-
-```conf
-refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0 stratum 1 prefer
-# refclock PPS /dev/pps0 lock PHC precision 1e-9
-```
-
-- Команды проверки:
-
-```bash
-sudo systemctl restart chrony
-chronyc tracking
-chronyc sources -v
-chronyc refclocks
-```
-
----
-
-### 4.28 Сводка: детальная конфигурация драйвера и sysfs
+### 4.25 Сводка: детальная конфигурация драйвера и sysfs
 
 - Параметры модуля `/etc/modprobe.d/ptp-ocp.conf`:
 
@@ -3774,7 +3606,7 @@ echo "extts 0 0"  > $PTP/pins/SMA2   # вход PPS
 
 ---
 
-### 4.29 Сетевая оптимизация для PTP
+### 4.26 Сетевая оптимизация для PTP
 
 ```bash
 # Проверка hardware timestamping
@@ -3812,7 +3644,7 @@ sudo ufw allow 320/udp comment "PTP General"
 
 ---
 
-### 4.30 Краткие справочники команд
+### 4.27 Краткие справочники команд
 
 #### Быстрый старт
 
@@ -3847,7 +3679,7 @@ chronyc sources -v                       # NTP источники
 
 ---
 
-### 4.31 Приложение: примеры systemd‑юнитов
+### 4.28 Приложение: примеры systemd‑юнитов
 
 **Создание systemd сервисов для PTP:**
 
@@ -3893,7 +3725,7 @@ sudo systemctl enable --now ptp4l phc2sys
 
 ---
 
-### 4.32 Полезные ссылки и поддержка
+### 4.29 Полезные ссылки и поддержка
 
 #### Документация и ресурсы
 
