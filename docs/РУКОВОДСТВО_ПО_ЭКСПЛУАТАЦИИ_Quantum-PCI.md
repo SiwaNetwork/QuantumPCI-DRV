@@ -260,12 +260,12 @@ Quantum-PCI представляет собой PCIe карту с интегр�
 #### Системные требования
 
 **Операционные системы:**
-- **Ubuntu**: 20.04 LTS, 22.04 LTS, 24.04 LTS (рекомендуется)
-- **Debian**: 11 (Bullseye), 12 (Bookworm)
-- **CentOS/RHEL**: 8, 9
-- **Fedora**: 35+
-- **openSUSE**: Leap 15.4+
-- **Ядро**: Linux ≥ 5.4 (рекомендуется 5.15+)
+- **Ubuntu**: 22.04 LTS, 24.04 LTS (рекомендуется)
+- **Debian**: 12 (Bookworm), 13 (Trixie)
+- **RHEL/CentOS Stream**: 9, 10
+- **Fedora**: 40+, 41+
+- **openSUSE**: Leap 15.5+, Tumbleweed
+- **Ядро**: Linux ≥ 5.4 (рекомендуется 6.1+)
 
 **Аппаратные требования:**
 - **Процессор**: x86_64, ARM64
@@ -330,10 +330,38 @@ sudo apt-get install -y \
     python3-pip
 ```
 
-**CentOS/RHEL/Fedora:**
+**RHEL/CentOS Stream/Fedora:**
 ```bash
-sudo yum groupinstall -y "Development Tools"
-sudo yum install -y \
+# Для RHEL/CentOS Stream 9+
+sudo dnf groupinstall -y "Development Tools"
+sudo dnf install -y \
+    kernel-devel \
+    kernel-headers \
+    ncurses-devel \
+    flex \
+    bison \
+    openssl-devel \
+    dkms \
+    elfutils-libelf-devel \
+    libudev-devel \
+    pciutils-devel \
+    autoconf \
+    zstd \
+    linuxptp \
+    chrony \
+    ethtool \
+    pciutils \
+    kmod \
+    i2c-tools \
+    gpsd \
+    gpsd-clients \
+    python3-gps \
+    tio \
+    python3-pip
+
+# Для Fedora 40+
+sudo dnf install -y \
+    @development-tools \
     kernel-devel \
     kernel-headers \
     ncurses-devel \
@@ -385,6 +413,9 @@ CONFIG_PCIE_PTM=y               # PTM поддержка
 CONFIG_PTP_1588_CLOCK=y         # PTP подсистема
 CONFIG_PPS=y                    # Pulse Per Second
 CONFIG_PPS_CLIENT_LDISC=y       # PPS line discipline
+CONFIG_PTP_OCP=y                # PTP OCP драйвер (если встроен в ядро)
+CONFIG_PTP_SYNC=y               # PTP синхронизация
+CONFIG_PTP_DEBUGFS=y            # PTP debugfs поддержка
 ```
 
 **Сетевые возможности:**
@@ -418,6 +449,8 @@ CONFIG_CPU_FREQ_GOV_PERFORMANCE=y
 - Максимум 4 SMA разъема на карту
 - До 2 GNSS приемников на карту (в зависимости от заказа)
 - Ограниченная поддержка IPv6 (только IPv4 рекомендуется)
+- Требуется ядро Linux 5.4+ для полной функциональности
+- Поддержка только x86_64 и ARM64 архитектур
 
 ---
 
@@ -987,30 +1020,38 @@ cd ~/Quantum
 
 **Шаг 2: Установка последних ключей ядра**
 ```bash
-sudo dnf -y install https://www.elrepo.org/elrepo-release-8.el8.elrepo.noarch.rpm
+# Для RHEL/CentOS Stream 9+
+sudo dnf -y install https://www.elrepo.org/elrepo-release-9.el9.elrepo.noarch.rpm
 sudo rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
 dnf --enablerepo=elrepo-kernel install kernel-ml
 reboot
+
+# Для Ubuntu/Debian (альтернативный способ)
+# sudo apt install -y linux-image-generic linux-headers-generic
 ```
 
 **Шаг 3: Установка необходимых пакетов**
 ```bash
-yum install -y ncurses-devel make gcc bc bison flex elfutils-libelf-devel openssl-devel grub2 i2c-tools git
+# Для RHEL/CentOS Stream 9+
+dnf install -y ncurses-devel make gcc bc bison flex elfutils-libelf-devel openssl-devel grub2 i2c-tools git
+
+# Для Ubuntu/Debian
+# sudo apt install -y build-essential linux-headers-$(uname -r) libncurses-dev libssl-dev i2c-tools git
 ```
 
 **Шаг 4: Загрузка полного исходного кода ядра**
 ```bash
 cd /usr/src/kernels
-wget https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.17.4.tar.xz
-tar -xvf linux-5.17.4.tar.xz
-rm linux-5.17.4.tar.xz
-mv linux-5.17.4/ 5.17.4/
-cd 5.17.4/
+wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.15.11.tar.xz
+tar -xvf linux-6.15.11.tar.xz
+rm linux-6.15.11.tar.xz
+mv linux-6.15.11/ 6.15.11/
+cd 6.15.11/
 ```
 
 **Шаг 5: Копирование существующей конфигурации ядра**
 ```bash
-cp -v /boot/config-5.17.4-1.el8.elrepo.x86_64 .config
+cp -v /boot/config-6.15.11-1.el9.elrepo.x86_64 .config
 vim .config
 # Вам нужно будет отредактировать .config и указать вновь установленное ядро
 ```
