@@ -34,7 +34,8 @@
    - 6.2 [Перечень основных операций](#62-перечень-основных-операций)
    - 6.3 [Проверка работоспособности](#63-проверка-работоспособности)
    - 6.4 [Настройка сетевых карт в паре с Quantum-PCI](#64-настройка-сетевых-карт-в-паре-с-quantum-pci)
-   - 6.5 [Расширенное тестирование с осциллографом](#65-расширенное-тестирование-с-осциллографом)
+   - 6.5 [Профессиональное тестирование и измерения](#65-профессиональное-тестирование-и-измерения)
+   - 6.6 [Оптимизация производительности](#66-оптимизация-производительности)
 
 7. [ТЕКУЩИЙ РЕМОНТ](#7-текущий-ремонт)
    - 7.1 [Восстановление работоспособности](#71-восстановление-работоспособности)
@@ -4287,7 +4288,7 @@ for iface in $(ip link show | grep -o 'eth[0-9]*'); do
 done
 ```
 
-### 6.5 Профессиональное тестирование и измерения
+    ### 6.5 Профессиональное тестирование и измерения
 
 **Обзор измерительного оборудования:**
 
@@ -4827,6 +4828,400 @@ echo "Профессиональный отчет сохранен в $REPORT_FI
 
 **Примечание:** Выбор конкретного оборудования зависит от требуемой точности измерений, бюджета лаборатории и специфики задач. Рекомендуется консультироваться с поставщиками измерительного оборудования для выбора оптимальной конфигурации.
 
+### 6.6 Оптимизация производительности
+
+**Цель оптимизации:**
+Достижение максимальной точности синхронизации времени и стабильности работы Quantum-PCI в различных условиях эксплуатации.
+
+#### 6.6.1 Оптимизация ядра Linux
+
+**Настройки ядра для максимальной производительности:**
+
+**1. Параметры реального времени:**
+```bash
+# Добавить в /etc/sysctl.conf
+# Оптимизация для реального времени
+kernel.sched_rt_runtime_us = -1
+kernel.sched_rt_period_us = 1000000
+
+# Отключение энергосбережения
+kernel.nmi_watchdog = 0
+kernel.perf_event_paranoid = -1
+
+# Оптимизация прерываний
+kernel.irqbalance = 0
+```
+
+**2. Настройки CPU для низкой задержки:**
+```bash
+# Скрипт настройки CPU
+#!/bin/bash
+# optimize-cpu.sh - Оптимизация CPU для Quantum-PCI
+
+echo "=== ОПТИМИЗАЦИЯ CPU ДЛЯ QUANTUM-PCI ==="
+
+# Отключение энергосбережения
+echo "Отключение энергосбережения CPU..."
+for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+    echo performance | sudo tee $cpu > /dev/null
+done
+
+# Отключение C-states
+echo "Отключение C-states..."
+for cpu in /sys/devices/system/cpu/cpu*/cpuidle/state*/disable; do
+    echo 1 | sudo tee $cpu > /dev/null 2>/dev/null || true
+done
+
+# Настройка IRQ affinity
+echo "Настройка IRQ affinity..."
+# Привязка PTP прерываний к отдельным CPU
+for irq in $(grep -E "(eth0|ptp)" /proc/interrupts | cut -d: -f1 | tr -d ' '); do
+    echo 2 | sudo tee /proc/irq/$irq/smp_affinity > /dev/null
+done
+
+# Настройка изоляции CPU
+echo "Настройка изоляции CPU..."
+# Добавить в GRUB_CMDLINE_LINUX: isolcpus=2,3 nohz_full=2,3 rcu_nocbs=2,3
+
+echo "Оптимизация CPU завершена"
+```
+
+**3. Настройки памяти:**
+```bash
+# Добавить в /etc/sysctl.conf
+# Оптимизация памяти
+vm.swappiness = 1
+vm.dirty_ratio = 15
+vm.dirty_background_ratio = 5
+vm.dirty_expire_centisecs = 3000
+vm.dirty_writeback_centisecs = 500
+
+# Предварительная загрузка драйвера
+echo "ptp_ocp" | sudo tee /etc/modules-load.d/ptp-ocp.conf
+```
+
+#### 6.6.2 Оптимизация сетевых параметров
+
+**Настройки сетевого стека для PTP:**
+
+**1. Оптимизация сетевых интерфейсов:**
+```bash
+#!/bin/bash
+# optimize-network.sh - Оптимизация сетевых параметров
+
+echo "=== ОПТИМИЗАЦИЯ СЕТЕВЫХ ПАРАМЕТРОВ ==="
+
+# Настройка для каждого сетевого интерфейса
+for iface in $(ip link show | grep -o 'eth[0-9]*'); do
+    echo "Оптимизация интерфейса $iface..."
+    
+    # Отключение энергосбережения
+    sudo ethtool -s $iface wol g
+    
+    # Настройка буферов
+    sudo ethtool -G $iface rx 4096 tx 4096
+    
+    # Отключение coalescing для низкой задержки
+    sudo ethtool -C $iface rx-usecs 0 tx-usecs 0
+    
+    # Настройка hardware timestamping
+    sudo ethtool -K $iface hw-timestamping on tx on rx on
+    
+    # Настройка PTP фильтра
+    sudo ethtool -A $iface rx on tx on
+done
+
+# Настройки ядра для сети
+echo "Настройка параметров ядра..."
+sudo sysctl -w net.core.rmem_max=134217728
+sudo sysctl -w net.core.wmem_max=134217728
+sudo sysctl -w net.core.rmem_default=262144
+sudo sysctl -w net.core.wmem_default=262144
+
+# Отключение TCP offloading для PTP
+for iface in $(ip link show | grep -o 'eth[0-9]*'); do
+    sudo ethtool -K $iface gro off gso off tso off
+done
+
+echo "Оптимизация сети завершена"
+```
+
+**2. Настройки файрвола для PTP:**
+```bash
+#!/bin/bash
+# configure-firewall-ptp.sh - Настройка файрвола для PTP
+
+echo "=== НАСТРОЙКА ФАЙРВОЛА ДЛЯ PTP ==="
+
+# UFW правила для PTP
+sudo ufw allow 319/udp comment "PTP Event"
+sudo ufw allow 320/udp comment "PTP General"
+sudo ufw allow 123/udp comment "NTP"
+
+# iptables правила (альтернатива)
+sudo iptables -A INPUT -p udp --dport 319 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 320 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 123 -j ACCEPT
+
+# Сохранение правил
+sudo iptables-save > /etc/iptables/rules.v4
+
+echo "Файрвол настроен для PTP"
+```
+
+#### 6.6.3 Оптимизация PTP конфигурации
+
+**Настройки для максимальной точности:**
+
+**1. Оптимизированная конфигурация ptp4l:**
+```bash
+# Создание оптимизированной конфигурации
+sudo tee /etc/ptp4l-optimized.conf << 'EOF'
+[global]
+# Основные настройки
+priority1 128
+priority2 128
+domainNumber 0
+network_transport UDPv4
+delay_mechanism E2E
+
+# Оптимизация для максимальной точности
+time_stamping hardware
+time_stamping on
+
+# Настройки синхронизации (агрессивные)
+logSyncInterval -3          # 8 pps
+logMinDelayReqInterval -3   # 8 pps
+logAnnounceInterval 0       # 1 pps
+announceReceiptTimeout 3
+syncReceiptTimeout 0
+
+# Настройки фильтрации
+delayAsymmetry 0
+fault_reset_interval 4
+fault_badpeernet_interval 16
+delay_resp_interval -3      # 8 pps
+
+# Настройки алгоритма
+assume_two_step 0
+logging_level 6
+path_trace_enabled 0
+follow_up_info 0
+hybrid_e2e 0
+
+# Отключение ненужных функций
+inhibit_multicast_service 0
+net_sync_monitor 0
+tc_spanning_tree 0
+
+# Настройки таймаутов
+tx_timestamp_timeout 50
+unicast_listen 0
+unicast_master_table 0
+unicast_req_duration 3600
+
+# Логирование
+use_syslog 1
+verbose 0
+summary_interval 0
+
+# Настройки часов
+kernel_leap 1
+check_fup_sync 0
+
+# PI контроллер (агрессивные настройки)
+pi_proportional_const 0.0
+pi_integral_const 0.0
+pi_proportional_scale 0.7
+pi_proportional_exponent -0.3
+pi_proportional_norm_max 0.7
+pi_integral_scale 0.3
+pi_integral_exponent 0.4
+pi_integral_norm_max 0.3
+
+# Пороги
+step_threshold 0.0
+first_step_threshold 0.00002
+max_frequency 900000000
+
+# Серво система
+clock_servo pi
+sanity_freq_limit 200000000
+ntpshm_segment 0
+msg_interval_request 0
+servo_num_offset_values 10
+servo_offset_threshold 0
+write_phase_mode 0
+s2_phc_index 0
+EOF
+```
+
+**2. Оптимизированная конфигурация phc2sys:**
+```bash
+# Создание оптимизированной конфигурации phc2sys
+sudo tee /etc/phc2sys-optimized.conf << 'EOF'
+[global]
+# Синхронизация PHC с системным временем
+# -s указывает на PHC устройство
+# -w указывает на wait for ptp4l
+# -S указывает на step the clock
+# -O указывает на offset в наносекундах
+# -R указывает на rate в ppb
+
+# Агрессивные настройки для максимальной точности
+servo pi
+pi_proportional_const 0.7
+pi_integral_const 0.3
+pi_proportional_scale 0.7
+pi_proportional_exponent -0.3
+pi_proportional_norm_max 0.7
+pi_integral_scale 0.3
+pi_integral_exponent 0.4
+pi_integral_norm_max 0.3
+
+# Пороги
+step_threshold 0.0
+first_step_threshold 0.00002
+max_frequency 900000000
+sanity_freq_limit 200000000
+
+# Настройки логирования
+use_syslog 1
+verbose 0
+summary_interval 0
+EOF
+```
+
+#### 6.6.4 Мониторинг производительности
+
+**Скрипт мониторинга производительности:**
+```bash
+#!/bin/bash
+# performance-monitor.sh - Мониторинг производительности Quantum-PCI
+
+LOG_FILE="/var/log/quantum-pci-performance-$(date +%Y%m%d).log"
+TIMECARD_BASE="/sys/class/timecard/ocp0"
+
+echo "=== МОНИТОРИНГ ПРОИЗВОДИТЕЛЬНОСТИ QUANTUM-PCI ===" | tee $LOG_FILE
+echo "Дата: $(date)" | tee -a $LOG_FILE
+echo | tee -a $LOG_FILE
+
+# Функция измерения производительности
+measure_performance() {
+    local metric="$1"
+    local value="$2"
+    local unit="$3"
+    local threshold="$4"
+    
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): $metric: $value $unit" | tee -a $LOG_FILE
+    
+    if (( $(echo "$value > $threshold" | bc -l) )); then
+        echo "⚠️  ВНИМАНИЕ: $metric превышает порог ($threshold $unit)" | tee -a $LOG_FILE
+    fi
+}
+
+# 1. Мониторинг PTP производительности
+echo "=== PTP ПРОИЗВОДИТЕЛЬНОСТЬ ===" | tee -a $LOG_FILE
+if [ -c "/dev/ptp0" ]; then
+    # Измерение offset
+    offset=$(sudo pmc -u -b 0 'GET CURRENT_DATA_SET' 2>/dev/null | grep "offsetFromMaster" | awk '{print $2}' || echo "0")
+    measure_performance "PTP Offset" "$offset" "ns" "100"
+    
+    # Измерение delay
+    delay=$(sudo pmc -u -b 0 'GET CURRENT_DATA_SET' 2>/dev/null | grep "meanPathDelay" | awk '{print $2}' || echo "0")
+    measure_performance "PTP Delay" "$delay" "ns" "1000"
+    
+    # Измерение jitter
+    jitter=$(sudo pmc -u -b 0 'GET CURRENT_DATA_SET' 2>/dev/null | grep "stepsRemoved" | awk '{print $2}' || echo "0")
+    measure_performance "PTP Steps Removed" "$jitter" "" "5"
+fi
+
+# 2. Мониторинг системных ресурсов
+echo "=== СИСТЕМНЫЕ РЕСУРСЫ ===" | tee -a $LOG_FILE
+cpu_load=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | sed 's/,//')
+measure_performance "CPU Load" "$cpu_load" "" "2.0"
+
+memory_usage=$(free | grep Mem | awk '{printf "%.1f", $3/$2 * 100.0}')
+measure_performance "Memory Usage" "$memory_usage" "%" "80"
+
+# 3. Мониторинг сетевых интерфейсов
+echo "=== СЕТЕВЫЕ ИНТЕРФЕЙСЫ ===" | tee -a $LOG_FILE
+for iface in $(ip link show | grep -o 'eth[0-9]*'); do
+    if [ -d "/sys/class/net/$iface" ]; then
+        rx_errors=$(cat /sys/class/net/$iface/statistics/rx_errors 2>/dev/null || echo "0")
+        tx_errors=$(cat /sys/class/net/$iface/statistics/tx_errors 2>/dev/null || echo "0")
+        
+        measure_performance "$iface RX Errors" "$rx_errors" "" "10"
+        measure_performance "$iface TX Errors" "$tx_errors" "" "10"
+    fi
+done
+
+# 4. Мониторинг температуры
+echo "=== ТЕМПЕРАТУРА ===" | tee -a $LOG_FILE
+if [ -f "/sys/class/thermal/thermal_zone0/temp" ]; then
+    temp=$(cat /sys/class/thermal/thermal_zone0/temp)
+    temp_c=$((temp / 1000))
+    measure_performance "CPU Temperature" "$temp_c" "°C" "70"
+fi
+
+# 5. Мониторинг IRQ
+echo "=== ПРЕРЫВАНИЯ ===" | tee -a $LOG_FILE
+for irq in $(grep -E "(eth0|ptp)" /proc/interrupts | cut -d: -f1 | tr -d ' '); do
+    irq_count=$(grep "eth0\|ptp" /proc/interrupts | grep ":$irq:" | awk '{print $2}' || echo "0")
+    measure_performance "IRQ $irq Count" "$irq_count" "" "10000"
+done
+
+echo "=== МОНИТОРИНГ ЗАВЕРШЕН ===" | tee -a $LOG_FILE
+```
+
+#### 6.6.5 Автоматическая оптимизация
+
+**Скрипт автоматической оптимизации:**
+```bash
+#!/bin/bash
+# auto-optimize.sh - Автоматическая оптимизация Quantum-PCI
+
+echo "=== АВТОМАТИЧЕСКАЯ ОПТИМИЗАЦИЯ QUANTUM-PCI ==="
+
+# 1. Оптимизация CPU
+echo "1. Оптимизация CPU..."
+for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+    echo performance | sudo tee $cpu > /dev/null
+done
+
+# 2. Оптимизация сети
+echo "2. Оптимизация сети..."
+for iface in $(ip link show | grep -o 'eth[0-9]*'); do
+    sudo ethtool -K $iface hw-timestamping on tx on rx on
+    sudo ethtool -C $iface rx-usecs 0 tx-usecs 0
+    sudo ethtool -K $iface gro off gso off tso off
+done
+
+# 3. Настройка IRQ affinity
+echo "3. Настройка IRQ affinity..."
+for irq in $(grep -E "(eth0|ptp)" /proc/interrupts | cut -d: -f1 | tr -d ' '); do
+    echo 2 | sudo tee /proc/irq/$irq/smp_affinity > /dev/null
+done
+
+# 4. Оптимизация параметров ядра
+echo "4. Оптимизация параметров ядра..."
+sudo sysctl -w kernel.sched_rt_runtime_us=-1
+sudo sysctl -w kernel.sched_rt_period_us=1000000
+sudo sysctl -w net.core.rmem_max=134217728
+sudo sysctl -w net.core.wmem_max=134217728
+
+# 5. Перезапуск PTP сервисов с оптимизированными настройками
+echo "5. Перезапуск PTP сервисов..."
+sudo systemctl stop ptp4l
+sudo systemctl stop phc2sys
+
+# Запуск с оптимизированными конфигурациями
+sudo ptp4l -f /etc/ptp4l-optimized.conf -i eth0 &
+sudo phc2sys -s /dev/ptp0 -w -S -O 0 -R 0 -f /etc/phc2sys-optimized.conf &
+
+echo "Автоматическая оптимизация завершена"
+```
+
 ---
 
 ## 7. ТЕКУЩИЙ РЕМОНТ
@@ -4839,18 +5234,300 @@ echo "Профессиональный отчет сохранен в $REPORT_FI
 - Проверка и замена кабельных соединений
 - Обновление драйвера
 
-### 7.2 Перечень возможных неисправностей
+### 7.2 Расширенная диагностика и устранение неисправностей
 
-**Таблица 7.1 - Возможные неисправности:**
+#### 7.2.1 Автоматизированная диагностика
 
-| Неисправность | Признаки | Причина | Способ устранения |
-|---------------|----------|---------|-------------------|
-| Карта не обнаружена | Нет в lspci | Проблемы с PCIe | Проверить подключение |
-| Драйвер не загружается | Ошибки в dmesg | Несовместимость ядра | Обновить драйвер |
-| PHC показывает `?` в chrony | `chronyc sources -v` показывает `?` | Неправильные права доступа | `sudo usermod -a -G ptp _chrony` |
-| Нет синхронизации | Высокий offset | Проблемы с GNSS | Проверить антенну |
-| Низкая точность | Высокий джиттер | Проблемы с кабелями | Заменить кабели |
-| Chrony не может получить доступ к PHC | Ошибки доступа к `/dev/ptp*` | Пользователь `_chrony` не в группе `ptp` | Настроить права доступа |
+**Скрипт комплексной диагностики:**
+```bash
+#!/bin/bash
+# quantum-pci-diagnostics.sh - Комплексная диагностика Quantum-PCI
+
+LOG_FILE="/var/log/quantum-pci-diagnostics-$(date +%Y%m%d-%H%M%S).log"
+TIMECARD_BASE="/sys/class/timecard/ocp0"
+
+echo "=== ДИАГНОСТИКА QUANTUM-PCI ===" | tee $LOG_FILE
+echo "Дата: $(date)" | tee -a $LOG_FILE
+echo "Версия скрипта: 1.0" | tee -a $LOG_FILE
+echo | tee -a $LOG_FILE
+
+# Функция логирования
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): $1" | tee -a $LOG_FILE
+}
+
+# Функция проверки статуса
+check_status() {
+    local test_name="$1"
+    local command="$2"
+    local expected="$3"
+    
+    log "Проверка: $test_name"
+    result=$(eval $command 2>&1)
+    
+    if [[ "$result" == *"$expected"* ]]; then
+        log "✅ $test_name: OK"
+        return 0
+    else
+        log "❌ $test_name: FAILED"
+        log "   Команда: $command"
+        log "   Результат: $result"
+        log "   Ожидалось: $expected"
+        return 1
+    fi
+}
+
+# 1. Проверка аппаратной части
+log "=== 1. ПРОВЕРКА АППАРАТНОЙ ЧАСТИ ==="
+check_status "PCIe обнаружение" "lspci | grep -i time" "Time"
+check_status "Драйвер загружен" "lsmod | grep ptp_ocp" "ptp_ocp"
+check_status "Sysfs интерфейс" "ls $TIMECARD_BASE" "serialnum"
+
+# 2. Проверка устройств
+log "=== 2. ПРОВЕРКА УСТРОЙСТВ ==="
+check_status "PHC устройство" "ls /dev/ptp*" "/dev/ptp"
+check_status "GNSS порт" "ls /dev/ttyS*" "/dev/ttyS"
+
+# 3. Проверка конфигурации
+log "=== 3. ПРОВЕРКА КОНФИГУРАЦИИ ==="
+if [ -d "$TIMECARD_BASE" ]; then
+    log "Информация о устройстве:"
+    log "  Серийный номер: $(cat $TIMECARD_BASE/serialnum 2>/dev/null || echo 'N/A')"
+    log "  Источник времени: $(cat $TIMECARD_BASE/clock_source 2>/dev/null || echo 'N/A')"
+    log "  GNSS синхронизация: $(cat $TIMECARD_BASE/gnss_sync 2>/dev/null || echo 'N/A')"
+    log "  Статус часов: $(cat $TIMECARD_BASE/clock_status 2>/dev/null || echo 'N/A')"
+fi
+
+# 4. Проверка PTP
+log "=== 4. ПРОВЕРКА PTP ==="
+if [ -c "/dev/ptp0" ]; then
+    log "PTP статус:"
+    sudo pmc -u -b 0 'GET CURRENT_DATA_SET' 2>&1 | tee -a $LOG_FILE
+else
+    log "❌ PTP устройство недоступно"
+fi
+
+# 5. Проверка NTP
+log "=== 5. ПРОВЕРКА NTP ==="
+if command -v chronyc >/dev/null 2>&1; then
+    log "NTP источники:"
+    chronyc sources -v 2>&1 | tee -a $LOG_FILE
+    log "NTP статистика:"
+    chronyc tracking 2>&1 | tee -a $LOG_FILE
+else
+    log "❌ chrony не установлен"
+fi
+
+# 6. Проверка системных ресурсов
+log "=== 6. ПРОВЕРКА СИСТЕМНЫХ РЕСУРСОВ ==="
+log "CPU загрузка: $(uptime | awk -F'load average:' '{print $2}')"
+log "Память: $(free -h | grep '^Mem:' | awk '{print $3"/"$2}')"
+log "Диск: $(df -h / | tail -1 | awk '{print $3"/"$2" ("$5")"}')"
+
+# 7. Проверка сетевых интерфейсов
+log "=== 7. ПРОВЕРКА СЕТЕВЫХ ИНТЕРФЕЙСОВ ==="
+for iface in $(ip link show | grep -o 'eth[0-9]*'); do
+    if [ -d "/sys/class/net/$iface" ]; then
+        log "Интерфейс $iface:"
+        log "  Статус: $(cat /sys/class/net/$iface/operstate 2>/dev/null || echo 'unknown')"
+        log "  Скорость: $(cat /sys/class/net/$iface/speed 2>/dev/null || echo 'unknown')"
+        log "  Hardware timestamping: $(ethtool -k $iface 2>/dev/null | grep hw-timestamping || echo 'unknown')"
+    fi
+done
+
+# 8. Проверка логов
+log "=== 8. ПРОВЕРКА ЛОГОВ ==="
+log "Последние ошибки в dmesg:"
+dmesg | grep -i "ptp\|time\|error" | tail -10 | tee -a $LOG_FILE
+
+log "Последние ошибки в syslog:"
+journalctl -u ptp4l -u phc2sys -u chrony --since "1 hour ago" --no-pager | tee -a $LOG_FILE
+
+log "=== ДИАГНОСТИКА ЗАВЕРШЕНА ==="
+log "Лог сохранен в: $LOG_FILE"
+```
+
+#### 7.2.2 Детальная таблица неисправностей
+
+**Таблица 7.1 - Расширенный перечень неисправностей:**
+
+| Категория | Неисправность | Признаки | Причина | Способ устранения | Критичность |
+|-----------|---------------|----------|---------|-------------------|-------------|
+| **Аппаратная** | Карта не обнаружена | Нет в lspci, нет sysfs | Проблемы с PCIe, питанием | Проверить подключение, питание | Критическая |
+| | Драйвер не загружается | Ошибки в dmesg | Несовместимость ядра, конфликт | Обновить драйвер, проверить конфликты | Критическая |
+| | GNSS антенна не работает | Нет сигнала, gnss_sync = "unlocked" | Повреждение антенны, кабеля | Проверить антенну, заменить кабель | Высокая |
+| **Программная** | PHC недоступен | `?` в chronyc sources | Неправильные права доступа | `sudo usermod -a -G ptp _chrony` | Высокая |
+| | PTP не синхронизируется | Высокий offset, нестабильность | Проблемы с сетью, конфигурацией | Проверить сеть, настройки PTP | Высокая |
+| | NTP показывает ошибки | Ошибки доступа к PHC | Пользователь не в группе ptp | Настроить права доступа | Средняя |
+| **Сетевая** | Нет PTP трафика | Нет пакетов в tcpdump | Блокировка файрволом | Настроить файрвол для PTP | Высокая |
+| | Высокая задержка сети | Высокий delay в PTP | Перегрузка сети, QoS | Настроить QoS, проверить сеть | Средняя |
+| **Временная** | Низкая точность | Высокий джиттер, wander | Проблемы с кабелями, заземлением | Заменить кабели, проверить заземление | Средняя |
+| | Дрейф времени | Постепенное отклонение | Проблемы с опорным генератором | Проверить GNSS, калибровку | Высокая |
+| **Системная** | Высокая загрузка CPU | Медленная работа системы | Неоптимальные настройки | Оптимизировать настройки ядра | Низкая |
+| | Недостаток памяти | Ошибки выделения памяти | Утечки памяти, малый объем | Увеличить память, исправить утечки | Средняя |
+
+#### 7.2.3 Пошаговые процедуры устранения неисправностей
+
+**Процедура 1: Карта не обнаружена**
+```bash
+#!/bin/bash
+# fix-pci-detection.sh - Устранение проблем с обнаружением PCIe
+
+echo "=== УСТРАНЕНИЕ ПРОБЛЕМ С ОБНАРУЖЕНИЕМ PCIe ==="
+
+# Шаг 1: Проверка физического подключения
+echo "1. Проверка физического подключения..."
+lspci | grep -i time || echo "Карта не обнаружена в PCIe"
+
+# Шаг 2: Проверка питания
+echo "2. Проверка питания..."
+dmesg | grep -i "power\|pci" | tail -10
+
+# Шаг 3: Проверка конфликтов
+echo "3. Проверка конфликтов ресурсов..."
+lspci -vvv | grep -A 20 -B 5 "Time"
+
+# Шаг 4: Перезагрузка PCIe
+echo "4. Перезагрузка PCIe шины..."
+echo 1 > /sys/bus/pci/rescan
+sleep 2
+lspci | grep -i time
+
+# Шаг 5: Проверка после перезагрузки
+echo "5. Проверка после перезагрузки..."
+if lspci | grep -i time; then
+    echo "✅ Карта обнаружена"
+    ls /sys/class/timecard/ 2>/dev/null || echo "❌ Sysfs интерфейс недоступен"
+else
+    echo "❌ Карта по-прежнему не обнаружена"
+    echo "Рекомендации:"
+    echo "- Проверить физическое подключение"
+    echo "- Проверить питание системы"
+    echo "- Проверить совместимость с материнской платой"
+fi
+```
+
+**Процедура 2: Проблемы с GNSS синхронизацией**
+```bash
+#!/bin/bash
+# fix-gnss-sync.sh - Устранение проблем с GNSS синхронизацией
+
+echo "=== УСТРАНЕНИЕ ПРОБЛЕМ С GNSS СИНХРОНИЗАЦИЕЙ ==="
+
+TIMECARD_BASE="/sys/class/timecard/ocp0"
+
+# Шаг 1: Проверка статуса GNSS
+echo "1. Проверка статуса GNSS..."
+if [ -d "$TIMECARD_BASE" ]; then
+    echo "GNSS синхронизация: $(cat $TIMECARD_BASE/gnss_sync 2>/dev/null || echo 'N/A')"
+    echo "Источник времени: $(cat $TIMECARD_BASE/clock_source 2>/dev/null || echo 'N/A')"
+else
+    echo "❌ TimeCard недоступна"
+    exit 1
+fi
+
+# Шаг 2: Проверка GNSS порта
+echo "2. Проверка GNSS порта..."
+GNSS_PORT="/dev/ttyS5"
+if [ -c "$GNSS_PORT" ]; then
+    echo "✅ GNSS порт доступен: $GNSS_PORT"
+    
+    # Проверка NMEA сообщений
+    echo "Проверка NMEA сообщений (5 секунд)..."
+    timeout 5s tio -b 115200 $GNSS_PORT 2>/dev/null | head -5 || echo "Нет данных"
+else
+    echo "❌ GNSS порт недоступен: $GNSS_PORT"
+fi
+
+# Шаг 3: Проверка gpsd
+echo "3. Проверка gpsd..."
+if pgrep gpsd > /dev/null; then
+    echo "✅ gpsd запущен"
+    echo "Статус GPS:"
+    timeout 10s gpsmon -n 1 2>/dev/null | head -10
+else
+    echo "❌ gpsd не запущен"
+    echo "Запуск gpsd..."
+    sudo systemctl start gpsd
+    sudo systemctl enable gpsd
+fi
+
+# Шаг 4: Перезапуск GNSS
+echo "4. Перезапуск GNSS..."
+echo "MAC" > $TIMECARD_BASE/clock_source
+sleep 2
+echo "GNSS" > $TIMECARD_BASE/clock_source
+sleep 10
+
+# Шаг 5: Проверка результата
+echo "5. Проверка результата..."
+echo "GNSS синхронизация: $(cat $TIMECARD_BASE/gnss_sync 2>/dev/null || echo 'N/A')"
+```
+
+#### 7.2.4 Мониторинг и предупреждение о неисправностях
+
+**Скрипт мониторинга состояния:**
+```bash
+#!/bin/bash
+# quantum-pci-monitor.sh - Мониторинг состояния Quantum-PCI
+
+TIMECARD_BASE="/sys/class/timecard/ocp0"
+ALERT_EMAIL="admin@company.com"
+LOG_FILE="/var/log/quantum-pci-monitor.log"
+
+# Функция отправки алерта
+send_alert() {
+    local message="$1"
+    local severity="$2"
+    
+    echo "$(date): $severity: $message" >> $LOG_FILE
+    
+    # Отправка email (если настроен)
+    if command -v mail >/dev/null 2>&1; then
+        echo "$message" | mail -s "Quantum-PCI Alert: $severity" $ALERT_EMAIL
+    fi
+    
+    # Отправка в syslog
+    logger -p user.warning "Quantum-PCI: $message"
+}
+
+# Проверка доступности устройства
+if [ ! -d "$TIMECARD_BASE" ]; then
+    send_alert "TimeCard устройство недоступно" "CRITICAL"
+    exit 1
+fi
+
+# Проверка GNSS синхронизации
+gnss_sync=$(cat $TIMECARD_BASE/gnss_sync 2>/dev/null || echo "unknown")
+if [ "$gnss_sync" != "locked" ]; then
+    send_alert "GNSS синхронизация потеряна: $gnss_sync" "WARNING"
+fi
+
+# Проверка PTP статуса
+if [ -c "/dev/ptp0" ]; then
+    ptp_status=$(sudo pmc -u -b 0 'GET CURRENT_DATA_SET' 2>/dev/null | grep "clockClass" || echo "unknown")
+    if [[ "$ptt_status" == *"248"* ]] || [[ "$ptt_status" == *"255"* ]]; then
+        send_alert "PTP синхронизация потеряна: $ptp_status" "WARNING"
+    fi
+fi
+
+# Проверка температуры
+if [ -f "/sys/class/thermal/thermal_zone0/temp" ]; then
+    temp=$(cat /sys/class/thermal/thermal_zone0/temp)
+    temp_c=$((temp / 1000))
+    if [ $temp_c -gt 70 ]; then
+        send_alert "Высокая температура: ${temp_c}°C" "WARNING"
+    fi
+fi
+
+# Проверка системных ресурсов
+cpu_load=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | sed 's/,//')
+if (( $(echo "$cpu_load > 5.0" | bc -l) )); then
+    send_alert "Высокая загрузка CPU: $cpu_load" "WARNING"
+fi
+
+echo "$(date): Мониторинг завершен успешно" >> $LOG_FILE
+```
 
 ---
 
