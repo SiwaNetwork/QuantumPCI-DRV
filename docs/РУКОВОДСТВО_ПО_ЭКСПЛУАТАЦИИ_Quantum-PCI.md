@@ -1160,13 +1160,13 @@ cat available_sma_outputs
 **Примеры настройки выходных сигналов:**
 ```bash
 # Вывод PPS ПЛИС на SMA
-echo OUT: PHC >> sma1
+echo "PHC" > sma1
 
 # Вывод PPS атомных часов на SMA
-echo OUT: MAC >> sma1
+echo "MAC" > sma1
 
 # Вывод PPS модуля GPS на SMA
-echo OUT: GNSS1 >> sma1
+echo "GNSS1" > sma1
 ```
 
 **Входные данные:**
@@ -1181,7 +1181,7 @@ cat available_sma_inputs
 **Настройка портов SMA:**
 Используйте порт для ввода временных меток входящих сигналов, это настроено SMA1 с помощью timestamper-1 TS1:
 ```bash
-echo IN: TS1 >> sma1
+echo "TS1" > sma1
 ```
 
 **Для обратного считывания сигналов с отметкой времени используйте testptp:**
