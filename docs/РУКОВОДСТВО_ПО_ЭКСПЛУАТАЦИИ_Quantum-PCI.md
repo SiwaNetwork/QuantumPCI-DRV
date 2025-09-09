@@ -670,10 +670,10 @@ ls /sys/class/timecard/ocp0/
 cd /sys/class/timecard/ocp0
 
 # Настройка всех SMA выходов на 10 МГц для тестирования
-echo "OUT: 10MHz" > sma1
-echo "OUT: 10MHz" > sma2
-echo "OUT: 10MHz" > sma3
-echo "OUT: 10MHz" > sma4
+echo "10MHz" > sma1
+echo "10MHz" > sma2
+echo "10MHz" > sma3
+echo "10MHz" > sma4
 
 # Проверка конфигурации
 cat sma1 sma2 sma3 sma4
@@ -712,10 +712,10 @@ cat sma1 sma2 sma3 sma4
 
 7. **Настройка выходов на 1PPS:**
 ```bash
-echo "OUT: PPS" > sma1
-echo "OUT: PPS" > sma2
-echo "OUT: PPS" > sma3
-echo "OUT: PPS" > sma4
+echo "PPS" > sma1
+echo "PPS" > sma2
+echo "PPS" > sma3
+echo "PPS" > sma4
 ```
 
 8. **Настройка осциллографа для 1PPS:**
@@ -737,8 +737,8 @@ echo "OUT: PPS" > sma4
 
 10. **Настройка входов:**
 ```bash
-echo "IN: 10MHz" > sma1
-echo "IN: PPS1" > sma2
+echo "10MHz" > sma1
+echo "PPS" > sma2
 ```
 
 11. **Подача тестовых сигналов:**
@@ -4396,8 +4396,8 @@ cat /sys/class/timecard/ocp0/clock_source
 **Настройка осциллографа для измерения джиттера:**
 ```bash
 # Настройка SMA выходов для тестирования джиттера
-echo "OUT: 10MHz" > /sys/class/timecard/ocp0/sma1
-echo "OUT: PPS" > /sys/class/timecard/ocp0/sma2
+echo "10MHz" > /sys/class/timecard/ocp0/sma1
+echo "PPS" > /sys/class/timecard/ocp0/sma2
 
 # Проверка конфигурации
 cat /sys/class/timecard/ocp0/sma1
@@ -4489,10 +4489,10 @@ cat /sys/class/timecard/ocp0/sma2
 **1. Настройка для измерения задержек:**
 ```bash
 # Настройка всех выходов на PPS для измерения синхронизации
-echo "OUT: PPS" > /sys/class/timecard/ocp0/sma1
-echo "OUT: PPS" > /sys/class/timecard/ocp0/sma2
-echo "OUT: PPS" > /sys/class/timecard/ocp0/sma3
-echo "OUT: PPS" > /sys/class/timecard/ocp0/sma4
+echo "PPS" > /sys/class/timecard/ocp0/sma1
+echo "PPS" > /sys/class/timecard/ocp0/sma2
+echo "PPS" > /sys/class/timecard/ocp0/sma3
+echo "PPS" > /sys/class/timecard/ocp0/sma4
 ```
 
 **2. Подключение осциллографа:**
@@ -4573,8 +4573,8 @@ echo "MAC" > /sys/class/timecard/ocp0/clock_source
 **2. Настройка для температурных испытаний:**
 ```bash
 # Настройка выходов для тестирования
-echo "OUT: 10MHz" > /sys/class/timecard/ocp0/sma1
-echo "OUT: PPS" > /sys/class/timecard/ocp0/sma2
+echo "10MHz" > /sys/class/timecard/ocp0/sma1
+echo "PPS" > /sys/class/timecard/ocp0/sma2
 
 # Проверка конфигурации
 cat /sys/class/timecard/ocp0/sma1
@@ -4600,8 +4600,8 @@ FREQUENCY_COUNTER="/dev/ttyUSB0"  # Порт частотомера
 echo "=== Тест температурной стабильности Quantum-PCI ==="
 
 # Настройка выходов для тестирования
-echo "OUT: 10MHz" > $TIMECARD_BASE/sma1
-echo "OUT: PPS" > $TIMECARD_BASE/sma2
+echo "10MHz" > $TIMECARD_BASE/sma1
+echo "PPS" > $TIMECARD_BASE/sma2
 
 # Функция измерения частоты через частотомер
 measure_frequency() {
