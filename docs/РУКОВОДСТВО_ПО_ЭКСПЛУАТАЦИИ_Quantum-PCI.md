@@ -670,10 +670,10 @@ ls /sys/class/timecard/ocp0/
 cd /sys/class/timecard/ocp0
 
 # Настройка всех SMA выходов на 10 МГц для тестирования
-echo "10MHz" > sma1
-echo "10MHz" > sma2
-echo "10MHz" > sma3
-echo "10MHz" > sma4
+echo "10Mhz" > sma1
+echo "10Mhz" > sma2
+echo "10Mhz" > sma3
+echo "10Mhz" > sma4
 
 # Проверка конфигурации
 cat sma1 sma2 sma3 sma4
@@ -4358,7 +4358,7 @@ done
 # Настройка Quantum-PCI для работы в режиме PTP Master
 echo "GNSS" > /sys/class/timecard/ocp0/clock_source
 echo "PPS" > /sys/class/timecard/ocp0/sma1
-echo "10MHz" > /sys/class/timecard/ocp0/sma2
+echo "10Mhz" > /sys/class/timecard/ocp0/sma2
 
 # Проверка статуса синхронизации
 cat /sys/class/timecard/ocp0/gnss_sync
@@ -4396,7 +4396,7 @@ cat /sys/class/timecard/ocp0/clock_source
 **Настройка осциллографа для измерения джиттера:**
 ```bash
 # Настройка SMA выходов для тестирования джиттера
-echo "10MHz" > /sys/class/timecard/ocp0/sma1
+echo "10Mhz" > /sys/class/timecard/ocp0/sma1
 echo "PPS" > /sys/class/timecard/ocp0/sma2
 
 # Проверка конфигурации
@@ -4573,7 +4573,7 @@ echo "MAC" > /sys/class/timecard/ocp0/clock_source
 **2. Настройка для температурных испытаний:**
 ```bash
 # Настройка выходов для тестирования
-echo "10MHz" > /sys/class/timecard/ocp0/sma1
+echo "10Mhz" > /sys/class/timecard/ocp0/sma1
 echo "PPS" > /sys/class/timecard/ocp0/sma2
 
 # Проверка конфигурации
@@ -4600,7 +4600,7 @@ FREQUENCY_COUNTER="/dev/ttyUSB0"  # Порт частотомера
 echo "=== Тест температурной стабильности Quantum-PCI ==="
 
 # Настройка выходов для тестирования
-echo "10MHz" > $TIMECARD_BASE/sma1
+echo "10Mhz" > $TIMECARD_BASE/sma1
 echo "PPS" > $TIMECARD_BASE/sma2
 
 # Функция измерения частоты через частотомер
