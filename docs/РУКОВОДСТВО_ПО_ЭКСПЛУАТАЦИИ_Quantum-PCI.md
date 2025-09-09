@@ -640,8 +640,8 @@ cat /sys/class/timecard/ocp0/available_sma_outputs
 # Настройка SMA1 как вход для 10MHz
 echo "10MHz" > /sys/class/timecard/ocp0/sma1
 
-# Настройка SMA4 как выход PPS
-echo "PPS" > /sys/class/timecard/ocp0/sma4
+# Настройка SMA4 как выход PPS (используем GNSS1 для PPS от GNSS)
+echo "GNSS1" > /sys/class/timecard/ocp0/sma4
 
 # Проверка текущей конфигурации
 cat /sys/class/timecard/ocp0/sma1
@@ -712,10 +712,10 @@ cat sma1 sma2 sma3 sma4
 
 7. **Настройка выходов на 1PPS:**
 ```bash
-echo "PPS" > sma1
-echo "PPS" > sma2
-echo "PPS" > sma3
-echo "PPS" > sma4
+echo "PHC" > sma1    # PPS от FPGA
+echo "GNSS1" > sma2  # PPS от GNSS
+echo "PHC" > sma3    # PPS от FPGA
+echo "GNSS1" > sma4  # PPS от GNSS
 ```
 
 8. **Настройка осциллографа для 1PPS:**
@@ -738,7 +738,7 @@ echo "PPS" > sma4
 10. **Настройка входов:**
 ```bash
 echo "10MHz" > sma1
-echo "PPS" > sma2
+echo "PPS1" > sma2
 ```
 
 11. **Подача тестовых сигналов:**
@@ -3627,9 +3627,9 @@ BASE="/sys/class/timecard/ocp0"
 cat $BASE/available_clock_sources
 echo "GNSS" > $BASE/clock_source
 echo "10MHz" > $BASE/sma1
-echo "PPS"   > $BASE/sma2
+echo "GNSS1" > $BASE/sma2  # PPS от GNSS
 echo "10MHz" > $BASE/sma3
-echo "PPS"   > $BASE/sma4
+echo "GNSS1" > $BASE/sma4  # PPS от GNSS
 echo "100"   > $BASE/external_pps_cable_delay
 echo "37"    > $BASE/utc_tai_offset
 ```
@@ -4357,7 +4357,7 @@ done
 ```bash
 # Настройка Quantum-PCI для работы в режиме PTP Master
 echo "GNSS" > /sys/class/timecard/ocp0/clock_source
-echo "PPS" > /sys/class/timecard/ocp0/sma1
+echo "GNSS1" > /sys/class/timecard/ocp0/sma1  # PPS от GNSS
 echo "10Mhz" > /sys/class/timecard/ocp0/sma2
 
 # Проверка статуса синхронизации
@@ -4397,7 +4397,7 @@ cat /sys/class/timecard/ocp0/clock_source
 ```bash
 # Настройка SMA выходов для тестирования джиттера
 echo "10Mhz" > /sys/class/timecard/ocp0/sma1
-echo "PPS" > /sys/class/timecard/ocp0/sma2
+echo "GNSS1" > /sys/class/timecard/ocp0/sma2  # PPS от GNSS
 
 # Проверка конфигурации
 cat /sys/class/timecard/ocp0/sma1
@@ -4489,10 +4489,10 @@ cat /sys/class/timecard/ocp0/sma2
 **1. Настройка для измерения задержек:**
 ```bash
 # Настройка всех выходов на PPS для измерения синхронизации
-echo "PPS" > /sys/class/timecard/ocp0/sma1
-echo "PPS" > /sys/class/timecard/ocp0/sma2
-echo "PPS" > /sys/class/timecard/ocp0/sma3
-echo "PPS" > /sys/class/timecard/ocp0/sma4
+echo "PHC" > /sys/class/timecard/ocp0/sma1    # PPS от FPGA
+echo "GNSS1" > /sys/class/timecard/ocp0/sma2  # PPS от GNSS
+echo "PHC" > /sys/class/timecard/ocp0/sma3    # PPS от FPGA
+echo "GNSS1" > /sys/class/timecard/ocp0/sma4  # PPS от GNSS
 ```
 
 **2. Подключение осциллографа:**
@@ -4574,7 +4574,7 @@ echo "MAC" > /sys/class/timecard/ocp0/clock_source
 ```bash
 # Настройка выходов для тестирования
 echo "10Mhz" > /sys/class/timecard/ocp0/sma1
-echo "PPS" > /sys/class/timecard/ocp0/sma2
+echo "GNSS1" > /sys/class/timecard/ocp0/sma2  # PPS от GNSS
 
 # Проверка конфигурации
 cat /sys/class/timecard/ocp0/sma1
@@ -4601,7 +4601,7 @@ echo "=== Тест температурной стабильности Quantum-P
 
 # Настройка выходов для тестирования
 echo "10Mhz" > $TIMECARD_BASE/sma1
-echo "PPS" > $TIMECARD_BASE/sma2
+echo "GNSS1" > $TIMECARD_BASE/sma2  # PPS от GNSS
 
 # Функция измерения частоты через частотомер
 measure_frequency() {
