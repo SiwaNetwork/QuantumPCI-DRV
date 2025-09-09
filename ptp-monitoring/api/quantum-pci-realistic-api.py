@@ -15,6 +15,15 @@ import glob
 from collections import deque, defaultdict
 from pathlib import Path
 
+# Импорт PTP мониторинга
+try:
+    from intel_network_monitor import get_ptp_network_metrics, get_ptp_network_health, get_ptp_network_ptp_metrics, get_ptp_interface_metrics
+    PTP_MONITORING_AVAILABLE = True
+    print("✅ PTP мониторинг доступен")
+except ImportError as e:
+    PTP_MONITORING_AVAILABLE = False
+    print(f"⚠️  PTP мониторинг недоступен - {e}")
+
 # === Конфигурация ===
 CONFIG = {
     'version': '2.0.0-realistic',
@@ -460,6 +469,156 @@ def health():
         'realistic_monitoring': True,
         'timestamp': time.time()
     })
+
+# === PTP Network Monitoring API ===
+
+@app.route('/api/ptp-network')
+def api_ptp_network():
+    """API для получения метрик сетевых карт с PTP"""
+    if not PTP_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'PTP мониторинг недоступен',
+            'message': 'Модуль intel_network_monitor не найден'
+        }), 503
+    
+    try:
+        metrics = get_ptp_network_metrics()
+        return jsonify(metrics)
+    except Exception as e:
+        return jsonify({
+            'error': 'Ошибка получения метрик PTP',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/ptp-network/health')
+def api_ptp_network_health():
+    """API для получения статуса здоровья PTP сетевых карт"""
+    if not PTP_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'PTP мониторинг недоступен',
+            'message': 'Модуль intel_network_monitor не найден'
+        }), 503
+    
+    try:
+        health = get_ptp_network_health()
+        return jsonify(health)
+    except Exception as e:
+        return jsonify({
+            'error': 'Ошибка получения статуса здоровья PTP',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/ptp-network/ptp')
+def api_ptp_network_ptp():
+    """API для получения PTP метрик сетевых карт"""
+    if not PTP_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'PTP мониторинг недоступен',
+            'message': 'Модуль intel_network_monitor не найден'
+        }), 503
+    
+    try:
+        ptp_metrics = get_ptp_network_ptp_metrics()
+        return jsonify(ptp_metrics)
+    except Exception as e:
+        return jsonify({
+            'error': 'Ошибка получения PTP метрик',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/ptp-network/interface/<interface>')
+def api_ptp_interface(interface):
+    """API для получения метрик конкретного PTP интерфейса"""
+    if not PTP_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'PTP мониторинг недоступен',
+            'message': 'Модуль intel_network_monitor не найден'
+        }), 503
+    
+    try:
+        metrics = get_ptp_interface_metrics(interface)
+        return jsonify(metrics)
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения метрик интерфейса {interface}',
+            'message': str(e)
+        }), 500
+
+# === Intel Network Monitoring API (обратная совместимость) ===
+
+@app.route('/api/intel-network')
+def api_intel_network():
+    """API для получения метрик Intel сетевых карт (обратная совместимость)"""
+    if not PTP_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'PTP мониторинг недоступен',
+            'message': 'Модуль intel_network_monitor не найден'
+        }), 503
+    
+    try:
+        from intel_network_monitor import get_intel_network_metrics
+        metrics = get_intel_network_metrics()
+        return jsonify(metrics)
+    except Exception as e:
+        return jsonify({
+            'error': 'Ошибка получения метрик Intel',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/intel-network/health')
+def api_intel_network_health():
+    """API для получения статуса здоровья Intel сетевых карт (обратная совместимость)"""
+    if not PTP_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'Intel мониторинг недоступен',
+            'message': 'Модуль intel_network_monitor не найден'
+        }), 503
+    
+    try:
+        health = get_intel_network_health()
+        return jsonify(health)
+    except Exception as e:
+        return jsonify({
+            'error': 'Ошибка получения статуса здоровья Intel',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/intel-network/ptp')
+def api_intel_network_ptp():
+    """API для получения PTP метрик Intel сетевых карт"""
+    if not INTEL_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'Intel мониторинг недоступен',
+            'message': 'Модуль intel_network_monitor не найден'
+        }), 503
+    
+    try:
+        ptp_metrics = get_intel_ptp_metrics()
+        return jsonify(ptp_metrics)
+    except Exception as e:
+        return jsonify({
+            'error': 'Ошибка получения PTP метрик Intel',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/intel-network/interface/<interface>')
+def api_intel_interface(interface):
+    """API для получения метрик конкретного Intel интерфейса"""
+    if not INTEL_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'Intel мониторинг недоступен',
+            'message': 'Модуль intel_network_monitor не найден'
+        }), 503
+    
+    try:
+        from intel_network_monitor import get_intel_interface_metrics
+        metrics = get_intel_interface_metrics(interface)
+        return jsonify(metrics)
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения метрик интерфейса {interface}',
+            'message': str(e)
+        }), 500
 
 # === WebSocket Events ===
 

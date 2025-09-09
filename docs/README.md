@@ -58,6 +58,7 @@
 - [`guides/installation.md`](guides/installation.md) - Установка драйвера
 - [`guides/configuration.md`](guides/configuration.md) - Детальная конфигурация Quantum-PCI
 - [`guides/precision-time-protocols.md`](guides/precision-time-protocols.md) - **Комплексное руководство по протоколам точного времени** (NTP, PTP)
+- [`guides/intel-network-cards-testing.md`](guides/intel-network-cards-testing.md) - **Тестирование и настройка Intel сетевых карт I210, I225, I226**
 - [`guides/troubleshooting.md`](guides/troubleshooting.md) - Устранение неполадок с Quantum-PCI
 
 ### API документация
@@ -168,6 +169,26 @@ echo "PTP device: /dev/$PTP_DEV"
 - `monitor-timecard.sh` - Мониторинг в реальном времени
 - `diagnose-timecard.sh` - Комплексная диагностика
 - `reset-timecard.sh` - Сброс к заводским настройкам
+
+### Скрипты тестирования Intel сетевых карт
+
+В папке [`scripts/`](../scripts/) доступны специализированные скрипты для работы с Intel сетевыми картами:
+
+- [`intel-network-testing.sh`](../scripts/intel-network-testing.sh) - **Комплексное тестирование Intel I210, I225, I226**
+- [`quick-intel-setup.sh`](../scripts/quick-intel-setup.sh) - **Быстрая настройка Intel сетевых карт**
+- [`intel-monitoring-integration.py`](../scripts/intel-monitoring-integration.py) - **Интеграция мониторинга с системой Quantum-PCI**
+
+#### Быстрый старт с Intel сетевыми картами:
+```bash
+# Быстрая настройка и запуск PTP
+sudo ./scripts/quick-intel-setup.sh setup
+
+# Проверка статуса
+sudo ./scripts/quick-intel-setup.sh status
+
+# Комплексное тестирование
+sudo ./scripts/intel-network-testing.sh
+```
 
 ## Мониторинг
 

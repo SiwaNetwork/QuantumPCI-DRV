@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -78,6 +78,38 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .status-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #7f8c8d;
+            flex-shrink: 0;
+        }
+        
+        .status-light.ok {
+            background: #27ae60;
+            box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+        }
+        
+        .status-light.warning {
+            background: #f39c12;
+            box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+        }
+        
+        .status-light.critical {
+            background: #e74c3c;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+        }
+        
+        #connection-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
         }
         
         .status-light {
@@ -144,6 +176,7 @@
         .metric-status.warning { background: rgba(255, 193, 7, 0.3); }
         .metric-status.critical { background: rgba(220, 53, 69, 0.3); }
         .metric-status.unknown { background: rgba(108, 117, 125, 0.3); }
+        .metric-status.inactive { background: rgba(127, 140, 141, 0.3); }
         
         /* Стили для крупных часов устройства */
         .device-clock-container {
@@ -291,6 +324,72 @@
                 text-align: center;
             }
         }
+        
+        /* Стили для сетевых карт */
+        .interfaces-details {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .interfaces-details h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .interface-item {
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .interface-item h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .interface-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .interface-stat {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .interface-stat .label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 2px;
+        }
+        
+        .interface-stat .value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-up { background-color: #27ae60; }
+        .status-down { background-color: #e74c3c; }
+        .status-unknown { background-color: #f39c12; }
     </style>
 </head>
 <body>
@@ -330,12 +429,6 @@
                 <div class="metric-status" id="ptp-drift-status">unknown</div>
             </div>
             
-            <div class="metric-card">
-                <h3>🕐 Clock Source</h3>
-                <div class="metric-value" id="clock-source">--</div>
-                <div class="metric-unit">источник синхронизации</div>
-                <div class="metric-status ok">active</div>
-            </div>
             
             <!-- GNSS Status -->
             <div class="metric-card">
@@ -363,9 +456,83 @@
                 <div>Type: <span id="device-type">--</span></div>
                 <div>Driver: <span id="device-driver">ptp_ocp</span></div>
             </div>
+            
+            <!-- Clock Source -->
+            <div class="metric-card">
+                <h3>🕐 Clock Source</h3>
+                <div class="metric-value" id="clock-source-display">--</div>
+                <div class="metric-label">Active Source</div>
+                <div id="source-description" style="font-size: 0.9em; color: #7f8c8d; margin: 5px 0;">--</div>
+                <div id="source-specific-info" style="margin-top: 10px; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; font-size: 0.85em;">
+                    <!-- Динамическая информация о источнике -->
+                </div>
+            </div>
+            
+            <!-- Clock Drift -->
+            <div class="metric-card">
+                <h3>📈 Clock Drift</h3>
+                <div class="metric-value" id="clock-drift">--</div>
+                <div class="metric-label">nanoseconds</div>
+                <div class="metric-status" id="drift-status">inactive</div>
+            </div>
+            
+            <!-- Clock Offset -->
+            <div class="metric-card">
+                <h3>📊 Clock Offset</h3>
+                <div class="metric-value" id="clock-offset">--</div>
+                <div class="metric-label">nanoseconds</div>
+                <div class="metric-status" id="offset-status">inactive</div>
+            </div>
+            
+            <!-- TOD Correction -->
+            <div class="metric-card">
+                <h3>🕒 TOD Correction</h3>
+                <div class="metric-value" id="tod-correction">--</div>
+                <div class="metric-label">nanoseconds</div>
+                <div class="metric-status" id="tod-status">active</div>
+            </div>
+            
+            <!-- UTC-TAI Offset -->
+            <div class="metric-card">
+                <h3>🌍 UTC-TAI Offset</h3>
+                <div class="metric-value" id="utc-tai-offset">--</div>
+                <div class="metric-label">seconds</div>
+                <div class="metric-status" id="utc-status">active</div>
+            </div>
         </div>
         
-        
+        <!-- Сетевые карты с PTP -->
+        <div class="section">
+            <h2>🌐 PTP Network Cards</h2>
+            <div class="metrics-grid" id="intel-network-grid">
+                <div class="metric-card">
+                    <h3>📊 Network Status</h3>
+                    <div class="metric-value" id="network-status">--</div>
+                    <div class="metric-label">Overall Status</div>
+                </div>
+                <div class="metric-card">
+                    <h3>🔌 Interfaces</h3>
+                    <div class="metric-value" id="interfaces-count">--</div>
+                    <div class="metric-label">Active Interfaces</div>
+                </div>
+                <div class="metric-card">
+                    <h3>⏰ PTP Support</h3>
+                    <div class="metric-value" id="ptp-support">--</div>
+                    <div class="metric-label">PTP Enabled</div>
+                </div>
+                <div class="metric-card">
+                    <h3>🚀 Hardware TS</h3>
+                    <div class="metric-value" id="hw-timestamping">--</div>
+                    <div class="metric-label">Hardware Timestamping</div>
+                </div>
+            </div>
+            
+            <!-- Детали интерфейсов -->
+            <div class="interfaces-details" id="interfaces-details">
+                <h3>📋 Interface Details</h3>
+                <div id="interfaces-list">Загрузка...</div>
+            </div>
+        </div>
         
         <!-- Крупные часы устройства -->
         <div class="device-clock-container">
@@ -392,7 +559,7 @@
                 const devicesResponse = await fetch('/api/devices');
                 const devicesData = await devicesResponse.json();
                 
-                updateConnectionStatus('ok', `Подключено (${devicesData.count} устройств)`);
+                updateConnectionStatus('ok', `Подключено (${devicesData.count})`);
                 updateDevicesList(devicesData.devices);
                 
                 if (devicesData.devices.length > 0) {
@@ -406,6 +573,25 @@
                 }
                 
                 updateLastUpdate();
+                
+                // Загрузка данных PTP сетевых карт
+                try {
+                    const ptpResponse = await fetch('/api/ptp-network');
+                    if (ptpResponse.ok) {
+                        const ptpData = await ptpResponse.json();
+                        updatePTPNetworkData(ptpData);
+                        
+                        // Обновление OCP метрик из PTP API
+                        if (ptpData.quantum_pci) {
+                            updateOCPMetrics(ptpData.quantum_pci);
+                        }
+                    } else {
+                        updatePTPNetworkError('PTP мониторинг недоступен');
+                    }
+                } catch (ptpError) {
+                    console.warn('PTP network monitoring not available:', ptpError);
+                    updatePTPNetworkError('PTP мониторинг недоступен');
+                }
                 
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -426,7 +612,6 @@
             if (data.ptp) {
                 document.getElementById('ptp-offset').textContent = data.ptp.offset_ns.toLocaleString();
                 document.getElementById('ptp-drift').textContent = data.ptp.drift_ppb.toLocaleString();
-                document.getElementById('clock-source').textContent = data.ptp.clock_source;
                 
                 updateStatusIndicator('ptp-offset-status', data.ptp.status);
                 updateStatusIndicator('ptp-drift-status', data.ptp.status);
@@ -454,12 +639,124 @@
                 document.getElementById('device-serial').textContent = data.device_info.serial_number;
                 document.getElementById('device-type').textContent = data.device_info.type;
             }
+            
+            // OCP Clock Status
+            if (data.quantum_pci) {
+                const qpci = data.quantum_pci;
+                console.log('OCP Data:', qpci); // Отладка
+                
+                // Основные метрики (безопасное преобразование в числа)
+                const drift = parseInt(qpci.clock_status_drift) || 0;
+                const offset = parseInt(qpci.clock_status_offset) || 0;
+                const tod = parseInt(qpci.tod_correction) || 0;
+                const utc = parseInt(qpci.utc_tai_offset) || 0;
+                
+                document.getElementById('clock-drift').textContent = drift.toLocaleString();
+                document.getElementById('clock-offset').textContent = offset.toLocaleString();
+                document.getElementById('tod-correction').textContent = tod.toLocaleString();
+                document.getElementById('utc-tai-offset').textContent = utc.toLocaleString();
+                
+                // Информация об источнике
+                document.getElementById('clock-source-display').textContent = qpci.clock_source || 'Unknown';
+                
+                // Описание источника
+                if (qpci.source_specific_metrics) {
+                    const metrics = qpci.source_specific_metrics;
+                    document.getElementById('source-description').textContent = metrics.description || '--';
+                    
+                    // Специфичная информация об источнике
+                    updateSourceSpecificInfo(metrics);
+                }
+                
+                // Цветовая индикация активных/неактивных метрик
+                updateMetricStatus(qpci.source_specific_metrics);
+            }
         }
         
         function updateStatusIndicator(elementId, status) {
             const element = document.getElementById(elementId);
             element.className = `metric-status ${status}`;
             element.textContent = status;
+        }
+        
+        function updateSourceSpecificInfo(metrics) {
+            const infoDiv = document.getElementById('source-specific-info');
+            let html = '';
+            
+            if (metrics.source === 'PTP' && metrics.ptp_info) {
+                html = `<strong>PTP Device:</strong> ${metrics.ptp_info.device}<br>`;
+                html += `<strong>Status:</strong> ${metrics.ptp_info.status}<br>`;
+                html += `<strong>Description:</strong> ${metrics.ptp_info.description}`;
+            } else if (metrics.source === 'PPS' && metrics.pps_info) {
+                html = `<strong>PPS Device:</strong> ${metrics.pps_info.device}<br>`;
+                html += `<strong>Status:</strong> ${metrics.pps_info.status}<br>`;
+                html += `<strong>Description:</strong> ${metrics.pps_info.description}`;
+            } else if (metrics.source === 'GNSS' && metrics.gnss_info) {
+                html = `<strong>GNSS Status:</strong> ${metrics.gnss_info.sync_status}<br>`;
+                html += `<strong>Description:</strong> ${metrics.gnss_info.description}`;
+            } else {
+                html = `<strong>Source:</strong> ${metrics.source}<br>`;
+                html += `<strong>Description:</strong> ${metrics.description}`;
+            }
+            
+            infoDiv.innerHTML = html;
+        }
+        
+        function updateMetricStatus(metrics) {
+            if (!metrics) return;
+            
+            // Обновление статусов метрик
+            updateMetricCardStatus('drift-status', 'clock_status_drift', metrics);
+            updateMetricCardStatus('offset-status', 'clock_status_offset', metrics);
+            updateMetricCardStatus('tod-status', 'tod_correction', metrics);
+            updateMetricCardStatus('utc-status', 'utc_tai_offset', metrics);
+        }
+        
+        function updateMetricCardStatus(statusElementId, metricName, metrics) {
+            const statusElement = document.getElementById(statusElementId);
+            const isActive = metrics.active_metrics && metrics.active_metrics.includes(metricName);
+            const isInactive = metrics.inactive_metrics && metrics.inactive_metrics.includes(metricName);
+            
+            if (isActive) {
+                statusElement.className = 'metric-status ok';
+                statusElement.textContent = 'active';
+            } else if (isInactive) {
+                statusElement.className = 'metric-status warning';
+                statusElement.textContent = 'inactive';
+            } else {
+                statusElement.className = 'metric-status unknown';
+                statusElement.textContent = 'unknown';
+            }
+        }
+        
+        function updateOCPMetrics(qpci) {
+            console.log('Updating OCP Metrics:', qpci); // Отладка
+            
+            // Основные метрики (безопасное преобразование в числа)
+            const drift = parseInt(qpci.clock_status_drift) || 0;
+            const offset = parseInt(qpci.clock_status_offset) || 0;
+            const tod = parseInt(qpci.tod_correction) || 0;
+            const utc = parseInt(qpci.utc_tai_offset) || 0;
+            
+            document.getElementById('clock-drift').textContent = drift.toLocaleString();
+            document.getElementById('clock-offset').textContent = offset.toLocaleString();
+            document.getElementById('tod-correction').textContent = tod.toLocaleString();
+            document.getElementById('utc-tai-offset').textContent = utc.toLocaleString();
+            
+            // Информация об источнике
+            document.getElementById('clock-source-display').textContent = qpci.clock_source || 'Unknown';
+            
+            // Описание источника
+            if (qpci.source_specific_metrics) {
+                const metrics = qpci.source_specific_metrics;
+                document.getElementById('source-description').textContent = metrics.description || '--';
+                
+                // Специфичная информация об источнике
+                updateSourceSpecificInfo(metrics);
+                
+                // Цветовая индикация активных/неактивных метрик
+                updateMetricStatus(metrics);
+            }
         }
         
         function updateDevicesList(devices) {
@@ -547,6 +844,80 @@
         
         // Обновление часов каждую секунду
         setInterval(updateDeviceClock, 1000);
+        
+        // Функции для обновления данных PTP сетевых карт
+        function updatePTPNetworkData(data) {
+            // Обновление основных метрик
+            document.getElementById('network-status').textContent = data.summary?.total_interfaces > 0 ? 'Active' : 'No Cards';
+            document.getElementById('interfaces-count').textContent = data.summary?.active_interfaces || 0;
+            document.getElementById('ptp-support').textContent = data.summary?.ptp_supported_interfaces || 0;
+            document.getElementById('hw-timestamping').textContent = data.summary?.ptp_running ? 'Enabled' : 'Disabled';
+            
+            // Обновление деталей интерфейсов
+            updateInterfacesList(data.interfaces || []);
+        }
+        
+        function updatePTPNetworkError(message) {
+            document.getElementById('network-status').textContent = 'Error';
+            document.getElementById('interfaces-count').textContent = '--';
+            document.getElementById('ptp-support').textContent = '--';
+            document.getElementById('hw-timestamping').textContent = '--';
+            
+            document.getElementById('interfaces-list').innerHTML = 
+                `<div style="color: #e74c3c; text-align: center; padding: 20px;">${message}</div>`;
+        }
+        
+        function updateInterfacesList(interfaces) {
+            const interfacesList = document.getElementById('interfaces-list');
+            
+            if (interfaces.length === 0) {
+                interfacesList.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 20px;">Сетевые карты с поддержкой PTP не найдены</div>';
+                return;
+            }
+            
+            let html = '';
+            interfaces.forEach(interface => {
+                const statusClass = interface.status === 'up' ? 'status-up' : 
+                                  interface.status === 'down' ? 'status-down' : 'status-unknown';
+                
+                html += `
+                    <div class="interface-item">
+                        <h4>
+                            <span class="status-indicator ${statusClass}"></span>
+                            ${interface.interface} (${interface.status.toUpperCase()})
+                        </h4>
+                        <div class="interface-stats">
+                            <div class="interface-stat">
+                                <div class="label">Driver</div>
+                                <div class="value">${interface.driver || 'Unknown'}</div>
+                            </div>
+                            <div class="interface-stat">
+                                <div class="label">Speed</div>
+                                <div class="value">${interface.speed || 'Unknown'}</div>
+                            </div>
+                            <div class="interface-stat">
+                                <div class="label">PTP Support</div>
+                                <div class="value">${interface.ptp_support ? 'Yes' : 'No'}</div>
+                            </div>
+                            <div class="interface-stat">
+                                <div class="label">HW Timestamping</div>
+                                <div class="value">${interface.timestamping?.hw || 'Unknown'}</div>
+                            </div>
+                            <div class="interface-stat">
+                                <div class="label">RX Packets</div>
+                                <div class="value">${interface.statistics?.rx_packets || 0}</div>
+                            </div>
+                            <div class="interface-stat">
+                                <div class="label">TX Packets</div>
+                                <div class="value">${interface.statistics?.tx_packets || 0}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            interfacesList.innerHTML = html;
+        }
         
         // Первоначальная загрузка
         refreshData();
