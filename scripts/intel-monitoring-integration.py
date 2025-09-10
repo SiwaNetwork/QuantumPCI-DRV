@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Интеграция мониторинга Intel сетевых карт I210, I225, I226 с системой мониторинга Quantum-PCI
-Автор: AI Assistant
 Дата: $(date)
 """
 

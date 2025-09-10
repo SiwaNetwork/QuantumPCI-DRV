@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Диагностика проблемы с LED
-# Автор: AI Assistant
 
 BUS=1
 ADDR=0x37

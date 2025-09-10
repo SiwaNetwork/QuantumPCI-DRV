@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Тест альтернативной схемы нумерации LED
-# Автор: AI Assistant
 
 BUS=1
 ADDR=0x37

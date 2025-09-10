@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Мониторинг GNSS и SMA статусов с LED индикацией
-Автор: AI Assistant
 """
 
 import subprocess

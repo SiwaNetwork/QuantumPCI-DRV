@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Быстрая настройка Intel сетевых карт I210, I225, I226 для Quantum-PCI
-# Автор: AI Assistant
 # Дата: $(date)
 
 set -e

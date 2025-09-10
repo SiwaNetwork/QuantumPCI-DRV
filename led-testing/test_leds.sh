@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Улучшенный скрипт тестирования LED с интеграцией в драйвер TimeCard
-# Автор: AI Assistant
 # Дата: $(date)
 
 TIMECARD_SYSFS="/sys/class/timecard/ocp0"
