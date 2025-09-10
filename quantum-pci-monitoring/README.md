@@ -36,7 +36,7 @@
 
 ```bash
 # Переход в директорию мониторинга
-cd ptp-monitoring
+cd quantum-pci-monitoring
 
 # Создание виртуального окружения
 python3 -m venv monitoring-env
@@ -111,7 +111,7 @@ export LOG_LEVEL=INFO
 
 ### Запуск
 ```bash
-cd ptp-monitoring
+cd quantum-pci-monitoring
 source monitoring-env/bin/activate
 python3 quantum-pci-monitor.py &
 ```
@@ -124,7 +124,7 @@ pkill -f quantum-pci-monitor
 ### Перезапуск
 ```bash
 pkill -f quantum-pci-monitor
-cd ptp-monitoring
+cd quantum-pci-monitoring
 source monitoring-env/bin/activate
 python3 quantum-pci-monitor.py &
 ```
@@ -132,7 +132,7 @@ python3 quantum-pci-monitor.py &
 ## 🏗️ Структура проекта
 
 ```
-ptp-monitoring/
+quantum-pci-monitoring/
 ├── api/                           # API и веб-интерфейсы
 │   ├── quantum-pci-realistic-api.py  # Основной API модуль
 │   ├── realistic-dashboard.html      # Красивый дашборд

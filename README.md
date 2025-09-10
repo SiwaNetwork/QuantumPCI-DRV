@@ -209,7 +209,7 @@ sudo phc2sys -s /dev/ptp0 -c CLOCK_REALTIME -w -m
 
 ```bash
 # Установка зависимостей
-cd ptp-monitoring
+cd quantum-pci-monitoring
 pip3 install -r requirements.txt
 
 # Запуск мониторинга
@@ -278,7 +278,7 @@ QuantumPCI-DRV/
 │   ├── examples/          # Примеры конфигураций
 │   ├── man/               # Man pages
 │   └── РУКОВОДСТВО_ПО_ЭКСПЛУАТАЦИИ_Quantum-PCI.md
-├── ptp-monitoring/         # Система веб-мониторинга
+├── quantum-pci-monitoring/         # Система веб-мониторинга
 │   ├── api/               # REST API и веб-интерфейсы
 │   ├── web/               # Дополнительные веб-ресурсы
 │   ├── quantum-pci-monitor.py
@@ -375,7 +375,7 @@ sudo modprobe ptp_ocp
 
 1. **Драйвер только для Linux** - Windows не поддерживается
 2. **Требуется ядро 5.4+** - для старых версий возможны проблемы
-3. **Мониторинг ограничен** - см. [ROADMAP](ptp-monitoring/ROADMAP.md) для планов развития
+3. **Мониторинг ограничен** - см. [ROADMAP](quantum-pci-monitoring/ROADMAP.md) для планов развития
 4. **BIOS настройки критичны** - VT-d/IOMMU обязательны
 
 ---

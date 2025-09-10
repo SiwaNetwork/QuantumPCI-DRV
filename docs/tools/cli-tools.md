@@ -497,7 +497,7 @@ User=root
 ### Cron задачи
 
 ```bash
-# /etc/cron.d/ptp-monitoring
+# /etc/cron.d/quantum-pci-monitoring
 # Проверка каждые 5 минут
 */5 * * * * root /usr/local/bin/ptp-status.sh >> /var/log/ptp-health.log 2>&1
 

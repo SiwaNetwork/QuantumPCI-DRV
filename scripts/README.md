@@ -144,7 +144,7 @@ cat /tmp/intel-network-test-report-*.txt
 ### Запуск веб-мониторинга с Intel поддержкой
 ```bash
 # Переход в папку мониторинга
-cd ../ptp-monitoring
+cd ../quantum-pci-monitoring
 
 # Запуск системы мониторинга
 python3 quantum-pci-monitor.py

@@ -53,7 +53,7 @@ def load_config() -> dict:
     """Load YAML configuration if present; otherwise return defaults."""
     defaults = _build_default_config()
     try:
-        base_dir = Path(__file__).resolve().parents[1]  # ptp-monitoring/
+        base_dir = Path(__file__).resolve().parents[1]  # quantum-pci-monitoring/
         cfg_path = base_dir / 'config' / 'config.yml'
         if cfg_path.exists():
             with cfg_path.open('r', encoding='utf-8') as f:
