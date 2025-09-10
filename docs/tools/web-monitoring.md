@@ -83,7 +83,7 @@
 
 ```bash
 cd ptp-monitoring
-pip install --break-system-packages -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 2. Запуск системы
@@ -267,7 +267,7 @@ socketio.run(app, debug=False, ...)
 
 1. **Module not found**
    ```bash
-   pip install --break-system-packages -r requirements.txt
+   pip install -r requirements.txt
    ```
 
 2. **Port 8080 already in use**
@@ -368,7 +368,7 @@ pkill -f demo-extended.py
 git pull origin main
 
 # Переустановить зависимости
-pip install --break-system-packages -r requirements.txt
+pip install -r requirements.txt
 
 # Запустить заново
 python3 demo-extended.py

@@ -127,8 +127,8 @@ find /lib/modules/$(uname -r) -name "*ptp*"
 
 ```bash
 # Клонирование репозитория
-git clone <repository-url> ptp-ocp-driver
-cd ptp-ocp-driver
+git clone https://github.com/SiwaNetwork/QuantumPCI-DRV.git
+cd QuantumPCI-DRV
 
 # Переход в директорию с драйвером
 cd ДРАЙВЕРА

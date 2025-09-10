@@ -209,8 +209,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/shiwa-time/QuantumPCI-DRV
-ExecStart=/usr/bin/python3 /home/shiwa-time/QuantumPCI-DRV/gnss_sma_monitor.py
+WorkingDirectory=/path/to/QuantumPCI-DRV
+ExecStart=/usr/bin/python3 /path/to/QuantumPCI-DRV/gnss_sma_monitor.py
 Restart=always
 RestartSec=10
 
