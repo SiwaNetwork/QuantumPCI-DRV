@@ -1,4 +1,4 @@
-# Драйвер PTP OCP
+# Драйвер PTP
 
 Драйвер для карт точного времени Quantum-PCI TimeCard.
 

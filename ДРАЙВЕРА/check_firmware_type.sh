@@ -64,7 +64,7 @@ read_firmware_header() {
     local magic=$(dd if=/dev/mtd0 bs=1 count=4 2>/dev/null)
     
     if [ "$magic" = "OCPC" ]; then
-        print_status "Обнаружена прошивка Meta Platforms (OCP) - магический заголовок: OCPC"
+        print_status "Обнаружена прошивка других систем (OCP) - магический заголовок: OCPC"
         return 0
     elif [ "$magic" = "SHIW" ]; then
         print_status "Обнаружена прошивка Quantum Platforms - магический заголовок: SHIW"
@@ -136,7 +136,7 @@ main() {
     print_header "Резюме"
     echo "Для переключения между типами прошивок используйте:"
     echo "  sudo ./switch_firmware_type.sh quantum  # Quantum Platforms (SHIW)"
-    echo "  sudo ./switch_firmware_type.sh meta     # Meta Platforms (OCPC)"
+    echo "  sudo ./switch_firmware_type.sh meta     # другие системы (OCPC)"
 }
 
 # Запуск основной функции

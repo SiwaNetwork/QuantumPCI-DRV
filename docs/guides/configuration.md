@@ -2,7 +2,7 @@
 
 ## Обзор
 
-Подробное руководство по настройке Quantum-PCI с драйвером PTP OCP и связанных компонентов для различных сценариев использования.
+Подробное руководство по настройке Quantum-PCI с драйвером PTP и связанных компонентов для различных сценариев использования.
 
 ## Архитектура системы
 
@@ -27,7 +27,7 @@
 └─────────────────────────────────────────────────────────────────┘
          │
 ┌─────────────────────────────────────────────────────────────────┐
-│                       PTP OCP Driver                           │
+│                       PTP Driver                           │
 │  ┌─────────────────┐              ┌─────────────────────────┐   │
 │  │ TimeCard Class  │              │    PTP Interface        │   │
 │  │ /sys/class/     │              │    /sys/class/ptp/      │   │
@@ -342,7 +342,7 @@ uds_address                /var/run/ptp4l
 logging_level              6
 verbose                    0
 use_syslog                 1
-userDescription            "PTP OCP Telecom Profile"
+userDescription            "PTP Telecom Profile"
 manufacturerIdentity       00:00:00
 summary_interval           0
 kernel_leap                1

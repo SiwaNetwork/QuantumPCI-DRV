@@ -416,7 +416,7 @@ CONFIG_PCIE_PTM=y               # PTM поддержка
 CONFIG_PTP_1588_CLOCK=y         # PTP подсистема
 CONFIG_PPS=y                    # Pulse Per Second
 CONFIG_PPS_CLIENT_LDISC=y       # PPS line discipline
-CONFIG_PTP_OCP=y                # PTP OCP драйвер (если встроен в ядро)
+CONFIG_PTP_OCP=y                # PTP драйвер (если встроен в ядро)
 CONFIG_PTP_SYNC=y               # PTP синхронизация
 CONFIG_PTP_DEBUGFS=y            # PTP debugfs поддержка
 ```
@@ -1243,7 +1243,7 @@ ls -l /dev/ptp*
 # 1) Создаём ключи
 sudo mkdir -p /root/module-signing
 cd /root/module-signing
-openssl req -new -x509 -newkey rsa:2048 -keyout MOK.priv -outform DER -out MOK.der -nodes -days 36500 -subj "/CN=PTP OCP Module/"
+openssl req -new -x509 -newkey rsa:2048 -keyout MOK.priv -outform DER -out MOK.der -nodes -days 36500 -subj "/CN=PTP Module/"
 
 # 2) Регистрируем ключ (потребуется подтверждение при перезагрузке в MOK Manager)
 sudo mokutil --import MOK.der

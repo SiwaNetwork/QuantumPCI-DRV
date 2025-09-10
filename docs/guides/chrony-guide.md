@@ -367,7 +367,7 @@ detect_ptp_type() {
         local clock_name=$(cat "$sys_path/clock_name")
         echo "Тип устройства: $clock_name"
         
-        if [[ "$clock_name" == *"OCP"* ]]; then
+        if [[ "$clock_name" == *"TimeCard"* ]]; then
             echo "Обнаружено TimeCard устройство"
             return 0
         fi

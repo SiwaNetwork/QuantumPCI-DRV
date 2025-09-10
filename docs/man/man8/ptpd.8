@@ -2,9 +2,9 @@
 .SH NAME
 ptpd \- PTP daemon administration guide
 .SH SYNOPSIS
-System administration tasks for PTP OCP devices and LinuxPTP services.
+System administration tasks for PTP devices and LinuxPTP services.
 .SH DESCRIPTION
-This manual page describes common administrative tasks for managing PTP (Precision Time Protocol) services with PTP OCP hardware in a Linux environment.
+This manual page describes common administrative tasks for managing PTP (Precision Time Protocol) services with PTP hardware in a Linux environment.
 
 .SH SERVICE MANAGEMENT
 .SS Starting and Stopping Services
@@ -46,7 +46,7 @@ Requires=ptp4l.service
 .fi
 
 .SH DRIVER MANAGEMENT
-.SS Loading the PTP OCP Driver
+.SS Loading the PTP Driver
 .nf
 # Load driver manually
 modprobe ptp_ocp
@@ -307,5 +307,5 @@ PTP sysfs interfaces
 Richard Cochran <richardcochran@gmail.com>, Jonathan Lemon <jonathan.lemon@gmail.com>, and the LinuxPTP development team.
 
 .SH COPYRIGHT
-Copyright (C) 2011-2024 Richard Cochran, Meta Platforms, Inc., and the LinuxPTP project contributors.
+Copyright (C) 2011-2024 Richard Cochran and the LinuxPTP project contributors.
 This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

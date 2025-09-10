@@ -2,7 +2,7 @@
 
 ## Обзор
 
-Детальное руководство по установке и настройке драйвера PTP OCP.
+Детальное руководство по установке и настройке драйвера PTP.
 
 ## Системные требования
 
@@ -176,7 +176,7 @@ echo "ptp_ocp" | sudo tee -a /etc/modules
 
 # Создание конфигурации modprobe
 sudo tee /etc/modprobe.d/ptp-ocp.conf << EOF
-# PTP OCP driver configuration
+# PTP driver configuration
 options ptp_ocp debug=0
 EOF
 ```
@@ -210,7 +210,7 @@ sudo dkms install -m ptp-ocp -v 1.0
 ```bash
 # Создание правил для устройств PTP
 sudo tee /etc/udev/rules.d/99-ptp-ocp.rules << EOF
-# PTP OCP device rules
+# PTP device rules
 SUBSYSTEM=="ptp", GROUP="dialout", MODE="0664"
 KERNEL=="ptp[0-9]*", GROUP="dialout", MODE="0664"
 EOF
@@ -236,7 +236,7 @@ groups $USER
 # Создание сервиса для автозагрузки драйвера
 sudo tee /etc/systemd/system/ptp-ocp.service << EOF
 [Unit]
-Description=PTP OCP Driver
+Description=PTP Driver
 After=multi-user.target
 
 [Service]

@@ -7,7 +7,7 @@
 sudo ./convert_firmware.sh quantum my_firmware.bin
 ```
 
-### В Meta Platforms
+### В других системах
 ```bash
 sudo ./convert_firmware.sh meta my_firmware.bin
 ```
@@ -18,8 +18,6 @@ sudo ./convert_firmware.sh meta my_firmware.bin
 # Quantum Platforms
 sudo ./convert_firmware.sh flash my_firmware_quantum.bin "Quantum Platforms"
 
-# Meta Platforms
-sudo ./convert_firmware.sh flash my_firmware_meta.bin "Meta Platforms"
 ```
 
 ## Параметры по умолчанию

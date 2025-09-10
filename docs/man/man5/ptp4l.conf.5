@@ -55,7 +55,7 @@ If set to 1, the clock will operate in slave-only mode. Default is 0.
 The timestamping method to use. Options are:
 .RS
 .IP \(bu 4
-\fBhardware\fR - Use hardware timestamping (recommended for PTP OCP)
+\fBhardware\fR - Use hardware timestamping (recommended for PTP)
 .IP \(bu 4
 \fBsoftware\fR - Use software timestamping
 .IP \(bu 4
@@ -167,8 +167,8 @@ Ingress latency correction in nanoseconds.
 .B egressLatency \fINUMBER\fR
 Egress latency correction in nanoseconds.
 
-.SH PTP OCP SPECIFIC OPTIONS
-Options particularly relevant for PTP OCP hardware:
+.SH PTP SPECIFIC OPTIONS
+Options particularly relevant for PTP hardware:
 
 .TP
 .B dataset_comparison \fITYPE\fR
@@ -181,7 +181,7 @@ Dataset comparison method. For telecom profiles, use:
 .RE
 
 .SH EXAMPLES
-Example configuration for PTP OCP hardware:
+Example configuration for PTP hardware:
 
 .nf
 [global]
