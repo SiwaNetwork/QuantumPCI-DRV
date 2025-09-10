@@ -59,6 +59,9 @@ modules.order
 
 # Generated metrics files
 *.json
+# Specific metrics files
+led-testing/*_metrics.json
+quantum-pci-monitoring/*_metrics.json
 
 # Monitoring environment
 ptp-monitoring/monitoring-env/
