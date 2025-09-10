@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Скрипт тестирования Intel сетевых карт I210, I225, I226 с Quantum-PCI
-# Автор: AI Assistant
 # Дата: $(date)
 
 set -e

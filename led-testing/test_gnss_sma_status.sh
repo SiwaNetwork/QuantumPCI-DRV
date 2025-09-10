@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Тест статусов GNSS и SMA для Quantum-PCI TimeCard
-# Автор: AI Assistant
 
 # Пути sysfs
 TIMECARD_SYSFS="/sys/class/timecard/ocp0"

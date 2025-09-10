@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Простой тест LED для TimeCard
-# Автор: AI Assistant
 
 TIMECARD_SYSFS="/sys/class/timecard/ocp0"
 BUS=3
