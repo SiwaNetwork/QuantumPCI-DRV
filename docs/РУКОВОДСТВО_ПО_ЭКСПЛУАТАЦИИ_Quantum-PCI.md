@@ -1817,7 +1817,7 @@ cat /sys/class/timecard/ocp0/clock_source
 
 **Запуск системы мониторинга:**
 ```bash
-cd ptp-monitoring
+cd quantum-pci-monitoring
 python3 quantum-pci-monitor.py
 ```
 

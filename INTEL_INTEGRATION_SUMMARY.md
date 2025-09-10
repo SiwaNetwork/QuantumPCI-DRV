@@ -41,13 +41,13 @@
 
 ### 🌐 Интеграция с веб-мониторингом
 
-6. **`ptp-monitoring/api/intel-network-monitor.py`** (17.8 KB)
+6. **`quantum-pci-monitoring/api/intel-network-monitor.py`** (17.8 KB)
    - Модуль мониторинга Intel сетевых карт
    - API функции для интеграции с Flask
    - Кэширование метрик
    - Проверка здоровья системы
 
-7. **Обновлен `ptp-monitoring/api/quantum-pci-realistic-api.py`**
+7. **Обновлен `quantum-pci-monitoring/api/quantum-pci-realistic-api.py`**
    - Добавлены API endpoints для Intel мониторинга:
      - `/api/intel-network` - Метрики Intel сетевых карт
      - `/api/intel-network/health` - Статус здоровья
@@ -129,7 +129,7 @@ sudo ./quick-intel-setup.sh status
 sudo ./intel-network-testing.sh
 
 # 4. Запуск веб-мониторинга
-cd ../ptp-monitoring
+cd ../quantum-pci-monitoring
 python3 quantum-pci-monitor.py
 ```
 

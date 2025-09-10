@@ -82,7 +82,7 @@
 ### 1. Установка зависимостей
 
 ```bash
-cd ptp-monitoring
+cd quantum-pci-monitoring
 pip install -r requirements.txt
 ```
 
@@ -344,8 +344,8 @@ socketio.run(app, debug=False, ...)
 
 ```bash
 # Backup конфигурации
-cp -r ptp-monitoring/config/ backup/
-cp ptp-monitoring/api/timecard-extended-api.py backup/
+cp -r quantum-pci-monitoring/config/ backup/
+cp quantum-pci-monitoring/api/timecard-extended-api.py backup/
 ```
 
 ### Данные

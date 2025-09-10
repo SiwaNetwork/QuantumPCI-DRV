@@ -365,7 +365,7 @@ def api_roadmap():
             'documentation': 'Помощь с документацией и переводами',
             'research': 'Исследование новых возможностей драйвера'
         },
-        'roadmap_url': 'https://github.com/SiwaNetwork/QuantumPCI-DRV/blob/main/ptp-monitoring/ROADMAP.md',
+        'roadmap_url': 'https://github.com/SiwaNetwork/QuantumPCI-DRV/blob/main/quantum-pci-monitoring/ROADMAP.md',
         'timestamp': time.time()
     })
 

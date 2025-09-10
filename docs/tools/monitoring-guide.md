@@ -1,4 +1,4 @@
-﻿# Руководство по мониторингу Quantum-PCI
+# Руководство по мониторингу Quantum-PCI
 
 ## Обзор
 
@@ -45,7 +45,7 @@ sudo apt update
 sudo apt install python3 python3-pip
 
 # Установка Python пакетов
-cd ptp-monitoring
+cd quantum-pci-monitoring
 pip3 install -r requirements.txt
 ```
 
