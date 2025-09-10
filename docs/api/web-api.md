@@ -30,7 +30,7 @@ curl http://localhost:8080/
 **Пример ответа:**
 ```json
 {
-  "service": "TimeCard PTP OCP Monitoring API v2.0",
+  "service": "TimeCard PTP Monitoring API v2.0",
   "version": "2.0.0",
   "timestamp": 1753689738.2285047,
   "devices_count": 1,

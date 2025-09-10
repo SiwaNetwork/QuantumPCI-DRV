@@ -1,12 +1,12 @@
 .TH PTP_OCP 4 "2024-01-15" "Linux" "Devices"
 .SH NAME
-ptp_ocp \- PTP OCP (Open Compute Project) hardware clock driver
+ptp_ocp \- PTP hardware clock driver
 .SH SYNOPSIS
 .nf
 #include <linux/ptp_clock.h>
 .fi
 .SH DESCRIPTION
-The \fBptp_ocp\fR driver provides support for PTP OCP (Open Compute Project) hardware timestamping cards. These cards are designed to provide highly accurate time synchronization for datacenter and telecommunications applications.
+The \fBptp_ocp\fR driver provides support for PTP hardware timestamping cards. These cards are designed to provide highly accurate time synchronization for datacenter and telecommunications applications.
 
 The driver creates PTP hardware clock devices that can be accessed through the standard Linux PTP clock API. Each supported card typically provides:
 
@@ -27,10 +27,10 @@ The driver creates character device nodes under \fI/dev/\fR with names following
 Example device nodes:
 .TP
 .I /dev/ptp0
-First PTP OCP device
+First PTP device
 .TP
 .I /dev/ptp1
-Second PTP OCP device
+Second PTP device
 
 .SH SYSFS INTERFACE
 The driver provides various attributes under \fI/sys/class/ptp/ptp\fIN\fR/:
@@ -99,7 +99,7 @@ Debug level (0-7). Higher values produce more verbose output.
 Force enable device even if not properly detected.
 
 .SH SUPPORTED HARDWARE
-The driver supports PTP OCP cards with the following PCI vendor/device IDs:
+The driver supports PTP cards with the following PCI vendor/device IDs:
 
 .IP \(bu 4
 Vendor ID: 0x1d9b (Facebook/Meta)
@@ -141,5 +141,5 @@ Interrupt information (search for ptp_ocp).
 Jonathan Lemon <jonathan.lemon@gmail.com> and other contributors.
 
 .SH COPYRIGHT
-Copyright (C) 2021-2024 Meta Platforms, Inc. and the Linux kernel contributors.
+Copyright (C) 2021-2024 Linux kernel contributors.
 This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

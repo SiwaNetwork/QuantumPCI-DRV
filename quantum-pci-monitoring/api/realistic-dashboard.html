@@ -581,9 +581,9 @@
                         const ptpData = await ptpResponse.json();
                         updatePTPNetworkData(ptpData);
                         
-                        // Обновление OCP метрик из PTP API
+                        // Обновление метрик из PTP API
                         if (ptpData.quantum_pci) {
-                            updateOCPMetrics(ptpData.quantum_pci);
+                            updatePTPMetrics(ptpData.quantum_pci);
                         }
                     } else {
                         updatePTPNetworkError('PTP мониторинг недоступен');
@@ -640,10 +640,10 @@
                 document.getElementById('device-type').textContent = data.device_info.type;
             }
             
-            // OCP Clock Status
+            // PTP Clock Status
             if (data.quantum_pci) {
                 const qpci = data.quantum_pci;
-                console.log('OCP Data:', qpci); // Отладка
+                console.log('PTP Data:', qpci); // Отладка
                 
                 // Основные метрики (безопасное преобразование в числа)
                 const drift = parseInt(qpci.clock_status_drift) || 0;
@@ -729,8 +729,8 @@
             }
         }
         
-        function updateOCPMetrics(qpci) {
-            console.log('Updating OCP Metrics:', qpci); // Отладка
+        function updatePTPMetrics(qpci) {
+            console.log('Updating PTP Metrics:', qpci); // Отладка
             
             // Основные метрики (безопасное преобразование в числа)
             const drift = parseInt(qpci.clock_status_drift) || 0;

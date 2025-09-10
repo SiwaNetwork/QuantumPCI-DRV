@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# prometheus-exporter.py - Prometheus exporter для TimeCard PTP OCP
+# prometheus-exporter.py - Prometheus exporter для TimeCard PTP
 
 import time
 import threading
@@ -763,7 +763,7 @@ def main():
     logging.getLogger().setLevel(getattr(logging, args.log_level))
     
     print("="*80)
-    print("🚀 TimeCard PTP OCP Prometheus Exporter v2.0")
+    print("🚀 TimeCard PTP Prometheus Exporter v2.0")
     print("="*80)
     print(f"📊 Exporter URL:       http://localhost:{args.port}/metrics")
     print(f"🔗 TimeCard API:       {args.api_url}")

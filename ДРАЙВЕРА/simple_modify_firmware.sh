@@ -79,12 +79,12 @@ create_quantum_firmware() {
     dd if="$output_file" bs=1 count=16 2>/dev/null | hexdump -C
 }
 
-# Функция для создания прошивки Meta Platforms
+# Функция для создания прошивки других систем
 create_meta_firmware() {
     local input_file=$1
     local output_file=$2
     
-    print_header "Создание прошивки Meta Platforms (OCPC)"
+    print_header "Создание прошивки других систем (OCPC)"
     
     if [ ! -f "$input_file" ]; then
         print_error "Входной файл $input_file не найден"
@@ -119,7 +119,7 @@ create_meta_firmware() {
     print_status "Размер итоговой прошивки: $final_size байт"
     
     # Показываем заголовок
-    print_header "Заголовок прошивки Meta Platforms"
+    print_header "Заголовок прошивки других систем"
     dd if="$output_file" bs=1 count=16 2>/dev/null | hexdump -C
 }
 
@@ -156,7 +156,7 @@ show_help() {
     echo
     echo "Команды:"
     echo "  quantum <входной_файл> [выходной] - Создать прошивку Quantum Platforms (SHIW)"
-    echo "  meta <входной_файл> [выходной]    - Создать прошивку Meta Platforms (OCPC)"
+    echo "  meta <входной_файл> [выходной]    - Создать прошивку других систем (OCPC)"
     echo "  flash <файл> <тип>                - Прошить устройство"
     echo "  help                              - Показать эту справку"
     echo

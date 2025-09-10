@@ -1,8 +1,8 @@
-# Настройка мониторинга PTP OCP
+# Настройка мониторинга PTP
 
 ## Обзор
 
-Комплексная система мониторинга для PTP OCP включающая Prometheus, Grafana, и пользовательские скрипты.
+Комплексная система мониторинга для PTP включающая Prometheus, Grafana, и пользовательские скрипты.
 
 ## Prometheus Node Exporter
 
@@ -242,7 +242,7 @@ sudo systemctl start ptp-metrics-exporter.service
 {
   "dashboard": {
     "id": null,
-    "title": "PTP OCP Monitoring",
+    "title": "PTP Monitoring",
     "tags": ["ptp", "timing", "synchronization"],
     "style": "dark",
     "timezone": "browser",
@@ -414,7 +414,7 @@ groups:
           severity: critical
         annotations:
           summary: "PTP driver is not loaded"
-          description: "PTP OCP driver is not loaded or functioning"
+          description: "PTP driver is not loaded or functioning"
 
       - alert: PTPNotSynchronized
         expr: ptp_port_state{state!="SLAVE",state!="MASTER"} == 1

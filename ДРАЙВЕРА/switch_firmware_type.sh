@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Скрипт для переключения между типами прошивок
-# Quantum Platforms и Meta Platforms (OCP)
+# Quantum Platforms и другие системы
 
 set -e
 
@@ -68,9 +68,9 @@ create_quantum_firmware() {
     print_status "Прошивка Quantum Platforms создана: quantum_firmware_with_header.bin"
 }
 
-# Функция для создания прошивки с заголовком OCPC (Meta Platforms)
+# Функция для создания прошивки с заголовком OCPC (другие системы)
 create_meta_firmware() {
-    print_header "Создание прошивки Meta Platforms (OCP)"
+    print_header "Создание прошивки других систем (OCP)"
     
     # Создаем тестовую прошивку
     dd if=/dev/zero of=meta_firmware.bin bs=1M count=1 2>/dev/null
@@ -88,7 +88,7 @@ create_meta_firmware() {
     # Добавляем данные прошивки
     dd if=/dev/zero bs=1M count=1 >> meta_firmware_with_header.bin 2>/dev/null
     
-    print_status "Прошивка Meta Platforms создана: meta_firmware_with_header.bin"
+    print_status "Прошивка других систем создана: meta_firmware_with_header.bin"
 }
 
 # Функция для прошивки устройства
@@ -150,13 +150,13 @@ show_help() {
     echo
     echo "Команды:"
     echo "  quantum    - Создать и прошить прошивку Quantum Platforms (SHIW)"
-    echo "  meta       - Создать и прошить прошивку Meta Platforms (OCPC)"
+    echo "  meta       - Создать и прошить прошивку других систем (OCPC)"
     echo "  status     - Показать текущее состояние"
     echo "  help       - Показать эту справку"
     echo
     echo "Примеры:"
     echo "  $0 quantum    # Переключиться на Quantum Platforms"
-    echo "  $0 meta       # Переключиться на Meta Platforms"
+    echo "  $0 meta       # Переключиться на другие системы"
     echo "  $0 status     # Показать статус"
 }
 
@@ -172,7 +172,7 @@ main() {
             ;;
         "meta")
             create_meta_firmware
-            flash_device "meta_firmware_with_header.bin" "Meta Platforms (OCPC)"
+            flash_device "meta_firmware_with_header.bin" "другие системы (OCPC)"
             ;;
         "status")
             show_status

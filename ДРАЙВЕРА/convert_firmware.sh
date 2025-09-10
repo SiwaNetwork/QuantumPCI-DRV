@@ -113,7 +113,7 @@ show_help() {
     echo
     echo "Команды:"
     echo "  quantum <входной.bin> [выходной.bin] - Создать прошивку Quantum Platforms (SHIW)"
-    echo "  meta <входной.bin> [выходной.bin]    - Создать прошивку Meta Platforms (OCPC)"
+    echo "  meta <входной.bin> [выходной.bin]    - Создать прошивку других систем (OCPC)"
     echo "  flash <файл.bin> <тип>               - Прошить устройство"
     echo "  help                                 - Показать эту справку"
     echo

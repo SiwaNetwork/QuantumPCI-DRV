@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# timecard-real-api.py - API для мониторинга реальных данных TimeCard PTP OCP
+# timecard-real-api.py - API для мониторинга реальных данных TimeCard PTP
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_socketio import SocketIO
@@ -585,7 +585,7 @@ def api_index():
     return jsonify({
         'api_name': 'TimeCard Real Monitoring API',
         'version': '1.0.0',
-        'description': 'API для мониторинга реальных данных TimeCard PTP OCP',
+        'description': 'API для мониторинга реальных данных TimeCard PTP',
         'endpoints': {
             'devices': '/api/devices',
             'device_status': '/api/device/<device_id>/status',
@@ -677,7 +677,7 @@ def handle_device_update_request(data):
 
 if __name__ == '__main__':
     print("="*80)
-    print("🚀 TimeCard PTP OCP Real Monitoring API v1.0")
+    print("🚀 TimeCard PTP Real Monitoring API v1.0")
     print("="*80)
     print("📊 Real Dashboard:    http://localhost:8080/dashboard")
     print("🔧 API Endpoints:     http://localhost:8080/api/")

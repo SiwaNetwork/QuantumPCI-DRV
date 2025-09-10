@@ -2,7 +2,7 @@
 
 ## Обзор
 
-Данный документ описывает графические интерфейсы и веб-интерфейсы для управления и мониторинга PTP OCP системы.
+Данный документ описывает графические интерфейсы и веб-интерфейсы для управления и мониторинга PTP системы.
 
 ## Web-based мониторинг
 
@@ -37,7 +37,7 @@ sudo systemctl start grafana-server
 ```json
 {
   "dashboard": {
-    "title": "PTP OCP Monitoring",
+    "title": "PTP Monitoring",
     "panels": [
       {
         "title": "PTP Offset",
@@ -171,7 +171,7 @@ chrony_tracking_frequency_ppm
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PTP OCP Monitor</title>
+    <title>PTP Monitor</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -226,7 +226,7 @@ chrony_tracking_frequency_ppm
 </head>
 <body>
     <div class="container">
-        <h1>PTP OCP Monitoring Dashboard</h1>
+        <h1>PTP Monitoring Dashboard</h1>
         
         <div class="card">
             <h2>System Status</h2>
@@ -640,7 +640,7 @@ if __name__ == '__main__':
 {
   "name": "PTP Monitor",
   "short_name": "PTP Monitor",
-  "description": "PTP OCP Monitoring Application",
+  "description": "PTP Monitoring Application",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#2196F3",
@@ -733,4 +733,4 @@ sudo systemctl reload nginx
 - **Custom Dashboard**: http://localhost:8080
 - **Mobile PWA**: http://localhost/
 
-Все интерфейсы предоставляют различные уровни детализации для мониторинга и управления PTP OCP системой.
+Все интерфейсы предоставляют различные уровни детализации для мониторинга и управления PTP системой.

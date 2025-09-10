@@ -2,7 +2,7 @@
 
 ## Обзор
 
-Данный документ описывает пользовательский API для работы с драйвером PTP OCP.
+Данный документ описывает пользовательский API для работы с драйвером PTP.
 
 ## Интерфейсы устройств
 
@@ -20,7 +20,7 @@ int fd = open("/dev/ptp0", O_RDWR);
 
 #### /sys/class/timecard/ocpN/
 
-Основной интерфейс драйвера PTP OCP для управления устройствами TimeCard:
+Основной интерфейс драйвера PTP для управления устройствами TimeCard:
 
 **Основные атрибуты:**
 - `clock_source` - текущий источник синхронизации (GNSS, MAC, IRIG-B, external)
@@ -50,9 +50,9 @@ int fd = open("/dev/ptp0", O_RDWR);
 - `uevent` - события устройства
 
 **Бинарные файлы:**
-- `config` - конфигурация устройства (OCP_CONFIG_SIZE байт)
-- `disciplining_config` - конфигурация дисциплинирования (OCP_ART_CONFIG_SIZE байт)
-- `temperature_table` - температурная таблица (OCP_ART_TEMP_TABLE_SIZE байт)
+- `config` - конфигурация устройства (CONFIG_SIZE байт)
+- `disciplining_config` - конфигурация дисциплинирования (ART_CONFIG_SIZE байт)
+- `temperature_table` - температурная таблица (ART_TEMP_TABLE_SIZE байт)
 
 **Символические ссылки:**
 - `device` -> `../../../XXXX:XX:XX.X` - ссылка на PCI устройство
