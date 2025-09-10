@@ -269,19 +269,30 @@ QuantumPCI-DRV/
 ├── ДРАЙВЕРА/               # Драйвер ядра ptp_ocp
 │   ├── ptp_ocp.c          # Основной код драйвера
 │   ├── Makefile           # Сборка драйвера
-│   └── README.md          # Инструкции по драйверу
-├── docs/                   # Документация
+│   ├── README.md          # Инструкции по драйверу
+│   └── *.md               # Техническая документация драйвера
+├── docs/                   # Комплексная документация
 │   ├── guides/            # Руководства пользователя
 │   ├── api/               # API документация
-│   ├── tools/             # Инструменты
+│   ├── tools/             # Инструменты и утилиты
+│   ├── examples/          # Примеры конфигураций
+│   ├── man/               # Man pages
 │   └── РУКОВОДСТВО_ПО_ЭКСПЛУАТАЦИИ_Quantum-PCI.md
-├── ptp-monitoring/         # Система мониторинга
-│   ├── api/               # REST API
-│   ├── web/               # Web интерфейс
-│   └── quantum-pci-monitor.py
-├── bmp280-sensor/          # Драйвер датчика температуры
-├── bno055-sensor/          # Драйвер IMU датчика
-└── led-testing/            # Тесты LED индикации
+├── ptp-monitoring/         # Система веб-мониторинга
+│   ├── api/               # REST API и веб-интерфейсы
+│   ├── web/               # Дополнительные веб-ресурсы
+│   ├── quantum-pci-monitor.py
+│   ├── requirements.txt   # Python зависимости
+│   └── ROADMAP.md         # План развития
+├── scripts/                # Скрипты для Intel сетевых карт
+│   ├── intel-network-testing.sh
+│   ├── quick-intel-setup.sh
+│   └── intel-monitoring-integration.py
+├── bmp280-sensor/          # Драйвер датчика температуры/давления
+├── bno055-sensor/          # Драйвер 9-DOF IMU датчика
+├── led-testing/            # Тесты и управление LED индикацией
+├── README.md               # Основная документация проекта
+└── INTEL_INTEGRATION_SUMMARY.md  # Отчет по интеграции Intel
 ```
 
 ## 🛠️ Утилиты и инструменты

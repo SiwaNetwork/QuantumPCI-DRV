@@ -1,4 +1,4 @@
-﻿# Quantum-PCI Monitoring System
+# Quantum-PCI Monitoring System
 
 ## 🎯 Обзор
 
@@ -36,7 +36,7 @@
 
 ```bash
 # Переход в директорию мониторинга
-cd /home/shiwa-time/QuantumPCI-DRV/ptp-monitoring
+cd ptp-monitoring
 
 # Создание виртуального окружения
 python3 -m venv monitoring-env
@@ -111,7 +111,7 @@ export LOG_LEVEL=INFO
 
 ### Запуск
 ```bash
-cd /home/shiwa-time/QuantumPCI-DRV/ptp-monitoring
+cd ptp-monitoring
 source monitoring-env/bin/activate
 python3 quantum-pci-monitor.py &
 ```
@@ -124,7 +124,7 @@ pkill -f quantum-pci-monitor
 ### Перезапуск
 ```bash
 pkill -f quantum-pci-monitor
-cd /home/shiwa-time/QuantumPCI-DRV/ptp-monitoring
+cd ptp-monitoring
 source monitoring-env/bin/activate
 python3 quantum-pci-monitor.py &
 ```

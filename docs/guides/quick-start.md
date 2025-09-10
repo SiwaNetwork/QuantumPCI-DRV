@@ -30,8 +30,8 @@ sudo dnf install gcc kernel-devel kernel-headers git
 ### 1. Получение исходного кода
 
 ```bash
-git clone <repository-url>
-cd ptp-ocp-driver
+git clone https://github.com/SiwaNetwork/QuantumPCI-DRV.git
+cd QuantumPCI-DRV
 ```
 
 ### 2. Сборка драйвера
