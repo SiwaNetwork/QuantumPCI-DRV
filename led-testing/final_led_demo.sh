@@ -4,7 +4,7 @@
 # Автор: AI Assistant
 
 TIMECARD_SYSFS="/sys/class/timecard/ocp0"
-BUS=1
+BUS=3
 ADDR=0x37
 
 # Цвета для вывода
@@ -49,11 +49,11 @@ echo -e "${GREEN}✅ TimeCard: $SERIAL${NC}"
 
 # Проверка IS32FL3207
 if ! sudo i2cdetect -y $BUS | grep -q "37"; then
-    echo -e "${RED}❌ IS32FL3207 не найден${NC}"
+    echo -e "${RED}❌ IS32FL3207 не найден на шине $BUS${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✅ IS32FL3207: 0x37${NC}"
+echo -e "${GREEN}✅ IS32FL3207: 0x37 на шине $BUS${NC}"
 
 # Инициализация
 echo -e "${BLUE}🔧 Инициализация LED контроллера...${NC}"
@@ -99,19 +99,9 @@ for i in {0..17}; do
     sleep 0.3
 done
 
-# Демонстрация 2: Градиент яркости
-echo -e "${BLUE}🎯 Демо 2: Градиент яркости${NC}"
-for brightness in 0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x90 0xA0 0xB0 0xC0 0xD0 0xE0 0xF0 0xFF; do
-    turn_off_all
-    turn_on_led 0 $brightness
-    echo -e "   ${CYAN}LED 1: 0x$(printf "%02X" $brightness)${NC}"
-    sleep 0.2
-done
-
-# Демонстрация 3: Бегущий огонь
-echo -e "${BLUE}🎯 Демо 3: Бегущий огонь${NC}"
+# Демонстрация 2: Бегущий огонек
+echo -e "${BLUE}🎯 Демо 2: Бегущий огонек${NC}"
 for cycle in {1..3}; do
-    echo -e "   ${YELLOW}Цикл $cycle${NC}"
     for i in {0..17}; do
         turn_off_all
         turn_on_led $i
@@ -119,111 +109,56 @@ for cycle in {1..3}; do
     done
     for i in {16..1}; do
         turn_off_all
-        turn_on_led $((i-1))
+        turn_on_led $i
         sleep 0.1
     done
 done
 
-# Демонстрация 4: Группы LED
-echo -e "${BLUE}🎯 Демо 4: Группы LED${NC}"
-
-# Группа 1: Power, Sync, GNSS, Alarm
-turn_off_all
-for led in 0 1 2 3; do
-    turn_on_led $led 0xFF
-done
-echo -e "   ${GREEN}Группа 1: Power, Sync, GNSS, Alarm${NC}"
-sleep 2
-
-# Группа 2: Status LEDs
-turn_off_all
-for led in 4 5 6 7; do
-    turn_on_led $led 0x80
-done
-echo -e "   ${CYAN}Группа 2: Status LEDs${NC}"
-sleep 2
-
-# Группа 3: Debug LEDs
-turn_off_all
-for led in 8 9 10 11; do
-    turn_on_led $led 0x60
-done
-echo -e "   ${YELLOW}Группа 3: Debug LEDs${NC}"
-sleep 2
-
-# Группа 4: Info LEDs
-turn_off_all
-for led in 12 13 14 15; do
-    turn_on_led $led 0x40
-done
-echo -e "   ${PURPLE}Группа 4: Info LEDs${NC}"
-sleep 2
-
-# Группа 5: Test LEDs
-turn_off_all
-for led in 16 17; do
-    turn_on_led $led 0x20
-done
-echo -e "   ${RED}Группа 5: Test LEDs${NC}"
-sleep 2
-
-# Демонстрация 5: Мигание
-echo -e "${BLUE}🎯 Демо 5: Мигание${NC}"
-for blink in {1..5}; do
-    echo -e "   ${GREEN}Мигание $blink${NC}"
-    turn_off_all
-    sleep 0.5
+# Демонстрация 3: Пульсация
+echo -e "${BLUE}🎯 Демо 3: Пульсация всех LED${NC}"
+for brightness in 0x10 0x30 0x50 0x70 0x90 0xB0 0xD0 0xFF 0xD0 0xB0 0x90 0x70 0x50 0x30 0x10 0x00; do
     for i in {0..17}; do
-        turn_on_led $i
+        turn_on_led $i $brightness
+    done
+    sleep 0.2
+done
+
+# Демонстрация 4: Случайные паттерны
+echo -e "${BLUE}🎯 Демо 4: Случайные паттерны${NC}"
+for pattern in {1..5}; do
+    turn_off_all
+    for i in {0..17}; do
+        if [ $((RANDOM % 2)) -eq 1 ]; then
+            turn_on_led $i
+        fi
     done
     sleep 0.5
 done
 
-# Демонстрация 6: Паттерны
-echo -e "${BLUE}🎯 Демо 6: Паттерны${NC}"
-
-# Паттерн 1: Шахматная доска
-echo -e "   ${CYAN}Паттерн 1: Шахматная доска${NC}"
-turn_off_all
-for i in {0..17}; do
-    if (( i % 2 == 0 )); then
-        turn_on_led $i 0xFF
-    fi
+# Демонстрация 5: Волна
+echo -e "${BLUE}🎯 Демо 5: Волна${NC}"
+for wave in {1..3}; do
+    for i in {0..17}; do
+        turn_off_all
+        # Включаем несколько LED в виде волны
+        for j in {0..5}; do
+            pos=$(( (i + j) % 18 ))
+            turn_on_led $pos
+        done
+        sleep 0.2
+    done
 done
-sleep 2
 
-# Паттерн 2: Змейка
-echo -e "   ${YELLOW}Паттерн 2: Змейка${NC}"
-turn_off_all
-for i in {0..8}; do
-    turn_on_led $i 0xFF
-    turn_on_led $((17-i)) 0xFF
+# Демонстрация 6: Мигание
+echo -e "${BLUE}🎯 Демо 6: Мигание${NC}"
+for blink in {1..10}; do
+    turn_off_all
+    sleep 0.3
+    for i in {0..17}; do
+        turn_on_led $i
+    done
     sleep 0.3
 done
-sleep 1
 
-# Паттерн 3: Спираль
-echo -e "   ${PURPLE}Паттерн 3: Спираль${NC}"
-turn_off_all
-for i in 0 4 8 12 16 17 13 9 5 1 2 6 10 14 15 11 7 3; do
-    turn_on_led $i 0xFF
-    sleep 0.2
-done
-sleep 2
-
-# Финальная демонстрация: Все LED
-echo -e "${BLUE}🎯 Финальная демонстрация: Все LED${NC}"
-turn_off_all
-for i in {0..17}; do
-    turn_on_led $i
-    echo -e "   ${GREEN}LED $((i + 1)) включен${NC}"
-done
-
-echo -e "${CYAN}🎉 Демонстрация завершена!${NC}"
-echo -e "${YELLOW}   Все 18 LED включены${NC}"
-echo -e "${BLUE}   Нажмите Ctrl+C для выключения${NC}"
-
-# Ожидание пользователя
-while true; do
-    sleep 1
-done 
+echo -e "${GREEN}✅ Демонстрация завершена${NC}"
+cleanup 

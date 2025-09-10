@@ -45,4 +45,20 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-*.temp ptp-monitoring/monitoring-env/
+*.temp
+
+# Linux kernel build artifacts
+*.ko
+*.o
+*.mod.c
+*.mod.o
+Module.symvers
+modules.order
+.*.cmd
+.module-common.o
+
+# Generated metrics files
+*.json
+
+# Monitoring environment
+ptp-monitoring/monitoring-env/
