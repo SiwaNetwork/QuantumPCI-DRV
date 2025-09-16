@@ -23,6 +23,14 @@ try:
 except ImportError as e:
     PTP_MONITORING_AVAILABLE = False
     print(f"⚠️  PTP мониторинг недоступен - {e}")
+# Импорт BMP280 мониторинга
+try:
+    from bmp280_monitor import get_bmp280_data, get_bmp280_info, is_bmp280_available
+    BMP280_MONITORING_AVAILABLE = True
+    print("✅ BMP280 мониторинг доступен")
+except ImportError as e:
+    BMP280_MONITORING_AVAILABLE = False
+    print(f"⚠️  BMP280 мониторинг недоступен - {e}")
 
 # === Конфигурация ===
 CONFIG = {
@@ -65,6 +73,7 @@ class QuantumPCIRealisticMonitor:
         self.devices = self.discover_devices()
         self.metrics_history = defaultdict(lambda: deque(maxlen=CONFIG['monitoring']['history_maxlen']))
         self.alert_history = deque(maxlen=100)
+        self.start_time = time.time()
         self.start_monitoring()
         
     def discover_devices(self):
@@ -113,6 +122,8 @@ class QuantumPCIRealisticMonitor:
         offset_raw = self._read_sysfs(device['sysfs_path'], 'clock_status_offset')
         drift_raw = self._read_sysfs(device['sysfs_path'], 'clock_status_drift')
         clock_source = self._read_sysfs(device['sysfs_path'], 'clock_source')
+        utc_tai_offset_raw = self._read_sysfs(device['sysfs_path'], 'utc_tai_offset')
+        tod_correction_raw = self._read_sysfs(device['sysfs_path'], 'tod_correction')
         
         # Парсинг значений
         try:
@@ -124,6 +135,30 @@ class QuantumPCIRealisticMonitor:
             metrics['drift_ppb'] = int(drift_raw) if drift_raw else 0
         except (ValueError, TypeError):
             metrics['drift_ppb'] = 0
+            
+        try:
+            metrics['utc_tai_offset'] = int(utc_tai_offset_raw) if utc_tai_offset_raw else 0
+        except (ValueError, TypeError):
+            metrics['utc_tai_offset'] = 0
+            
+        try:
+            metrics['tod_correction'] = int(tod_correction_raw) if tod_correction_raw else 0
+        except (ValueError, TypeError):
+            metrics['tod_correction'] = 0
+            
+        # Настраиваемые параметры
+        irig_b_mode_raw = self._read_sysfs(device['sysfs_path'], 'irig_b_mode')
+        ts_window_adjust_raw = self._read_sysfs(device['sysfs_path'], 'ts_window_adjust')
+        
+        try:
+            metrics['irig_b_mode'] = int(irig_b_mode_raw) if irig_b_mode_raw else 0
+        except (ValueError, TypeError):
+            metrics['irig_b_mode'] = 0
+            
+        try:
+            metrics['ts_window_adjust'] = int(ts_window_adjust_raw) if ts_window_adjust_raw else 0
+        except (ValueError, TypeError):
+            metrics['ts_window_adjust'] = 0
             
         metrics['clock_source'] = clock_source or 'UNKNOWN'
         
@@ -183,6 +218,8 @@ class QuantumPCIRealisticMonitor:
     def get_device_info(self, device):
         """Получение информации об устройстве"""
         available_sources = self._read_sysfs(device['sysfs_path'], 'available_clock_sources')
+        available_sma_inputs = self._read_sysfs(device['sysfs_path'], 'available_sma_inputs')
+        available_sma_outputs = self._read_sysfs(device['sysfs_path'], 'available_sma_outputs')
         
         return {
             'device_id': device['id'],
@@ -190,6 +227,8 @@ class QuantumPCIRealisticMonitor:
             'type': device['type'],
             'driver': 'ptp_ocp',
             'available_clock_sources': available_sources.split(',') if available_sources else [],
+            'available_sma_inputs': available_sma_inputs.split(',') if available_sma_inputs else [],
+            'available_sma_outputs': available_sma_outputs.split(',') if available_sma_outputs else [],
             'sysfs_path': device['sysfs_path']
         }
     
@@ -454,6 +493,11 @@ def realistic_dashboard():
     """Реалистичный дашборд с честными возможностями"""
     return send_from_directory('api', 'realistic-dashboard.html')
 
+@app.route('/test-dashboard')
+def test_dashboard():
+    """Тестовый дашборд для отладки"""
+    return send_from_directory('.', 'test_dashboard.html')
+
 @app.route('/web/<path:filename>')
 def web_files(filename):
     """Статические веб-файлы"""
@@ -620,6 +664,157 @@ def api_intel_interface(interface):
             'message': str(e)
         }), 500
 
+# === BMP280 Sensor API Endpoints ===
+
+@app.route('/api/bmp280')
+def api_bmp280_data():
+    """API для получения данных с датчика BMP280"""
+    if not BMP280_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'BMP280 мониторинг недоступен',
+            'available': False
+        }), 503
+    
+    try:
+        data = get_bmp280_data()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения данных BMP280: {str(e)}',
+            'available': False
+        }), 500
+
+@app.route('/api/bmp280/info')
+def api_bmp280_info():
+    """API для получения информации о датчике BMP280"""
+    if not BMP280_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'BMP280 мониторинг недоступен',
+            'available': False
+        }), 503
+    
+    try:
+        info = get_bmp280_info()
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения информации BMP280: {str(e)}',
+            'available': False
+        }), 500
+
+@app.route('/api/bmp280/temperature')
+def api_bmp280_temperature():
+    """API для получения только температуры с BMP280"""
+    if not BMP280_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'BMP280 мониторинг недоступен',
+            'available': False
+        }), 503
+    
+    try:
+        from bmp280_monitor import bmp280_monitor
+        temperature = bmp280_monitor.get_temperature_only()
+        if temperature is not None:
+            return jsonify({
+                'temperature_c': temperature,
+                'timestamp': time.time(),
+                'available': True
+            })
+        else:
+            return jsonify({
+                'error': 'Не удалось получить температуру',
+                'available': False
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения температуры: {str(e)}',
+            'available': False
+        }), 500
+
+@app.route('/api/bmp280/pressure')
+def api_bmp280_pressure():
+    """API для получения только давления с BMP280"""
+    if not BMP280_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'BMP280 мониторинг недоступен',
+            'available': False
+        }), 503
+    
+    try:
+        from bmp280_monitor import bmp280_monitor
+        pressure = bmp280_monitor.get_pressure_only()
+        if pressure is not None:
+            return jsonify({
+                'pressure_pa': pressure,
+                'pressure_hpa': pressure / 100,
+                'pressure_mbar': pressure / 100,
+                'timestamp': time.time(),
+                'available': True
+            })
+        else:
+            return jsonify({
+                'error': 'Не удалось получить давление',
+                'available': False
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения давления: {str(e)}',
+            'available': False
+        }), 500
+
+@app.route('/api/logs')
+def api_logs():
+    """API для получения логов системы"""
+    try:
+        # Читаем последние 100 строк из лога
+        log_file = "/home/shiwa-time/QuantumPCI-DRV/ptp-monitoring/monitoring.log"
+        if os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                recent_lines = lines[-100:] if len(lines) > 100 else lines
+                return jsonify({
+                    'logs': [line.strip() for line in recent_lines],
+                    'total_lines': len(lines),
+                    'recent_lines': len(recent_lines)
+                })
+        else:
+            return jsonify({
+                'logs': ['No log file found'],
+                'total_lines': 0,
+                'recent_lines': 0
+            })
+    except Exception as e:
+        return jsonify({
+            'error': f'Error reading logs: {str(e)}',
+            'logs': []
+        }), 500
+
+@app.route('/api/export')
+def api_export():
+    """API для экспорта данных"""
+    try:
+        export_data = {
+            'timestamp': time.time(),
+            'devices': monitor.devices,
+            'system_info': {
+                'api_version': CONFIG['version'],
+                'uptime': time.time() - monitor.start_time if hasattr(monitor, 'start_time') else 0
+            }
+        }
+        
+        # Добавляем BMP280 данные если доступны
+        if BMP280_MONITORING_AVAILABLE:
+            try:
+                export_data['bmp280'] = get_bmp280_data()
+            except:
+                pass
+        
+        return jsonify(export_data)
+    except Exception as e:
+        return jsonify({
+            'error': f'Error exporting data: {str(e)}'
+        }), 500
+
 # === WebSocket Events ===
 
 @socketio.on('connect')
@@ -627,19 +822,37 @@ def handle_connect():
     """Клиент подключился"""
     print('Client connected to realistic API')
     
+    # Подготавливаем данные для отправки
+    status_data = {
+        'connected': True,
+        'devices_count': len(monitor.devices),
+        'api_version': CONFIG['version'],
+        'realistic_monitoring': True,
+        'limitations_warning': 'Доступны только базовые метрики из ptp_ocp драйвера',
+        'timestamp': time.time()
+    }
+    
+    # Добавляем PTP данные если есть устройства
     if monitor.devices:
         device = monitor.devices[0]
         ptp_data = monitor.get_ptp_metrics(device)
-        
-        socketio.emit('status_update', {
-            'connected': True,
-            'devices_count': len(monitor.devices),
-            'current_offset': ptp_data.get('offset_ns', 0),
-            'api_version': CONFIG['version'],
-            'realistic_monitoring': True,
-            'limitations_warning': 'Доступны только базовые метрики из ptp_ocp драйвера',
-            'timestamp': time.time()
-        })
+        status_data['current_offset'] = ptp_data.get('offset_ns', 0)
+    
+    # Добавляем BMP280 данные если доступны
+    if BMP280_MONITORING_AVAILABLE:
+        try:
+            bmp280_data = get_bmp280_data()
+            status_data['bmp280_available'] = bmp280_data.get('available', False)
+            if bmp280_data.get('available'):
+                status_data['bmp280_temperature'] = bmp280_data.get('temperature_c')
+                status_data['bmp280_pressure'] = bmp280_data.get('pressure_hpa')
+        except Exception as e:
+            status_data['bmp280_error'] = str(e)
+            status_data['bmp280_available'] = False
+    else:
+        status_data['bmp280_available'] = False
+    
+    socketio.emit('status_update', status_data)
 
 @socketio.on('disconnect')
 def handle_disconnect():

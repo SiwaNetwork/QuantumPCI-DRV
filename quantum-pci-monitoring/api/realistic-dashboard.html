@@ -292,6 +292,36 @@
             color: white;
         }
         
+        .sensor-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            color: white;
+        }
+        
+        .sensor-section h2 {
+            color: #4ecdc4;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.8em;
+        }
+        
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .sensor-controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
         .refresh-btn {
             background: rgba(255, 255, 255, 0.2);
             border: none;
@@ -325,71 +355,6 @@
             }
         }
         
-        /* Стили для сетевых карт */
-        .interfaces-details {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        
-        .interfaces-details h3 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-        
-        .interface-item {
-            background: rgba(52, 152, 219, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-left: 4px solid #3498db;
-        }
-        
-        .interface-item h4 {
-            color: #2c3e50;
-            margin-bottom: 8px;
-            font-size: 1.1em;
-        }
-        
-        .interface-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .interface-stat {
-            background: rgba(255, 255, 255, 0.7);
-            padding: 8px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        
-        .interface-stat .label {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            margin-bottom: 2px;
-        }
-        
-        .interface-stat .value {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .status-up { background-color: #27ae60; }
-        .status-down { background-color: #e74c3c; }
-        .status-unknown { background-color: #f39c12; }
     </style>
 </head>
 <body>
@@ -455,6 +420,12 @@
                 <div>Serial: <span id="device-serial">--</span></div>
                 <div>Type: <span id="device-type">--</span></div>
                 <div>Driver: <span id="device-driver">ptp_ocp</span></div>
+                <div class="metric-label">Available Clock Sources:</div>
+                <div id="available-clock-sources">--</div>
+                <div class="metric-label">Available SMA Inputs:</div>
+                <div id="available-sma-inputs">--</div>
+                <div class="metric-label">Available SMA Outputs:</div>
+                <div id="available-sma-outputs">--</div>
             </div>
             
             <!-- Clock Source -->
@@ -466,6 +437,15 @@
                 <div id="source-specific-info" style="margin-top: 10px; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; font-size: 0.85em;">
                     <!-- Динамическая информация о источнике -->
                 </div>
+            </div>
+            
+            <!-- Configuration Parameters -->
+            <div class="metric-card">
+                <h3>⚙️ Configuration</h3>
+                <div class="metric-label">IRIG-B Mode:</div>
+                <div class="metric-value" id="irig-b-mode">--</div>
+                <div class="metric-label">TS Window Adjust:</div>
+                <div class="metric-value" id="ts-window-adjust">--</div>
             </div>
             
             <!-- Clock Drift -->
@@ -501,36 +481,36 @@
             </div>
         </div>
         
-        <!-- Сетевые карты с PTP -->
-        <div class="section">
-            <h2>🌐 PTP Network Cards</h2>
-            <div class="metrics-grid" id="intel-network-grid">
+        <!-- BMP280 Sensor Section -->
+        <div class="sensor-section" id="bmp280-section">
+            <h2>🌡️ BMP280 Environmental Sensor</h2>
+            <div class="sensor-grid">
                 <div class="metric-card">
-                    <h3>📊 Network Status</h3>
-                    <div class="metric-value" id="network-status">--</div>
-                    <div class="metric-label">Overall Status</div>
+                    <h3>🌡️ Temperature</h3>
+                    <div class="metric-value" id="bmp280-temperature">--</div>
+                    <div class="metric-unit">°C</div>
+                    <div class="metric-status" id="bmp280-temp-status">unknown</div>
                 </div>
+                
                 <div class="metric-card">
-                    <h3>🔌 Interfaces</h3>
-                    <div class="metric-value" id="interfaces-count">--</div>
-                    <div class="metric-label">Active Interfaces</div>
+                    <h3>📊 Pressure</h3>
+                    <div class="metric-value" id="bmp280-pressure">--</div>
+                    <div class="metric-unit">гПа</div>
+                    <div class="metric-status" id="bmp280-press-status">unknown</div>
                 </div>
+                
                 <div class="metric-card">
-                    <h3>⏰ PTP Support</h3>
-                    <div class="metric-value" id="ptp-support">--</div>
-                    <div class="metric-label">PTP Enabled</div>
-                </div>
-                <div class="metric-card">
-                    <h3>🚀 Hardware TS</h3>
-                    <div class="metric-value" id="hw-timestamping">--</div>
-                    <div class="metric-label">Hardware Timestamping</div>
+                    <h3>📋 Sensor Info</h3>
+                    <div>Type: <span id="bmp280-type">BMP280</span></div>
+                    <div>I2C: <span id="bmp280-i2c">0x76</span></div>
+                    <div>Status: <span id="bmp280-status">--</span></div>
+                    <div>Last Update: <span id="bmp280-last-update">--</span></div>
                 </div>
             </div>
             
-            <!-- Детали интерфейсов -->
-            <div class="interfaces-details" id="interfaces-details">
-                <h3>📋 Interface Details</h3>
-                <div id="interfaces-list">Загрузка...</div>
+            <div class="sensor-controls">
+                <button onclick="refreshBMP280()" class="refresh-btn">🔄 Refresh BMP280</button>
+                <button onclick="toggleBMP280Monitoring()" class="refresh-btn" id="bmp280-monitor-btn">⏸️ Pause Monitoring</button>
             </div>
         </div>
         
@@ -554,10 +534,12 @@
         let currentData = {};
         
         async function refreshData() {
+            console.log('refreshData called at:', new Date().toLocaleTimeString()); // Отладка
             try {
                 // Получение списка устройств
                 const devicesResponse = await fetch('/api/devices');
                 const devicesData = await devicesResponse.json();
+                console.log('Devices response:', devicesData); // Отладка
                 
                 updateConnectionStatus('ok', `Подключено (${devicesData.count})`);
                 updateDevicesList(devicesData.devices);
@@ -565,33 +547,19 @@
                 if (devicesData.devices.length > 0) {
                     // Получение статуса первого устройства
                     const deviceId = devicesData.devices[0].device_id;
+                    console.log('Fetching status for device:', deviceId); // Отладка
                     const statusResponse = await fetch(`/api/device/${deviceId}/status`);
                     const statusData = await statusResponse.json();
+                    console.log('Received status data:', statusData); // Отладка
                     
                     updateMetrics(statusData);
                     currentData = statusData;
+                } else {
+                    console.log('No devices found'); // Отладка
                 }
                 
                 updateLastUpdate();
                 
-                // Загрузка данных PTP сетевых карт
-                try {
-                    const ptpResponse = await fetch('/api/ptp-network');
-                    if (ptpResponse.ok) {
-                        const ptpData = await ptpResponse.json();
-                        updatePTPNetworkData(ptpData);
-                        
-                        // Обновление метрик из PTP API
-                        if (ptpData.quantum_pci) {
-                            updatePTPMetrics(ptpData.quantum_pci);
-                        }
-                    } else {
-                        updatePTPNetworkError('PTP мониторинг недоступен');
-                    }
-                } catch (ptpError) {
-                    console.warn('PTP network monitoring not available:', ptpError);
-                    updatePTPNetworkError('PTP мониторинг недоступен');
-                }
                 
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -608,20 +576,112 @@
         }
         
         function updateMetrics(data) {
+            console.log('updateMetrics called with data:', data); // Отладка
+            
             // PTP Metrics
             if (data.ptp) {
-                document.getElementById('ptp-offset').textContent = data.ptp.offset_ns.toLocaleString();
-                document.getElementById('ptp-drift').textContent = data.ptp.drift_ppb.toLocaleString();
+                console.log('Updating PTP metrics:', data.ptp); // Отладка
+                
+                // Проверяем, что элементы существуют
+                const offsetElement = document.getElementById('ptp-offset');
+                const driftElement = document.getElementById('ptp-drift');
+                
+                if (offsetElement) {
+                    offsetElement.textContent = data.ptp.offset_ns.toLocaleString();
+                    console.log('Updated ptp-offset to:', data.ptp.offset_ns);
+                } else {
+                    console.error('Element ptp-offset not found!');
+                }
+                
+                if (driftElement) {
+                    driftElement.textContent = data.ptp.drift_ppb.toLocaleString();
+                    console.log('Updated ptp-drift to:', data.ptp.drift_ppb);
+                } else {
+                    console.error('Element ptp-drift not found!');
+                }
                 
                 updateStatusIndicator('ptp-offset-status', data.ptp.status);
                 updateStatusIndicator('ptp-drift-status', data.ptp.status);
                 
+            } else {
+                console.log('No PTP data found'); // Отладка
             }
             
             // GNSS Status
             if (data.gnss) {
                 document.getElementById('gnss-status').textContent = data.gnss.sync_status;
                 updateStatusIndicator('gnss-status-indicator', data.gnss.status);
+            }
+            
+            // Clock Source
+            if (data.ptp && data.ptp.clock_source) {
+                document.getElementById('clock-source-display').textContent = data.ptp.clock_source;
+                document.getElementById('source-description').textContent = `Active Source: ${data.ptp.clock_source}`;
+            }
+            
+            // Clock Drift and Offset (дополнительные элементы)
+            if (data.ptp) {
+                // Обновляем clock-drift если элемент существует
+                const clockDriftElement = document.getElementById('clock-drift');
+                if (clockDriftElement) {
+                    clockDriftElement.textContent = data.ptp.drift_ppb.toLocaleString();
+                    updateStatusIndicator('drift-status', data.ptp.status);
+                }
+                
+                // Обновляем clock-offset если элемент существует
+                const clockOffsetElement = document.getElementById('clock-offset');
+                if (clockOffsetElement) {
+                    clockOffsetElement.textContent = data.ptp.offset_ns.toLocaleString();
+                    updateStatusIndicator('offset-status', data.ptp.status);
+                }
+                
+                // Обновляем UTC-TAI offset
+                const utcTaiElement = document.getElementById('utc-tai-offset');
+                if (utcTaiElement && data.ptp.utc_tai_offset !== undefined) {
+                    utcTaiElement.textContent = data.ptp.utc_tai_offset.toLocaleString();
+                    console.log('UTC-TAI offset updated:', data.ptp.utc_tai_offset); // Отладка
+                }
+                
+                // Обновляем TOD Correction
+                const todCorrectionElement = document.getElementById('tod-correction');
+                if (todCorrectionElement && data.ptp.tod_correction !== undefined) {
+                    todCorrectionElement.textContent = data.ptp.tod_correction.toLocaleString();
+                    console.log('TOD Correction updated:', data.ptp.tod_correction); // Отладка
+                }
+                
+                // Обновляем настраиваемые параметры
+                const irigBModeElement = document.getElementById('irig-b-mode');
+                if (irigBModeElement && data.ptp.irig_b_mode !== undefined) {
+                    irigBModeElement.textContent = data.ptp.irig_b_mode;
+                    console.log('IRIG-B Mode updated:', data.ptp.irig_b_mode); // Отладка
+                }
+                
+                const tsWindowAdjustElement = document.getElementById('ts-window-adjust');
+                if (tsWindowAdjustElement && data.ptp.ts_window_adjust !== undefined) {
+                    tsWindowAdjustElement.textContent = data.ptp.ts_window_adjust;
+                    console.log('TS Window Adjust updated:', data.ptp.ts_window_adjust); // Отладка
+                }
+            }
+            
+            // Device Info
+            if (data.device_info) {
+                document.getElementById('device-serial').textContent = data.device_info.serial_number || '--';
+                document.getElementById('device-type').textContent = data.device_info.type || '--';
+                
+                // Available Clock Sources
+                if (data.device_info.available_clock_sources) {
+                    document.getElementById('available-clock-sources').textContent = data.device_info.available_clock_sources.join(', ');
+                }
+                
+                // Available SMA Inputs
+                if (data.device_info.available_sma_inputs) {
+                    document.getElementById('available-sma-inputs').textContent = data.device_info.available_sma_inputs.join(', ');
+                }
+                
+                // Available SMA Outputs
+                if (data.device_info.available_sma_outputs) {
+                    document.getElementById('available-sma-outputs').textContent = data.device_info.available_sma_outputs.join(', ');
+                }
             }
             
             // SMA Configuration
@@ -845,83 +905,115 @@
         // Обновление часов каждую секунду
         setInterval(updateDeviceClock, 1000);
         
-        // Функции для обновления данных PTP сетевых карт
-        function updatePTPNetworkData(data) {
-            // Обновление основных метрик
-            document.getElementById('network-status').textContent = data.summary?.total_interfaces > 0 ? 'Active' : 'No Cards';
-            document.getElementById('interfaces-count').textContent = data.summary?.active_interfaces || 0;
-            document.getElementById('ptp-support').textContent = data.summary?.ptp_supported_interfaces || 0;
-            document.getElementById('hw-timestamping').textContent = data.summary?.ptp_running ? 'Enabled' : 'Disabled';
-            
-            // Обновление деталей интерфейсов
-            updateInterfacesList(data.interfaces || []);
-        }
         
-        function updatePTPNetworkError(message) {
-            document.getElementById('network-status').textContent = 'Error';
-            document.getElementById('interfaces-count').textContent = '--';
-            document.getElementById('ptp-support').textContent = '--';
-            document.getElementById('hw-timestamping').textContent = '--';
-            
-            document.getElementById('interfaces-list').innerHTML = 
-                `<div style="color: #e74c3c; text-align: center; padding: 20px;">${message}</div>`;
-        }
+        // === BMP280 Functions ===
+        let bmp280MonitoringActive = true;
+        let bmp280Interval = null;
         
-        function updateInterfacesList(interfaces) {
-            const interfacesList = document.getElementById('interfaces-list');
-            
-            if (interfaces.length === 0) {
-                interfacesList.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 20px;">Сетевые карты с поддержкой PTP не найдены</div>';
-                return;
-            }
-            
-            let html = '';
-            interfaces.forEach(interface => {
-                const statusClass = interface.status === 'up' ? 'status-up' : 
-                                  interface.status === 'down' ? 'status-down' : 'status-unknown';
+        async function refreshBMP280() {
+            try {
+                const response = await fetch('/api/bmp280');
+                const data = await response.json();
                 
-                html += `
-                    <div class="interface-item">
-                        <h4>
-                            <span class="status-indicator ${statusClass}"></span>
-                            ${interface.interface} (${interface.status.toUpperCase()})
-                        </h4>
-                        <div class="interface-stats">
-                            <div class="interface-stat">
-                                <div class="label">Driver</div>
-                                <div class="value">${interface.driver || 'Unknown'}</div>
-                            </div>
-                            <div class="interface-stat">
-                                <div class="label">Speed</div>
-                                <div class="value">${interface.speed || 'Unknown'}</div>
-                            </div>
-                            <div class="interface-stat">
-                                <div class="label">PTP Support</div>
-                                <div class="value">${interface.ptp_support ? 'Yes' : 'No'}</div>
-                            </div>
-                            <div class="interface-stat">
-                                <div class="label">HW Timestamping</div>
-                                <div class="value">${interface.timestamping?.hw || 'Unknown'}</div>
-                            </div>
-                            <div class="interface-stat">
-                                <div class="label">RX Packets</div>
-                                <div class="value">${interface.statistics?.rx_packets || 0}</div>
-                            </div>
-                            <div class="interface-stat">
-                                <div class="label">TX Packets</div>
-                                <div class="value">${interface.statistics?.tx_packets || 0}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
+                if (data.available) {
+                    // Обновляем температуру
+                    document.getElementById('bmp280-temperature').textContent = 
+                        data.temperature_c ? data.temperature_c.toFixed(2) : '--';
+                    document.getElementById('bmp280-temp-status').textContent = 'ok';
+                    document.getElementById('bmp280-temp-status').className = 'metric-status ok';
+                    
+                    // Обновляем давление
+                    document.getElementById('bmp280-pressure').textContent = 
+                        data.pressure_hpa ? data.pressure_hpa.toFixed(2) : '--';
+                    document.getElementById('bmp280-press-status').textContent = 'ok';
+                    document.getElementById('bmp280-press-status').className = 'metric-status ok';
+                    
+                    // Обновляем статус
+                    document.getElementById('bmp280-status').textContent = 'Active';
+                    document.getElementById('bmp280-last-update').textContent = 
+                        new Date(data.timestamp * 1000).toLocaleTimeString('ru-RU');
+                    
+                    // Показываем секцию
+                    document.getElementById('bmp280-section').style.display = 'block';
+                } else {
+                    // Ошибка или недоступность
+                    document.getElementById('bmp280-temperature').textContent = '--';
+                    document.getElementById('bmp280-pressure').textContent = '--';
+                    document.getElementById('bmp280-temp-status').textContent = 'error';
+                    document.getElementById('bmp280-temp-status').className = 'metric-status error';
+                    document.getElementById('bmp280-press-status').textContent = 'error';
+                    document.getElementById('bmp280-press-status').className = 'metric-status error';
+                    document.getElementById('bmp280-status').textContent = 'Error';
+                    document.getElementById('bmp280-last-update').textContent = '--';
+                }
+            } catch (error) {
+                console.error('Ошибка получения данных BMP280:', error);
+                document.getElementById('bmp280-temperature').textContent = '--';
+                document.getElementById('bmp280-pressure').textContent = '--';
+                document.getElementById('bmp280-temp-status').textContent = 'error';
+                document.getElementById('bmp280-temp-status').className = 'metric-status error';
+                document.getElementById('bmp280-press-status').textContent = 'error';
+                document.getElementById('bmp280-press-status').className = 'metric-status error';
+                document.getElementById('bmp280-status').textContent = 'Connection Error';
+            }
+        }
+        
+        function toggleBMP280Monitoring() {
+            const btn = document.getElementById('bmp280-monitor-btn');
             
-            interfacesList.innerHTML = html;
+            if (bmp280MonitoringActive) {
+                // Останавливаем мониторинг
+                if (bmp280Interval) {
+                    clearInterval(bmp280Interval);
+                    bmp280Interval = null;
+                }
+                bmp280MonitoringActive = false;
+                btn.textContent = '▶️ Start Monitoring';
+                btn.style.background = 'rgba(40, 167, 69, 0.3)';
+            } else {
+                // Запускаем мониторинг
+                refreshBMP280(); // Сразу обновляем
+                bmp280Interval = setInterval(refreshBMP280, 5000); // Каждые 5 секунд
+                bmp280MonitoringActive = true;
+                btn.textContent = '⏸️ Pause Monitoring';
+                btn.style.background = 'rgba(255, 193, 7, 0.3)';
+            }
+        }
+        
+        // Проверяем доступность BMP280 при загрузке
+        async function checkBMP280Availability() {
+            try {
+                const response = await fetch('/api/bmp280/info');
+                const data = await response.json();
+                
+                if (data.available) {
+                    // BMP280 доступен, показываем секцию и запускаем мониторинг
+                    document.getElementById('bmp280-section').style.display = 'block';
+                    refreshBMP280();
+                    bmp280Interval = setInterval(refreshBMP280, 5000);
+                } else {
+                    // BMP280 недоступен, скрываем секцию
+                    document.getElementById('bmp280-section').style.display = 'none';
+                    console.log('BMP280 sensor not available');
+                }
+            } catch (error) {
+                console.error('Ошибка проверки доступности BMP280:', error);
+                document.getElementById('bmp280-section').style.display = 'none';
+            }
         }
         
         // Первоначальная загрузка
-        refreshData();
+        console.log('Starting dashboard initialization...'); // Отладка
+        
+        // Принудительное обновление данных
+        setTimeout(() => {
+            console.log('Force refreshing data...'); // Отладка
+            refreshData();
+        }, 1000);
+        
         updateDeviceClock();
+        checkBMP280Availability();
+        console.log('Dashboard initialization complete'); // Отладка
     </script>
 </body>
 </html>
