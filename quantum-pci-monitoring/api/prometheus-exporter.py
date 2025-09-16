@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+🌐 PTP Network Cardsразд#!/usr/bin/env python3
 # prometheus-exporter.py - Prometheus exporter для TimeCard PTP
 
 import time
