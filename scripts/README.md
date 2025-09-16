@@ -285,5 +285,5 @@ journalctl -u ptp4l -f
 
 **Версия**: 1.0  
 **Дата**: 2025  
-**Автор**: AI Assistant  
+**Автор**: Development Team  
 **Проект**: Quantum-PCI-DRV

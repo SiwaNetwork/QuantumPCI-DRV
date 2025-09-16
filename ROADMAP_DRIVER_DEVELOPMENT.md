@@ -521,4 +521,4 @@ setInterval(async () => {
 
 *Документ создан: $(date)*  
 *Версия: 1.1*  
-*Автор: AI Assistant*
+*Автор: Development Team*
