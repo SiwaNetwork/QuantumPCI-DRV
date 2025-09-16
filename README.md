@@ -282,8 +282,7 @@ QuantumPCI-DRV/
 │   ├── api/               # REST API и веб-интерфейсы
 │   ├── web/               # Дополнительные веб-ресурсы
 │   ├── quantum-pci-monitor.py
-│   ├── requirements.txt   # Python зависимости
-│   └── ROADMAP.md         # План развития
+│   └── requirements.txt   # Python зависимости
 ├── scripts/                # Скрипты для Intel сетевых карт
 │   ├── intel-network-testing.sh
 │   ├── quick-intel-setup.sh
@@ -292,6 +291,7 @@ QuantumPCI-DRV/
 ├── bno055-sensor/          # Драйвер 9-DOF IMU датчика
 ├── led-testing/            # Тесты и управление LED индикацией
 ├── README.md               # Основная документация проекта
+├── ROADMAP_DRIVER_DEVELOPMENT.md  # План развития драйвера
 └── INTEL_INTEGRATION_SUMMARY.md  # Отчет по интеграции Intel
 ```
 
@@ -375,7 +375,7 @@ sudo modprobe ptp_ocp
 
 1. **Драйвер только для Linux** - Windows не поддерживается
 2. **Требуется ядро 5.4+** - для старых версий возможны проблемы
-3. **Мониторинг ограничен** - см. [ROADMAP](quantum-pci-monitoring/ROADMAP.md) для планов развития
+3. **Мониторинг ограничен** - см. [ROADMAP](ROADMAP_DRIVER_DEVELOPMENT.md) для планов развития
 4. **BIOS настройки критичны** - VT-d/IOMMU обязательны
 
 ---
