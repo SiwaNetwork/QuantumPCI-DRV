@@ -1,0 +1,352 @@
+--- a/ptp_ocp.c
++++ b/ptp_ocp.c
+@@ -60,6 +60,45 @@
+ #define MRO50_BOARD_CONFIG_WRITE _IOW('M', 10, u32 *)
+ 
+ #endif /* MRO50_IOCTL_H */
++
++/* Error handling and watchdog structures */
++struct ptp_ocp_error_recovery {
++	u32 error_count;
++	u32 max_retries;
++	u32 retry_delay_ms;
++	bool auto_recovery_enabled;
++	struct work_struct recovery_work;
++	struct timer_list retry_timer;
++	enum ptp_ocp_error_code last_error;
++	u64 last_error_time;
++};
++
++struct ptp_ocp_watchdog {
++	struct timer_list watchdog_timer;
++	u32 timeout_ms;
++	u32 last_heartbeat;
++	bool enabled;
++	bool critical_section;
++	
++	/* Statistics */
++	u32 timeout_count;
++	u32 reset_count;
++	u64 last_reset_time;
++	
++	/* Operation monitoring */
++	struct {
++		u64 gettime_count;
++		u64 settime_count;
++		u64 last_operation_time;
++		bool operation_stuck;
++	} operation_monitor;
++};
++
++enum ptp_ocp_log_level {
++	PTP_OCP_LOG_DEBUG = 0,
++	PTP_OCP_LOG_INFO = 1,
++	PTP_OCP_LOG_WARN = 2,
++	PTP_OCP_LOG_ERROR = 3,
++	PTP_OCP_LOG_CRIT = 4,
++};
++
++struct ptp_ocp_logger {
++	enum ptp_ocp_log_level level;
++	bool enable_file_logging;
++	char log_file[256];
++	struct mutex log_mutex;
++	u64 log_rotation_size;
++	u32 log_rotation_count;
++};
++
+ /*---------------------------------------------------------------------------*/
+ 
+ #ifndef PCI_VENDOR_ID_QUANTUM_PCI
+@@ -488,6 +527,12 @@ struct ptp_ocp {
+ 	struct ptp_ocp_signal	signal[4];
+ 	struct ptp_ocp_sma_connector sma[4];
+ 	const struct ocp_sma_op *sma_op;
++	
++	/* Reliability improvements */
++	struct ptp_ocp_error_recovery error_recovery;
++	struct ptp_ocp_watchdog watchdog;
++	struct ptp_ocp_logger logger;
++	enum ptp_ocp_error_code last_error;
++	u32 error_count;
++	bool auto_recovery_enabled;
+ 	
+ 	struct system_time_snapshot snapshot;
+ 	u64			ptm_t1_prev;
+@@ -496,6 +541,80 @@ struct ptp_ocp {
+ 	bool			signal_enabled_before_suspend[4];
+ };
+ 
++/* Error handling functions */
++static int ptp_ocp_handle_error(struct ptp_ocp *bp, 
++				enum ptp_ocp_error_code error,
++				const char *operation)
++{
++	struct ptp_ocp_error_recovery *recovery = &bp->error_recovery;
++	
++	recovery->error_count++;
++	recovery->last_error = error;
++	recovery->last_error_time = ktime_get_ns();
++	bp->error_count = recovery->error_count;
++	bp->last_error = error;
++	
++	dev_err(&bp->pdev->dev, "Error in %s: %d (count: %u)\n", 
++		operation, error, recovery->error_count);
++	
++	/* Log error details */
++	ptp_ocp_log_error(bp, error, operation);
++	
++	/* Attempt automatic recovery */
++	if (recovery->auto_recovery_enabled && 
++	    recovery->error_count <= recovery->max_retries) {
++		
++		dev_info(&bp->pdev->dev, "Attempting automatic recovery...\n");
++		
++		/* Schedule recovery work */
++		schedule_work(&recovery->recovery_work);
++		
++		return 0;
++	}
++	
++	/* Critical error - requires intervention */
++	if (recovery->error_count > recovery->max_retries) {
++		dev_crit(&bp->pdev->dev, "Too many errors, disabling device\n");
++		ptp_ocp_disable_device(bp);
++		return -EIO;
++	}
++	
++	return error;
++}
++
++static void ptp_ocp_log_error(struct ptp_ocp *bp, 
++			      enum ptp_ocp_error_code error,
++			      const char *operation)
++{
++	struct ptp_ocp_logger *logger = &bp->logger;
++	char buffer[512];
++	int len;
++	
++	mutex_lock(&logger->log_mutex);
++	
++	len = snprintf(buffer, sizeof(buffer), 
++		       "[%s] ERROR: %s failed with code %d\n",
++		       operation, error);
++	
++	/* Log to system log */
++	dev_err(&bp->pdev->dev, "%s", buffer);
++	
++	/* Log to file if enabled */
++	if (logger->enable_file_logging) {
++		ptp_ocp_log_to_file(bp, buffer, len);
++	}
++	
++	mutex_unlock(&logger->log_mutex);
++}
++
++/* Watchdog functions */
++static void ptp_ocp_watchdog_timer_callback(struct timer_list *t)
++{
++	struct ptp_ocp_watchdog *watchdog = from_timer(watchdog, t, watchdog_timer);
++	struct ptp_ocp *bp = container_of(watchdog, struct ptp_ocp, watchdog);
++	u32 current_time = jiffies_to_msecs(jiffies);
++	
++	if (!watchdog->enabled)
++		return;
++	
++	/* Check heartbeat */
++	if (current_time - watchdog->last_heartbeat > watchdog->timeout_ms) {
++		dev_err(&bp->pdev->dev, "Watchdog timeout! Last heartbeat: %u ms ago\n",
++			current_time - watchdog->last_heartbeat);
++		
++		watchdog->timeout_count++;
++		
++		/* Attempt recovery */
++		if (ptp_ocp_watchdog_recovery(bp)) {
++			dev_info(&bp->pdev->dev, "Watchdog recovery successful\n");
++		} else {
++			dev_crit(&bp->pdev->dev, "Watchdog recovery failed, resetting device\n");
++			ptp_ocp_watchdog_reset(bp);
++		}
++	}
++	
++	/* Restart timer */
++	mod_timer(&watchdog->watchdog_timer, 
++		  jiffies + msecs_to_jiffies(watchdog->timeout_ms));
++}
++
++static void ptp_ocp_watchdog_heartbeat(struct ptp_ocp *bp)
++{
++	struct ptp_ocp_watchdog *watchdog = &bp->watchdog;
++	
++	if (watchdog->enabled) {
++		watchdog->last_heartbeat = jiffies_to_msecs(jiffies);
++	}
++}
++
++static int ptp_ocp_watchdog_recovery(struct ptp_ocp *bp)
++{
++	/* Attempt to recover from watchdog timeout */
++	dev_info(&bp->pdev->dev, "Attempting watchdog recovery...\n");
++	
++	/* Reset critical components */
++	ptp_ocp_watchdog_heartbeat(bp);
++	
++	/* Check if device is responsive */
++	if (ptp_ocp_check_device_health(bp) == 0) {
++		return 0; /* Recovery successful */
++	}
++	
++	return -EIO; /* Recovery failed */
++}
++
++static void ptp_ocp_watchdog_reset(struct ptp_ocp *bp)
++{
++	struct ptp_ocp_watchdog *watchdog = &bp->watchdog;
++	
++	dev_crit(&bp->pdev->dev, "Performing watchdog reset...\n");
++	
++	watchdog->reset_count++;
++	watchdog->last_reset_time = ktime_get_ns();
++	
++	/* Disable device */
++	ptp_ocp_disable_device(bp);
++	
++	/* Re-enable device */
++	ptp_ocp_enable_device(bp);
++	
++	/* Reset heartbeat */
++	ptp_ocp_watchdog_heartbeat(bp);
++}
++
++static int ptp_ocp_check_device_health(struct ptp_ocp *bp)
++{
++	u32 status, ctrl;
++	
++	/* Check basic register access */
++	status = ioread32(&bp->reg->status);
++	ctrl = ioread32(&bp->reg->ctrl);
++	
++	/* Check for obvious errors */
++	if (status & 0x80000000) { /* Error bit */
++		return -EIO;
++	}
++	
++	return 0; /* Device is healthy */
++}
++
+ /*---------------------------------------------------------------------------*/
+ 
+ static struct class timecard_class = {
+@@ -1520,6 +1639,7 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ {
+ 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
+ 	struct system_time_snapshot sts;
++	int ret;
+ 	u32 ctrl, time_ns, time_sec;
+ 	int i;
+ 
+@@ -1527,6 +1647,9 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ 	if (bp->ptm)
+ 		ptp_read_system_prets(sts);
+ 
++	/* Update watchdog heartbeat */
++	ptp_ocp_watchdog_heartbeat(bp);
++
+ 	ctrl = OCP_CTRL_READ_TIME_REQ | OCP_CTRL_ENABLE;
+ 	iowrite32(ctrl, &bp->reg->ctrl);
+ 
+@@ -1534,6 +1657,7 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ 		ctrl = ioread32(&bp->reg->ctrl);
+ 		if (ctrl & OCP_CTRL_READ_TIME_DONE)
+ 			break;
++		udelay(10);
+ 	}
+ 
+ 	if (bp->ptm) {
+@@ -1541,8 +1665,15 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ 		sts->post_ts = ns_to_timespec64(ns - bp->ts_window_adjust);
+ 	}
+ 
+-	time_ns = ioread32(&bp->reg->time_ns);
+-	time_sec = ioread32(&bp->reg->time_sec);
++	/* Read time with error checking */
++	time_ns = ioread32(&bp->reg->time_ns);
++	time_sec = ioread32(&bp->reg->time_sec);
++	
++	/* Validate time values */
++	if (time_sec == 0 && time_ns == 0) {
++		ret = ptp_ocp_handle_error(bp, PTP_OCP_ERROR_PTP, "gettime");
++		return ret;
++	}
+ 
+ 	ts->tv_sec = time_sec;
+ 	ts->tv_nsec = time_ns;
+@@ -1550,6 +1681,8 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ 	if (bp->ptm)
+ 		ptp_read_system_postts(sts);
+ 
++	/* Update operation monitor */
++	bp->watchdog.operation_monitor.gettime_count++;
++	bp->watchdog.operation_monitor.last_operation_time = ktime_get_ns();
+ 	return 0;
+ }
+ 
+@@ -1558,6 +1691,7 @@ ptp_ocp_settime(struct ptp_clock_info *ptp_info, const struct timespec64 *ts)
+ {
+ 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
+ 	u32 time_ns, time_sec, select;
++	int ret;
+ 
+ 	time_ns = ts->tv_nsec;
+ 	time_sec = ts->tv_sec;
+@@ -1565,6 +1699,9 @@ ptp_ocp_settime(struct ptp_clock_info *ptp_info, const struct timespec64 *ts)
+ 	select = ioread32(&bp->reg->select);
+ 	iowrite32(OCP_SELECT_CLK_REG, &bp->reg->select);
+ 
++	/* Update watchdog heartbeat */
++	ptp_ocp_watchdog_heartbeat(bp);
++
+ 	iowrite32(time_ns, &bp->reg->adjust_ns);
+ 	iowrite32(time_sec, &bp->reg->adjust_sec);
+ 
+@@ -1573,6 +1710,12 @@ ptp_ocp_settime(struct ptp_clock_info *ptp_info, const struct timespec64 *ts)
+ 
+ 	/* восстановить выбор часов */
+ 	iowrite32(select >> 16, &bp->reg->select);
++
++	/* Update operation monitor */
++	bp->watchdog.operation_monitor.settime_count++;
++	bp->watchdog.operation_monitor.last_operation_time = ktime_get_ns();
++
++	return 0;
+ }
+ 
+ static int
+@@ -1580,6 +1723,7 @@ ptp_ocp_adjtime(struct ptp_clock_info *ptp_info, s64 delta_ns)
+ {
+ 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
+ 	u32 select, ctrl;
++	int ret;
+ 
+ 	select = ioread32(&bp->reg->select);
+ 	iowrite32(OCP_SELECT_CLK_REG, &bp->reg->select);
+@@ -1587,6 +1731,9 @@ ptp_ocp_adjtime(struct ptp_clock_info *ptp_info, s64 delta_ns)
+ 	iowrite32(adj_val, &bp->reg->offset_ns);
+ 	iowrite32(NSEC_PER_SEC, &bp->reg->offset_window_ns);
+ 
++	/* Update watchdog heartbeat */
++	ptp_ocp_watchdog_heartbeat(bp);
++
+ 	ctrl = OCP_CTRL_ADJUST_OFFSET | OCP_CTRL_ENABLE;
+ 	iowrite32(ctrl, &bp->reg->ctrl);
+ 
+@@ -1594,6 +1741,8 @@ ptp_ocp_adjtime(struct ptp_clock_info *ptp_info, s64 delta_ns)
+ 	iowrite32(select >> 16, &bp->reg->select);
+ }
+ 
++	return 0;
++}
++
+ static void
+ ptp_ocp_adjfine(struct ptp_clock_info *ptp_info, long scaled_ppm)
+ {

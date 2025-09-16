@@ -1,0 +1,251 @@
+--- a/ptp_ocp.c
++++ b/ptp_ocp.c
+@@ -60,6 +60,45 @@
+ #define MRO50_BOARD_CONFIG_WRITE _IOW('M', 10, u32 *)
+ 
+ #endif /* MRO50_IOCTL_H */
++
++/* Reliability improvement structures */
++struct ptp_ocp_suspend_state {
++	/* PTP clock state */
++	struct timespec64 ptp_time;
++	u32 ptp_ctrl;
++	u32 ptp_status;
++	
++	/* Register configuration */
++	u32 reg_select;
++	u32 reg_ctrl;
++	u32 reg_status;
++	
++	/* Signal generator state */
++	bool signal_enabled[4];
++	struct ptp_ocp_signal signal_state[4];
++	
++	/* Interrupt state */
++	u32 msi_enable;
++	u32 irq_mask[32];
++	
++	/* Timestamps */
++	u64 suspend_time;
++	u64 resume_time;
++	
++	/* Validity flags */
++	bool state_valid;
++	bool time_synced;
++};
++
++enum ptp_ocp_error_code {
++	PTP_OCP_SUCCESS = 0,
++	PTP_OCP_ERROR_INVALID_PARAM = -1,
++	PTP_OCP_ERROR_REGISTER_ACCESS = -2,
++	PTP_OCP_ERROR_TIMEOUT = -3,
++	PTP_OCP_ERROR_INTERRUPT = -4,
++	PTP_OCP_ERROR_PCI = -5,
++	PTP_OCP_ERROR_PTP = -6,
++	PTP_OCP_ERROR_GNSS = -7,
++	PTP_OCP_ERROR_MAC = -8,
++	PTP_OCP_ERROR_SIGNAL = -9,
++	PTP_OCP_ERROR_SUSPEND = -10,
++	PTP_OCP_ERROR_RESUME = -11,
++	PTP_OCP_ERROR_WATCHDOG = -12,
++};
++
+ /*---------------------------------------------------------------------------*/
+ 
+ #ifndef PCI_VENDOR_ID_QUANTUM_PCI
+@@ -488,6 +527,12 @@ struct ptp_ocp {
+ 	struct ptp_ocp_signal	signal[4];
+ 	struct ptp_ocp_sma_connector sma[4];
+ 	const struct ocp_sma_op *sma_op;
++	
++	/* Reliability improvements */
++	struct ptp_ocp_suspend_state suspend_state;
++	enum ptp_ocp_error_code last_error;
++	u32 error_count;
++	bool auto_recovery_enabled;
++	
+ 	struct system_time_snapshot snapshot;
+ 	u64			ptm_t1_prev;
+ 	u64			ptm_t4_prev;
+@@ -496,6 +541,20 @@ struct ptp_ocp {
+ 	bool			signal_enabled_before_suspend[4];
+ };
+ 
++/* Reliability improvement functions */
++static inline int ptp_ocp_validate_register_access(struct ptp_ocp *bp, 
++						   void __iomem *reg)
++{
++	if (!bp || !reg) {
++		return PTP_OCP_ERROR_INVALID_PARAM;
++	}
++	return PTP_OCP_SUCCESS;
++}
++
++static inline void ptp_ocp_log_error(struct ptp_ocp *bp, 
++				     enum ptp_ocp_error_code error,
++				     const char *operation)
++{
++	dev_err(&bp->pdev->dev, "Error in %s: %d (count: %u)\n", 
++		operation, error, bp->error_count);
++}
++
+ /*---------------------------------------------------------------------------*/
+ 
+ static struct class timecard_class = {
+@@ -531,6 +590,7 @@ static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
+ 
+ #if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
+ static int ptp_ocp_suspend(struct device *dev)
+ {
+     struct ptp_ocp *bp = dev_get_drvdata(dev);
++    struct ptp_ocp_suspend_state *state = &bp->suspend_state;
+     unsigned long flags;
+     int i;
++    int ret = 0;
+ 
+     if (!bp)
+         return 0;
+ 
++    dev_info(dev, "Suspending ptp_ocp device...");
++
++    /* Save current PTP time */
++    ret = ptp_ocp_gettime(&bp->ptp_info, &state->ptp_time);
++    if (ret) {
++        dev_err(dev, "Failed to get PTP time before suspend: %d\n", ret);
++        bp->last_error = PTP_OCP_ERROR_SUSPEND;
++        bp->error_count++;
++        return ret;
++    }
++
+     /* Remember and disable generators */
++    spin_lock_irqsave(&bp->lock, flags);
++    
++    /* Save register state */
++    state->ptp_ctrl = ioread32(&bp->reg->ctrl);
++    state->ptp_status = ioread32(&bp->reg->status);
++    state->reg_select = ioread32(&bp->reg->select);
++    
+     for (i = 0; i < 4; i++) {
+         bp->signal_enabled_before_suspend[i] = bp->signal[i].running;
++        state->signal_enabled[i] = bp->signal[i].running;
++        state->signal_state[i] = bp->signal[i];
++        
+         if (bp->signal[i].running) {
+-            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, false);
++            ret = ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, false);
++            if (ret) {
++                dev_err(dev, "Failed to disable signal %d: %d\n", i, ret);
++                bp->last_error = PTP_OCP_ERROR_SIGNAL;
++                bp->error_count++;
++            }
+         }
+     }
+ 
+-    spin_lock_irqsave(&bp->lock, flags);
+     /* Disable MSI/IRQs if applicable */
+     if (bp->msi)
+-        iowrite32(0, &bp->msi->enable);
++        state->msi_enable = ioread32(&bp->msi->enable);
++        iowrite32(0, &bp->msi->enable);
+     spin_unlock_irqrestore(&bp->lock, flags);
+ 
++    /* Save suspend timestamp */
++    state->suspend_time = ktime_get_ns();
++    state->state_valid = true;
++    state->time_synced = true;
++
++    dev_info(dev, "ptp_ocp device suspended successfully");
+     return 0;
+ }
+ 
+ static int ptp_ocp_resume(struct device *dev)
+ {
+     struct ptp_ocp *bp = dev_get_drvdata(dev);
++    struct ptp_ocp_suspend_state *state = &bp->suspend_state;
+     unsigned long flags;
+     int i;
++    int ret = 0;
++    u64 suspend_duration;
+ 
+     if (!bp)
+         return 0;
+ 
++    if (!state->state_valid) {
++        dev_warn(dev, "Invalid suspend state, performing basic resume\n");
++        goto basic_resume;
++    }
++
++    dev_info(dev, "Resuming ptp_ocp device...");
++
++    state->resume_time = ktime_get_ns();
++    suspend_duration = state->resume_time - state->suspend_time;
++
+     spin_lock_irqsave(&bp->lock, flags);
++    
++    /* Restore register state */
++    iowrite32(state->reg_select, &bp->reg->select);
++    iowrite32(state->ptp_ctrl, &bp->reg->ctrl);
++    
+     /* Enable MSI/IRQs if applicable */
+     if (bp->msi)
+-        iowrite32(1, &bp->msi->enable);
++        iowrite32(state->msi_enable, &bp->msi->enable);
+     spin_unlock_irqrestore(&bp->lock, flags);
+ 
+     /* Restore generators state */
+     for (i = 0; i < 4; i++) {
+-        if (bp->signal_enabled_before_suspend[i]) {
+-            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, true);
++        if (state->signal_enabled[i]) {
++            bp->signal[i] = state->signal_state[i];
++            ret = ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, true);
++            if (ret) {
++                dev_err(dev, "Failed to restore signal %d: %d\n", i, ret);
++                bp->last_error = PTP_OCP_ERROR_SIGNAL;
++                bp->error_count++;
++            }
+         }
+     }
+ 
++    /* Adjust time for suspend duration */
++    if (state->time_synced) {
++        struct timespec64 adjusted_time = state->ptp_time;
++        adjusted_time.tv_nsec += suspend_duration % NSEC_PER_SEC;
++        adjusted_time.tv_sec += suspend_duration / NSEC_PER_SEC;
++        
++        ret = ptp_ocp_settime(&bp->ptp_info, &adjusted_time);
++        if (ret) {
++            dev_warn(dev, "Failed to adjust time after resume: %d\n", ret);
++            bp->last_error = PTP_OCP_ERROR_RESUME;
++            bp->error_count++;
++        } else {
++            dev_info(dev, "Time adjusted for suspend duration: %llu ns\n", 
++                     suspend_duration);
++        }
++    }
++    
++    state->state_valid = false;
++    dev_info(dev, "ptp_ocp device resumed successfully");
++    return 0;
++
++basic_resume:
++    /* Basic resume without state restoration */
++    spin_lock_irqsave(&bp->lock, flags);
++    if (bp->msi)
++        iowrite32(1, &bp->msi->enable);
++    spin_unlock_irqrestore(&bp->lock, flags);
++
++    for (i = 0; i < 4; i++) {
++        if (bp->signal_enabled_before_suspend[i]) {
++            ptp_ocp_signal_enable(bp->signal_out[i], NULL, i, true);
++        }
++    }
++
+     return 0;
+ }
+ 
+ static const struct dev_pm_ops ptp_ocp_pm_ops = {
+     .suspend = ptp_ocp_suspend,
+     .resume  = ptp_ocp_resume,
+ };
+ #endif

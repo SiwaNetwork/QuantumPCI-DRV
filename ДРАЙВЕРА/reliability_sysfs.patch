@@ -1,0 +1,349 @@
+--- a/ptp_ocp.c
++++ b/ptp_ocp.c
+@@ -6000,6 +6000,200 @@ static DEVICE_ATTR_RO(clock_status_drift);
+ static DEVICE_ATTR_RO(clock_status_offset);
+ 
++/* Reliability monitoring sysfs attributes */
++static ssize_t suspend_state_show(struct device *dev,
++				  struct device_attribute *attr,
++				  char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	struct ptp_ocp_suspend_state *state = &bp->suspend_state;
++	ssize_t count = 0;
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "=== Suspend State ===\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "State Valid: %s\n", state->state_valid ? "yes" : "no");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Time Synced: %s\n", state->time_synced ? "yes" : "no");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Suspend Time: %llu ns\n", state->suspend_time);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Resume Time: %llu ns\n", state->resume_time);
++	
++	if (state->state_valid) {
++		count += scnprintf(buf + count, PAGE_SIZE - count,
++				   "Suspend Duration: %llu ns\n", 
++				   state->resume_time - state->suspend_time);
++	}
++	
++	return count;
++}
++
++static ssize_t error_count_show(struct device *dev,
++				struct device_attribute *attr,
++				char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	return scnprintf(buf, PAGE_SIZE, "%u\n", bp->error_count);
++}
++
++static ssize_t error_recovery_show(struct device *dev,
++				   struct device_attribute *attr,
++				   char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	struct ptp_ocp_error_recovery *recovery = &bp->error_recovery;
++	ssize_t count = 0;
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "=== Error Recovery Status ===\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Error Count: %u\n", recovery->error_count);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Last Error: %d\n", recovery->last_error);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Auto Recovery: %s\n", 
++			   recovery->auto_recovery_enabled ? "enabled" : "disabled");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Max Retries: %u\n", recovery->max_retries);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Retry Delay: %u ms\n", recovery->retry_delay_ms);
++	
++	if (recovery->last_error_time > 0) {
++		u64 time_since_error = ktime_get_ns() - recovery->last_error_time;
++		count += scnprintf(buf + count, PAGE_SIZE - count,
++				   "Time Since Last Error: %llu ns\n", time_since_error);
++	}
++	
++	return count;
++}
++
++static ssize_t auto_recovery_show(struct device *dev,
++				  struct device_attribute *attr,
++				  char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	return scnprintf(buf, PAGE_SIZE, "%s\n", 
++			 bp->error_recovery.auto_recovery_enabled ? "enabled" : "disabled");
++}
++
++static ssize_t auto_recovery_store(struct device *dev,
++				   struct device_attribute *attr,
++				   const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	bool enable;
++	
++	if (kstrtobool(buf, &enable))
++		return -EINVAL;
++	
++	bp->error_recovery.auto_recovery_enabled = enable;
++	bp->auto_recovery_enabled = enable;
++	
++	dev_info(dev, "Auto recovery %s\n", enable ? "enabled" : "disabled");
++	
++	return count;
++}
++
++static ssize_t max_retries_show(struct device *dev,
++				struct device_attribute *attr,
++				char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	return scnprintf(buf, PAGE_SIZE, "%u\n", bp->error_recovery.max_retries);
++}
++
++static ssize_t max_retries_store(struct device *dev,
++				 struct device_attribute *attr,
++				 const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	u32 retries;
++	
++	if (kstrtou32(buf, 10, &retries))
++		return -EINVAL;
++	
++	if (retries > 100)
++		return -EINVAL;
++	
++	bp->error_recovery.max_retries = retries;
++	
++	dev_info(dev, "Max retries set to %u\n", retries);
++	
++	return count;
++}
++
++static ssize_t watchdog_enabled_show(struct device *dev,
++				     struct device_attribute *attr,
++				     char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	return scnprintf(buf, PAGE_SIZE, "%s\n", 
++			 bp->watchdog.enabled ? "enabled" : "disabled");
++}
++
++static ssize_t watchdog_enabled_store(struct device *dev,
++				      struct device_attribute *attr,
++				      const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	bool enable;
++	
++	if (kstrtobool(buf, &enable))
++		return -EINVAL;
++	
++	if (enable) {
++		/* Start watchdog */
++		bp->watchdog.enabled = true;
++		bp->watchdog.last_heartbeat = jiffies_to_msecs(jiffies);
++		mod_timer(&bp->watchdog.watchdog_timer, 
++			  jiffies + msecs_to_jiffies(bp->watchdog.timeout_ms));
++		dev_info(dev, "Watchdog enabled\n");
++	} else {
++		/* Stop watchdog */
++		bp->watchdog.enabled = false;
++		del_timer(&bp->watchdog.watchdog_timer);
++		dev_info(dev, "Watchdog disabled\n");
++	}
++	
++	return count;
++}
++
++static ssize_t watchdog_timeout_show(struct device *dev,
++				     struct device_attribute *attr,
++				     char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	return scnprintf(buf, PAGE_SIZE, "%u\n", bp->watchdog.timeout_ms);
++}
++
++static ssize_t watchdog_timeout_store(struct device *dev,
++				      struct device_attribute *attr,
++				      const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	u32 timeout_ms;
++	
++	if (kstrtou32(buf, 10, &timeout_ms))
++		return -EINVAL;
++	
++	if (timeout_ms < 1000 || timeout_ms > 60000) /* 1s to 60s */
++		return -EINVAL;
++	
++	bp->watchdog.timeout_ms = timeout_ms;
++	
++	/* Restart timer if watchdog is enabled */
++	if (bp->watchdog.enabled) {
++		mod_timer(&bp->watchdog.watchdog_timer, 
++			  jiffies + msecs_to_jiffies(timeout_ms));
++	}
++	
++	dev_info(dev, "Watchdog timeout set to %u ms\n", timeout_ms);
++	
++	return count;
++}
++
++static ssize_t watchdog_stats_show(struct device *dev,
++				   struct device_attribute *attr,
++				   char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	struct ptp_ocp_watchdog *watchdog = &bp->watchdog;
++	ssize_t count = 0;
++	u32 current_time = jiffies_to_msecs(jiffies);
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "=== Watchdog Statistics ===\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Enabled: %s\n", watchdog->enabled ? "yes" : "no");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Timeout: %u ms\n", watchdog->timeout_ms);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Last Heartbeat: %u ms ago\n", 
++			   current_time - watchdog->last_heartbeat);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Timeout Count: %u\n", watchdog->timeout_count);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Reset Count: %u\n", watchdog->reset_count);
++	
++	if (watchdog->last_reset_time > 0) {
++		u64 time_since_reset = ktime_get_ns() - watchdog->last_reset_time;
++		count += scnprintf(buf + count, PAGE_SIZE - count,
++				   "Time Since Last Reset: %llu ns\n", time_since_reset);
++	}
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "\n=== Operation Monitor ===\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "gettime Count: %llu\n", 
++			   watchdog->operation_monitor.gettime_count);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "settime Count: %llu\n", 
++			   watchdog->operation_monitor.settime_count);
++	
++	if (watchdog->operation_monitor.last_operation_time > 0) {
++		u64 time_since_op = ktime_get_ns() - 
++				    watchdog->operation_monitor.last_operation_time;
++		count += scnprintf(buf + count, PAGE_SIZE - count,
++				   "Time Since Last Operation: %llu ns\n", time_since_op);
++	}
++	
++	return count;
++}
++
++static ssize_t heartbeat_store(struct device *dev,
++			       struct device_attribute *attr,
++			       const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	
++	/* Manual heartbeat */
++	ptp_ocp_watchdog_heartbeat(bp);
++	
++	dev_info(dev, "Manual heartbeat sent\n");
++	
++	return count;
++}
++
++static ssize_t log_level_show(struct device *dev,
++			      struct device_attribute *attr,
++			      char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	const char *level_names[] = {"DEBUG", "INFO", "WARN", "ERROR", "CRIT"};
++	
++	if (bp->logger.level < ARRAY_SIZE(level_names)) {
++		return scnprintf(buf, PAGE_SIZE, "%s\n", level_names[bp->logger.level]);
++	}
++	
++	return scnprintf(buf, PAGE_SIZE, "UNKNOWN\n");
++}
++
++static ssize_t log_level_store(struct device *dev,
++			       struct device_attribute *attr,
++			       const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	enum ptp_ocp_log_level level;
++	
++	if (strncmp(buf, "DEBUG", 5) == 0) {
++		level = PTP_OCP_LOG_DEBUG;
++	} else if (strncmp(buf, "INFO", 4) == 0) {
++		level = PTP_OCP_LOG_INFO;
++	} else if (strncmp(buf, "WARN", 4) == 0) {
++		level = PTP_OCP_LOG_WARN;
++	} else if (strncmp(buf, "ERROR", 5) == 0) {
++		level = PTP_OCP_LOG_ERROR;
++	} else if (strncmp(buf, "CRIT", 4) == 0) {
++		level = PTP_OCP_LOG_CRIT;
++	} else {
++		return -EINVAL;
++	}
++	
++	bp->logger.level = level;
++	
++	dev_info(dev, "Log level set to %s\n", buf);
++	
++	return count;
++}
++
++static DEVICE_ATTR_RO(suspend_state);
++static DEVICE_ATTR_RO(error_count);
++static DEVICE_ATTR_RO(error_recovery);
++static DEVICE_ATTR_RW(auto_recovery);
++static DEVICE_ATTR_RW(max_retries);
++static DEVICE_ATTR_RW(watchdog_enabled);
++static DEVICE_ATTR_RW(watchdog_timeout);
++static DEVICE_ATTR_RO(watchdog_stats);
++static DEVICE_ATTR_WO(heartbeat);
++static DEVICE_ATTR_RW(log_level);
++
+ /*---------------------------------------------------------------------------*/
+ 
+ static const struct attribute_group fb_timecard_groups[] = {
+@@ -6020,6 +6214,16 @@ static const struct attribute_group fb_timecard_groups[] = {
+ 	&dev_attr_ts_window_adjust.attr,
+ 	&dev_attr_clock_status_drift.attr,
+ 	&dev_attr_clock_status_offset.attr,
++	&dev_attr_suspend_state.attr,
++	&dev_attr_error_count.attr,
++	&dev_attr_error_recovery.attr,
++	&dev_attr_auto_recovery.attr,
++	&dev_attr_max_retries.attr,
++	&dev_attr_watchdog_enabled.attr,
++	&dev_attr_watchdog_timeout.attr,
++	&dev_attr_watchdog_stats.attr,
++	&dev_attr_heartbeat.attr,
++	&dev_attr_log_level.attr,
+ 	NULL,
+ };
+ 
+@@ -6035,6 +6239,16 @@ static const struct attribute_group art_timecard_groups[] = {
+ 	&dev_attr_ts_window_adjust.attr,
+ 	&dev_attr_clock_status_drift.attr,
+ 	&dev_attr_clock_status_offset.attr,
++	&dev_attr_suspend_state.attr,
++	&dev_attr_error_count.attr,
++	&dev_attr_error_recovery.attr,
++	&dev_attr_auto_recovery.attr,
++	&dev_attr_max_retries.attr,
++	&dev_attr_watchdog_enabled.attr,
++	&dev_attr_watchdog_timeout.attr,
++	&dev_attr_watchdog_stats.attr,
++	&dev_attr_heartbeat.attr,
++	&dev_attr_log_level.attr,
+ 	NULL,
+ };
