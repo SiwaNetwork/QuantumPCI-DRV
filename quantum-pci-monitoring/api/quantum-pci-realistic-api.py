@@ -32,6 +32,20 @@ except ImportError as e:
     BMP280_MONITORING_AVAILABLE = False
     print(f"⚠️  BMP280 мониторинг недоступен - {e}")
 
+# Импорт INA219 мониторинга
+try:
+    from ina219_monitor import get_ina219_data, get_ina219_info, is_ina219_available
+    INA219_MONITORING_AVAILABLE = True
+    print("✅ INA219 мониторинг доступен")
+except ImportError as e:
+    INA219_MONITORING_AVAILABLE = False
+    print(f"⚠️  INA219 мониторинг недоступен - {e}")
+
+# PCT2075 мониторинг отключен - датчик неисправен
+PCT2075_MONITORING_AVAILABLE = False
+print("❌ PCT2075 мониторинг отключен - датчик неисправен")
+
+
 # === Конфигурация ===
 CONFIG = {
     'version': '2.0.0-realistic',
@@ -455,11 +469,46 @@ def api_real_metrics():
             'timestamp': time.time()
         }
     
+    # Добавляем INA219 данные если доступны
+    if INA219_MONITORING_AVAILABLE:
+        try:
+            ina219_data = get_ina219_data()
+            all_metrics['ina219'] = ina219_data
+        except Exception as e:
+            all_metrics['ina219'] = {'error': f'Ошибка чтения INA219: {e}'}
+    
+    # Добавляем BMP280 данные если доступны
+    if BMP280_MONITORING_AVAILABLE:
+        try:
+            bmp280_data = get_bmp280_data()
+            all_metrics['bmp280'] = bmp280_data
+        except Exception as e:
+            all_metrics['bmp280'] = {'error': f'Ошибка чтения BMP280: {e}'}
+    
     return jsonify({
         'metrics': all_metrics,
-        'note': 'Только реальные метрики из ptp_ocp драйвера',
+        'note': 'Реальные метрики из ptp_ocp драйвера + INA219 + BMP280',
         'timestamp': time.time()
     })
+
+@app.route('/api/ina219')
+def api_ina219():
+    """Данные INA219 датчиков"""
+    if not INA219_MONITORING_AVAILABLE:
+        return jsonify({'error': 'INA219 мониторинг недоступен'})
+    
+    try:
+        data = get_ina219_data()
+        info = get_ina219_info()
+        return jsonify({
+            'data': data,
+            'info': info,
+            'timestamp': time.time()
+        })
+    except Exception as e:
+        return jsonify({'error': f'Ошибка чтения INA219: {e}'})
+
+
 
 @app.route('/api/alerts')
 def api_alerts():
