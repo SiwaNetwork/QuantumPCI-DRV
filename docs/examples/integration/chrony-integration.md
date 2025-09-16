@@ -9,8 +9,8 @@
 ### Файл /etc/chrony/chrony.conf
 
 ```bash
-# Основной источник времени - PTP часы
-refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0 stratum 1 prefer
+# Основной источник времени - PTP часы (обновленная конфигурация)
+refclock PHC /dev/ptp0 poll 3 dpoll -2 offset 0 stratum 1 precision 1e-9 prefer
 
 # Резервные NTP источники
 server 0.pool.ntp.org iburst

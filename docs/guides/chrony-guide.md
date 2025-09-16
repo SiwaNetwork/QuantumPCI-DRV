@@ -38,8 +38,10 @@ sudo apt install chrony
 
 #### RHEL/CentOS/Fedora:
 ```bash
+# Для RHEL/CentOS 7 и старше
 sudo yum install chrony
-# или для новых версий
+
+# Для RHEL/CentOS 8+ и Fedora
 sudo dnf install chrony
 ```
 
@@ -110,15 +112,24 @@ logdir /var/log/chrony
 ```bash
 # /etc/chrony/chrony.conf
 
-# Использование PHC как источника времени
-refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0 stratum 1 precision 1e-9
+# Использование PHC как источника времени (рекомендуемая конфигурация)
+refclock PHC /dev/ptp0 poll 3 dpoll -2 offset 0 stratum 1 precision 1e-9 prefer
 
-# Использование PPS сигнала
+# Использование PPS сигнала (если доступен)
 refclock PPS /dev/pps0 refid PPS precision 1e-9
 
-# Комбинирование PHC и PPS
-refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0 noselect
+# Комбинирование PHC и PPS для максимальной точности
+refclock PHC /dev/ptp0 poll 3 dpoll -2 offset 0 noselect
 refclock PPS /dev/pps0 lock PHC precision 1e-9
+
+# Резервные NTP серверы
+server 0.pool.ntp.org iburst
+server 1.pool.ntp.org iburst
+
+# Настройки для высокой точности
+makestep 1.0 3
+rtcsync
+driftfile /var/lib/chrony/drift
 ```
 
 ## Команды управления
@@ -186,8 +197,8 @@ refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0
 ```bash
 # /etc/chrony/chrony.conf
 
-# TimeCard PHC как основной источник
-refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0 stratum 1 prefer
+# TimeCard PHC как основной источник (проверенная конфигурация)
+refclock PHC /dev/ptp0 poll 3 dpoll -2 offset 0 stratum 1 precision 1e-9 prefer
 
 # Резервные NTP серверы
 server 0.pool.ntp.org iburst
@@ -196,10 +207,18 @@ server 1.pool.ntp.org iburst
 # Быстрая начальная синхронизация
 makestep 1.0 3
 
-# Точная настройка
+# Точная настройка для TimeCard
 maxupdateskew 100.0
 corrtimeratio 3
 maxdrift 500
+
+# Дополнительные настройки для высокой точности
+rtcsync
+driftfile /var/lib/chrony/drift
+
+# Логирование для мониторинга
+log tracking measurements statistics
+logdir /var/log/chrony
 ```
 
 ## Скрипты автоматизации
