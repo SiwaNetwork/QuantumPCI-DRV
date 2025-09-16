@@ -619,6 +619,63 @@
             </div>
         </div>
         
+        <!-- BNO055 IMU Sensor Section -->
+        <div class="sensor-section" id="bno055-section">
+            <h2>🧭 BNO055 IMU Sensor</h2>
+            <div class="sensor-grid">
+                <div class="metric-card">
+                    <h3>🧭 Euler Angles</h3>
+                    <div class="metric-value" id="bno055-heading">--</div>
+                    <div class="metric-unit">°</div>
+                    <div class="metric-label">Heading</div>
+                    <div class="metric-value" id="bno055-roll">--</div>
+                    <div class="metric-unit">°</div>
+                    <div class="metric-label">Roll</div>
+                    <div class="metric-value" id="bno055-pitch">--</div>
+                    <div class="metric-unit">°</div>
+                    <div class="metric-label">Pitch</div>
+                    <div class="metric-status" id="bno055-euler-status">unknown</div>
+                </div>
+                
+                <div class="metric-card">
+                    <h3>⚡ Linear Acceleration</h3>
+                    <div class="metric-value" id="bno055-accel-x">--</div>
+                    <div class="metric-unit">m/s²</div>
+                    <div class="metric-label">X</div>
+                    <div class="metric-value" id="bno055-accel-y">--</div>
+                    <div class="metric-unit">m/s²</div>
+                    <div class="metric-label">Y</div>
+                    <div class="metric-value" id="bno055-accel-z">--</div>
+                    <div class="metric-unit">m/s²</div>
+                    <div class="metric-label">Z</div>
+                    <div class="metric-status" id="bno055-accel-status">unknown</div>
+                </div>
+                
+                <div class="metric-card">
+                    <h3>🌡️ Temperature</h3>
+                    <div class="metric-value" id="bno055-temperature">--</div>
+                    <div class="metric-unit">°C</div>
+                    <div class="metric-label">Sensor Temperature</div>
+                    <div class="metric-status" id="bno055-temp-status">unknown</div>
+                </div>
+                
+                <div class="metric-card">
+                    <h3>📋 Sensor Info</h3>
+                    <div>Type: <span id="bno055-type">BNO055</span></div>
+                    <div>I2C: <span id="bno055-i2c">0x29</span></div>
+                    <div>Mode: <span id="bno055-mode">--</span></div>
+                    <div>Status: <span id="bno055-status">--</span></div>
+                    <div>Last Update: <span id="bno055-last-update">--</span></div>
+                </div>
+            </div>
+            
+            <div class="sensor-controls">
+                <button onclick="refreshBNO055()" class="refresh-btn">🔄 Refresh BNO055</button>
+                <button onclick="toggleBNO055Monitoring()" class="refresh-btn" id="bno055-monitor-btn">⏸️ Pause Monitoring</button>
+                <button onclick="checkBNO055Calibration()" class="refresh-btn">🔧 Check Calibration</button>
+            </div>
+        </div>
+        
         
         <!-- Крупные часы устройства -->
         <div class="device-clock-container">
@@ -1254,6 +1311,151 @@
             }
         }
         
+        // === BNO055 Functions ===
+        let bno055MonitoringActive = true;
+        let bno055Interval = null;
+        
+        async function refreshBNO055() {
+            try {
+                const response = await fetch('/api/bno055');
+                const data = await response.json();
+                
+                if (data.available && data.data) {
+                    const sensorData = data.data;
+                    
+                    // Обновляем Euler angles
+                    if (sensorData.euler_angles) {
+                        document.getElementById('bno055-heading').textContent = sensorData.euler_angles.heading.toFixed(1);
+                        document.getElementById('bno055-roll').textContent = sensorData.euler_angles.roll.toFixed(1);
+                        document.getElementById('bno055-pitch').textContent = sensorData.euler_angles.pitch.toFixed(1);
+                        document.getElementById('bno055-euler-status').textContent = 'ok';
+                        document.getElementById('bno055-euler-status').className = 'metric-status ok';
+                    }
+                    
+                    // Обновляем Linear acceleration
+                    if (sensorData.linear_acceleration) {
+                        document.getElementById('bno055-accel-x').textContent = sensorData.linear_acceleration.x.toFixed(2);
+                        document.getElementById('bno055-accel-y').textContent = sensorData.linear_acceleration.y.toFixed(2);
+                        document.getElementById('bno055-accel-z').textContent = sensorData.linear_acceleration.z.toFixed(2);
+                        document.getElementById('bno055-accel-status').textContent = 'ok';
+                        document.getElementById('bno055-accel-status').className = 'metric-status ok';
+                    }
+                    
+                    // Обновляем температуру
+                    if (sensorData.temperature !== undefined) {
+                        document.getElementById('bno055-temperature').textContent = sensorData.temperature.toFixed(1);
+                        document.getElementById('bno055-temp-status').textContent = 'ok';
+                        document.getElementById('bno055-temp-status').className = 'metric-status ok';
+                    }
+                    
+                    // Обновляем информацию
+                    document.getElementById('bno055-mode').textContent = sensorData.operation_mode || 'unknown';
+                    document.getElementById('bno055-status').textContent = 'Active';
+                    document.getElementById('bno055-last-update').textContent = new Date().toLocaleTimeString();
+                } else {
+                    // BNO055 недоступен
+                    document.getElementById('bno055-heading').textContent = '--';
+                    document.getElementById('bno055-roll').textContent = '--';
+                    document.getElementById('bno055-pitch').textContent = '--';
+                    document.getElementById('bno055-euler-status').textContent = 'unavailable';
+                    document.getElementById('bno055-euler-status').className = 'metric-status error';
+                    
+                    document.getElementById('bno055-accel-x').textContent = '--';
+                    document.getElementById('bno055-accel-y').textContent = '--';
+                    document.getElementById('bno055-accel-z').textContent = '--';
+                    document.getElementById('bno055-accel-status').textContent = 'unavailable';
+                    document.getElementById('bno055-accel-status').className = 'metric-status error';
+                    
+                    document.getElementById('bno055-temperature').textContent = '--';
+                    document.getElementById('bno055-temp-status').textContent = 'unavailable';
+                    document.getElementById('bno055-temp-status').className = 'metric-status error';
+                    
+                    document.getElementById('bno055-mode').textContent = 'unknown';
+                    document.getElementById('bno055-status').textContent = 'Unavailable';
+                    document.getElementById('bno055-last-update').textContent = '--';
+                }
+            } catch (error) {
+                console.error('Ошибка получения данных BNO055:', error);
+                document.getElementById('bno055-heading').textContent = '--';
+                document.getElementById('bno055-roll').textContent = '--';
+                document.getElementById('bno055-pitch').textContent = '--';
+                document.getElementById('bno055-euler-status').textContent = 'error';
+                document.getElementById('bno055-euler-status').className = 'metric-status error';
+                
+                document.getElementById('bno055-accel-x').textContent = '--';
+                document.getElementById('bno055-accel-y').textContent = '--';
+                document.getElementById('bno055-accel-z').textContent = '--';
+                document.getElementById('bno055-accel-status').textContent = 'error';
+                document.getElementById('bno055-accel-status').className = 'metric-status error';
+                
+                document.getElementById('bno055-temperature').textContent = '--';
+                document.getElementById('bno055-temp-status').textContent = 'error';
+                document.getElementById('bno055-temp-status').className = 'metric-status error';
+                
+                document.getElementById('bno055-status').textContent = 'Connection Error';
+            }
+        }
+        
+        function toggleBNO055Monitoring() {
+            const btn = document.getElementById('bno055-monitor-btn');
+            
+            if (bno055MonitoringActive) {
+                // Останавливаем мониторинг
+                if (bno055Interval) {
+                    clearInterval(bno055Interval);
+                }
+                bno055MonitoringActive = false;
+                btn.textContent = '▶️ Start Monitoring';
+                btn.style.background = 'rgba(40, 167, 69, 0.3)';
+            } else {
+                // Запускаем мониторинг
+                refreshBNO055(); // Сразу обновляем
+                bno055Interval = setInterval(refreshBNO055, 5000); // Каждые 5 секунд
+                bno055MonitoringActive = true;
+                btn.textContent = '⏸️ Pause Monitoring';
+                btn.style.background = 'rgba(255, 193, 7, 0.3)';
+            }
+        }
+        
+        async function checkBNO055Calibration() {
+            try {
+                const response = await fetch('/api/bno055/calibration');
+                const data = await response.json();
+                
+                if (data.available && data.calibration) {
+                    const cal = data.calibration;
+                    alert(`BNO055 Calibration Status:\n\nSystem: ${cal.system}/3\nGyro: ${cal.gyro}/3\nAccel: ${cal.accel}/3\nMag: ${cal.mag}/3`);
+                } else {
+                    alert('BNO055 calibration status unavailable');
+                }
+            } catch (error) {
+                console.error('Ошибка получения статуса калибровки BNO055:', error);
+                alert('Ошибка получения статуса калибровки BNO055');
+            }
+        }
+        
+        // Проверяем доступность BNO055 при загрузке
+        async function checkBNO055Availability() {
+            try {
+                const response = await fetch('/api/bno055/info');
+                const data = await response.json();
+                
+                if (data.available) {
+                    // BNO055 доступен, показываем секцию и запускаем мониторинг
+                    document.getElementById('bno055-section').style.display = 'block';
+                    refreshBNO055();
+                    bno055Interval = setInterval(refreshBNO055, 5000);
+                } else {
+                    // BNO055 недоступен, скрываем секцию
+                    document.getElementById('bno055-section').style.display = 'none';
+                    console.log('BNO055 sensor not available');
+                }
+            } catch (error) {
+                console.error('Ошибка проверки доступности BNO055:', error);
+                document.getElementById('bno055-section').style.display = 'none';
+            }
+        }
+        
         // Первоначальная загрузка
         console.log('Starting dashboard initialization...'); // Отладка
         
@@ -1266,6 +1468,7 @@
         updateDeviceClock();
         checkBMP280Availability();
         checkINA219Availability();
+        checkBNO055Availability();
         console.log('Dashboard initialization complete'); // Отладка
     </script>
 </body>

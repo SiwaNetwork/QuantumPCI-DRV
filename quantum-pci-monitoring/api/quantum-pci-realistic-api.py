@@ -45,6 +45,15 @@ except ImportError as e:
 PCT2075_MONITORING_AVAILABLE = False
 print("❌ PCT2075 мониторинг отключен - датчик неисправен")
 
+# Импорт BNO055 мониторинга
+try:
+    from bno055_monitor import BNO055Monitor
+    BNO055_MONITORING_AVAILABLE = True
+    print("✅ BNO055 мониторинг доступен")
+except ImportError as e:
+    BNO055_MONITORING_AVAILABLE = False
+    print(f"⚠️  BNO055 мониторинг недоступен - {e}")
+
 
 # === Конфигурация ===
 CONFIG = {
@@ -485,9 +494,18 @@ def api_real_metrics():
         except Exception as e:
             all_metrics['bmp280'] = {'error': f'Ошибка чтения BMP280: {e}'}
     
+    # Добавляем BNO055 данные если доступны
+    if BNO055_MONITORING_AVAILABLE:
+        try:
+            bno055_monitor = BNO055Monitor()
+            bno055_data = bno055_monitor.get_sensor_data()
+            all_metrics['bno055'] = bno055_data
+        except Exception as e:
+            all_metrics['bno055'] = {'error': f'Ошибка чтения BNO055: {e}'}
+    
     return jsonify({
         'metrics': all_metrics,
-        'note': 'Реальные метрики из ptp_ocp драйвера + INA219 + BMP280',
+        'note': 'Реальные метрики из ptp_ocp драйвера + INA219 + BMP280 + BNO055',
         'timestamp': time.time()
     })
 
@@ -808,6 +826,82 @@ def api_bmp280_pressure():
     except Exception as e:
         return jsonify({
             'error': f'Ошибка получения давления: {str(e)}',
+            'available': False
+        }), 500
+
+@app.route('/api/bno055')
+def api_bno055_data():
+    """API для получения данных с датчика BNO055"""
+    if not BNO055_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'BNO055 мониторинг недоступен',
+            'available': False
+        }), 503
+    
+    try:
+        bno055_monitor = BNO055Monitor()
+        data = bno055_monitor.get_sensor_data()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения данных BNO055: {str(e)}',
+            'available': False
+        }), 500
+
+@app.route('/api/bno055/info')
+def api_bno055_info():
+    """API для получения информации о датчике BNO055"""
+    if not BNO055_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'BNO055 мониторинг недоступен',
+            'available': False
+        }), 503
+    
+    try:
+        bno055_monitor = BNO055Monitor()
+        info = bno055_monitor.get_device_info()
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения информации BNO055: {str(e)}',
+            'available': False
+        }), 500
+
+@app.route('/api/bno055/calibration')
+def api_bno055_calibration():
+    """API для получения статуса калибровки BNO055"""
+    if not BNO055_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'BNO055 мониторинг недоступен',
+            'available': False
+        }), 503
+    
+    try:
+        bno055_monitor = BNO055Monitor()
+        calibration = bno055_monitor.get_calibration_status()
+        return jsonify(calibration)
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения статуса калибровки BNO055: {str(e)}',
+            'available': False
+        }), 500
+
+@app.route('/api/bno055/mode')
+def api_bno055_mode():
+    """API для получения режима работы BNO055"""
+    if not BNO055_MONITORING_AVAILABLE:
+        return jsonify({
+            'error': 'BNO055 мониторинг недоступен',
+            'available': False
+        }), 503
+    
+    try:
+        bno055_monitor = BNO055Monitor()
+        mode = bno055_monitor.get_operation_mode()
+        return jsonify(mode)
+    except Exception as e:
+        return jsonify({
+            'error': f'Ошибка получения режима работы BNO055: {str(e)}',
             'available': False
         }), 500
 
