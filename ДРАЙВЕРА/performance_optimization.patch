@@ -1,0 +1,273 @@
+--- a/ptp_ocp.c
++++ b/ptp_ocp.c
+@@ -60,6 +60,45 @@
+ #define MRO50_BOARD_CONFIG_WRITE _IOW('M', 10, u32 *)
+ 
+ #endif /* MRO50_IOCTL_H */
++
++/* Performance optimization structures */
++struct ptp_ocp_register_cache {
++	/* Cache for status registers */
++	u32 status_cache;
++	u32 ctrl_cache;
++	u32 select_cache;
++	u64 last_status_update;
++	u64 last_ctrl_update;
++	u64 last_select_update;
++	
++	/* Cache for time values */
++	u32 time_ns_cache;
++	u32 time_sec_cache;
++	u64 last_time_update;
++	
++	/* Cache validity flags */
++	bool status_valid;
++	bool ctrl_valid;
++	bool select_valid;
++	bool time_valid;
++	
++	/* Cache settings */
++	u32 cache_timeout_ns;
++	bool cache_enabled;
++};
++
++struct ptp_ocp_performance_stats {
++	/* Operation latencies */
++	u64 gettime_latency_ns;
++	u64 settime_latency_ns;
++	u64 adjtime_latency_ns;
++	u64 irq_latency_ns;
++	
++	/* Operation counts */
++	u64 gettime_count;
++	u64 settime_count;
++	u64 adjtime_count;
++	u64 irq_count;
++	
++	/* Cache statistics */
++	u64 cache_hits;
++	u64 cache_misses;
++	u64 cache_hit_ratio;  /* in percentage */
++};
++
+ /*---------------------------------------------------------------------------*/
+ 
+ #ifndef PCI_VENDOR_ID_QUANTUM_PCI
+@@ -416,6 +455,12 @@ struct ptp_ocp {
+ 	struct ptp_ocp_signal	signal[4];
+ 	struct ptp_ocp_sma_connector sma[4];
+ 	const struct ocp_sma_op *sma_op;
++	
++	/* Performance optimization */
++	struct ptp_ocp_register_cache cache;
++	struct ptp_ocp_performance_stats perf_stats;
++	u32 cache_timeout_ns;
++	bool performance_mode;
++	
+ 	struct system_time_snapshot snapshot;
+ 	u64			ptm_t1_prev;
+ 	u64			ptm_t4_prev;
+@@ -424,6 +469,25 @@ struct ptp_ocp {
+ 	bool			signal_enabled_before_suspend[4];
+ };
+ 
++/* Performance optimization functions */
++static inline u32 ptp_ocp_read_reg_cached(struct ptp_ocp *bp, 
++					  void __iomem *reg, 
++					  u32 *cache, 
++					  u64 *last_update,
++					  bool *valid)
++{
++	u64 now = ktime_get_ns();
++	
++	if (*valid && (now - *last_update) < bp->cache.cache_timeout_ns) {
++		bp->perf_stats.cache_hits++;
++		return *cache;
++	}
++	
++	*cache = ioread32(reg);
++	*last_update = now;
++	*valid = true;
++	bp->perf_stats.cache_misses++;
++	
++	return *cache;
++}
++
++static inline void ptp_ocp_invalidate_cache(struct ptp_ocp *bp, u32 reg_mask)
++{
++	if (reg_mask & 0x01) bp->cache.status_valid = false;
++	if (reg_mask & 0x02) bp->cache.ctrl_valid = false;
++	if (reg_mask & 0x04) bp->cache.select_valid = false;
++	if (reg_mask & 0x08) bp->cache.time_valid = false;
++}
++
+ /*---------------------------------------------------------------------------*/
+ 
+ static struct class timecard_class = {
+@@ -1520,6 +1584,7 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ {
+ 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
+ 	struct system_time_snapshot sts;
++	u64 start_time, end_time;
+ 	u32 ctrl, time_ns, time_sec;
+ 	int i;
+ 
+@@ -1527,6 +1592,9 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ 	if (bp->ptm)
+ 		ptp_read_system_prets(sts);
+ 
++	/* Start performance timing */
++	start_time = ktime_get_ns();
++
+ 	ctrl = OCP_CTRL_READ_TIME_REQ | OCP_CTRL_ENABLE;
+ 	iowrite32(ctrl, &bp->reg->ctrl);
+ 
+@@ -1534,6 +1602,7 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ 		ctrl = ioread32(&bp->reg->ctrl);
+ 		if (ctrl & OCP_CTRL_READ_TIME_DONE)
+ 			break;
++		udelay(10);
+ 	}
+ 
+ 	if (bp->ptm) {
+@@ -1541,8 +1610,15 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ 		sts->post_ts = ns_to_timespec64(ns - bp->ts_window_adjust);
+ 	}
+ 
+-	time_ns = ioread32(&bp->reg->time_ns);
+-	time_sec = ioread32(&bp->reg->time_sec);
++	/* Use cached reads for better performance */
++	time_ns = ptp_ocp_read_reg_cached(bp, &bp->reg->time_ns,
++					  &bp->cache.time_ns_cache,
++					  &bp->cache.last_time_update,
++					  &bp->cache.time_valid);
++	time_sec = ptp_ocp_read_reg_cached(bp, &bp->reg->time_sec,
++					   &bp->cache.time_sec_cache,
++					   &bp->cache.last_time_update,
++					   &bp->cache.time_valid);
+ 
+ 	ts->tv_sec = time_sec;
+ 	ts->tv_nsec = time_ns;
+@@ -1550,6 +1626,12 @@ ptp_ocp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *ts)
+ 	if (bp->ptm)
+ 		ptp_read_system_postts(sts);
+ 
++	/* Update performance statistics */
++	end_time = ktime_get_ns();
++	bp->perf_stats.gettime_latency_ns = end_time - start_time;
++	bp->perf_stats.gettime_count++;
++	bp->perf_stats.cache_hit_ratio = 
++		(bp->perf_stats.cache_hits * 100) / 
++		(bp->perf_stats.cache_hits + bp->perf_stats.cache_misses);
++
+ 	return 0;
+ }
+ 
+@@ -1560,6 +1642,7 @@ ptp_ocp_settime(struct ptp_clock_info *ptp_info, const struct timespec64 *ts)
+ {
+ 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
+ 	u32 time_ns, time_sec, select;
++	u64 start_time, end_time;
+ 
+ 	time_ns = ts->tv_nsec;
+ 	time_sec = ts->tv_sec;
+@@ -1567,6 +1650,9 @@ ptp_ocp_settime(struct ptp_clock_info *ptp_info, const struct timespec64 *ts)
+ 	select = ioread32(&bp->reg->select);
+ 	iowrite32(OCP_SELECT_CLK_REG, &bp->reg->select);
+ 
++	/* Start performance timing */
++	start_time = ktime_get_ns();
++
+ 	iowrite32(time_ns, &bp->reg->adjust_ns);
+ 	iowrite32(time_sec, &bp->reg->adjust_sec);
+ 
+@@ -1575,6 +1661,12 @@ ptp_ocp_settime(struct ptp_clock_info *ptp_info, const struct timespec64 *ts)
+ 
+ 	/* восстановить выбор часов */
+ 	iowrite32(select >> 16, &bp->reg->select);
++
++	/* Update performance statistics */
++	end_time = ktime_get_ns();
++	bp->perf_stats.settime_latency_ns = end_time - start_time;
++	bp->perf_stats.settime_count++;
++	ptp_ocp_invalidate_cache(bp, 0x08); /* Invalidate time cache */
+ }
+ 
+ static int
+@@ -1583,6 +1675,7 @@ ptp_ocp_adjtime(struct ptp_clock_info *ptp_info, s64 delta_ns)
+ {
+ 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
+ 	u32 select, ctrl;
++	u64 start_time, end_time;
+ 
+ 	select = ioread32(&bp->reg->select);
+ 	iowrite32(OCP_SELECT_CLK_REG, &bp->reg->select);
+@@ -1590,6 +1683,9 @@ ptp_ocp_adjtime(struct ptp_clock_info *ptp_info, s64 delta_ns)
+ 	iowrite32(adj_val, &bp->reg->offset_ns);
+ 	iowrite32(NSEC_PER_SEC, &bp->reg->offset_window_ns);
+ 
++	/* Start performance timing */
++	start_time = ktime_get_ns();
++
+ 	ctrl = OCP_CTRL_ADJUST_OFFSET | OCP_CTRL_ENABLE;
+ 	iowrite32(ctrl, &bp->reg->ctrl);
+ 
+@@ -1597,6 +1693,12 @@ ptp_ocp_adjtime(struct ptp_clock_info *ptp_info, s64 delta_ns)
+ 	iowrite32(select >> 16, &bp->reg->select);
+ }
+ 
++	/* Update performance statistics */
++	end_time = ktime_get_ns();
++	bp->perf_stats.adjtime_latency_ns = end_time - start_time;
++	bp->perf_stats.adjtime_count++;
++	ptp_ocp_invalidate_cache(bp, 0x08); /* Invalidate time cache */
++
+ static void
+ ptp_ocp_adjfine(struct ptp_clock_info *ptp_info, long scaled_ppm)
+ {
+@@ -3000,6 +3102,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+ 	struct ptp_ocp *bp;
+ 	struct device *dev = &pdev->dev;
+ 	int err;
++	u64 start_time, end_time;
+ 
+ 	bp = devm_kzalloc(dev, sizeof(*bp), GFP_KERNEL);
+ 	if (!bp)
+@@ -3007,6 +3100,9 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+ 
+ 	bp->pdev = pdev;
+ 	bp->id = atomic_inc_return(&ptp_ocp_id);
++	
++	/* Initialize performance optimization */
++	start_time = ktime_get_ns();
+ 
+ 	dev_set_drvdata(dev, bp);
+ 	pci_set_drvdata(pdev, bp);
+@@ -3014,6 +3110,15 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+ 	mutex_init(&bp->mutex);
+ 	spin_lock_init(&bp->lock);
+ 
++	/* Initialize cache settings */
++	bp->cache_timeout_ns = 1000000;  /* 1 ms default */
++	bp->performance_mode = true;
++	bp->cache.cache_enabled = true;
++	bp->cache.cache_timeout_ns = bp->cache_timeout_ns;
++	
++	/* Initialize performance statistics */
++	memset(&bp->perf_stats, 0, sizeof(bp->perf_stats));
++
+ 	err = ptp_ocp_register_resources(bp, id);
+ 	if (err)
+ 		goto err_free;
+@@ -3021,6 +3126,10 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+ 	if (err)
+ 		goto err_unregister;
+ 
++	/* Record initialization time */
++	end_time = ktime_get_ns();
++	dev_info(dev, "Performance optimization initialized in %llu ns\n", 
++		 end_time - start_time);
++
+ 	return 0;
+ 
+ err_unregister:

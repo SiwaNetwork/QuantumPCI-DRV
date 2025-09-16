@@ -1,0 +1,256 @@
+--- a/ptp_ocp.c
++++ b/ptp_ocp.c
+@@ -6000,6 +6000,150 @@ static DEVICE_ATTR_RW(ts_window_adjust);
+ static DEVICE_ATTR_RO(clock_status_drift);
+ static DEVICE_ATTR_RO(clock_status_offset);
+ 
++/* Performance monitoring sysfs attributes */
++static ssize_t performance_stats_show(struct device *dev,
++				      struct device_attribute *attr,
++				      char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	struct ptp_ocp_performance_stats *stats = &bp->perf_stats;
++	ssize_t count = 0;
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "=== Performance Statistics ===\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Operation Latencies (ns):\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  gettime: %llu\n", stats->gettime_latency_ns);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  settime: %llu\n", stats->settime_latency_ns);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  adjtime: %llu\n", stats->adjtime_latency_ns);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  irq: %llu\n", stats->irq_latency_ns);
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "\nOperation Counts:\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  gettime: %llu\n", stats->gettime_count);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  settime: %llu\n", stats->settime_count);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  adjtime: %llu\n", stats->adjtime_count);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  irq: %llu\n", stats->irq_count);
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "\nCache Statistics:\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  hits: %llu\n", stats->cache_hits);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  misses: %llu\n", stats->cache_misses);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  hit ratio: %llu%%\n", stats->cache_hit_ratio);
++	
++	return count;
++}
++
++static ssize_t cache_stats_show(struct device *dev,
++				struct device_attribute *attr,
++				char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	struct ptp_ocp_register_cache *cache = &bp->cache;
++	ssize_t count = 0;
++	u64 now = ktime_get_ns();
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "=== Cache Statistics ===\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "Cache Settings:\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  enabled: %s\n", cache->cache_enabled ? "yes" : "no");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  timeout: %u ns\n", cache->cache_timeout_ns);
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "\nCache Status:\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  status: %s (age: %llu ns)\n", 
++			   cache->status_valid ? "valid" : "invalid",
++			   cache->status_valid ? (now - cache->last_status_update) : 0);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  ctrl: %s (age: %llu ns)\n", 
++			   cache->ctrl_valid ? "valid" : "invalid",
++			   cache->ctrl_valid ? (now - cache->last_ctrl_update) : 0);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  select: %s (age: %llu ns)\n", 
++			   cache->select_valid ? "valid" : "invalid",
++			   cache->select_valid ? (now - cache->last_select_update) : 0);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  time: %s (age: %llu ns)\n", 
++			   cache->time_valid ? "valid" : "invalid",
++			   cache->time_valid ? (now - cache->last_time_update) : 0);
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "\nCached Values:\n");
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  status: 0x%08x\n", cache->status_cache);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  ctrl: 0x%08x\n", cache->ctrl_cache);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  select: 0x%08x\n", cache->select_cache);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  time_ns: 0x%08x\n", cache->time_ns_cache);
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "  time_sec: 0x%08x\n", cache->time_sec_cache);
++	
++	return count;
++}
++
++static ssize_t cache_timeout_show(struct device *dev,
++				  struct device_attribute *attr,
++				  char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	return scnprintf(buf, PAGE_SIZE, "%u\n", bp->cache_timeout_ns);
++}
++
++static ssize_t cache_timeout_store(struct device *dev,
++				   struct device_attribute *attr,
++				   const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	u32 timeout_ns;
++	
++	if (kstrtou32(buf, 10, &timeout_ns))
++		return -EINVAL;
++	
++	if (timeout_ns < 1000 || timeout_ns > 100000000) /* 1us to 100ms */
++		return -EINVAL;
++	
++	bp->cache_timeout_ns = timeout_ns;
++	bp->cache.cache_timeout_ns = timeout_ns;
++	
++	/* Invalidate all caches when timeout changes */
++	ptp_ocp_invalidate_cache(bp, 0x0F);
++	
++	return count;
++}
++
++static ssize_t performance_mode_show(struct device *dev,
++				     struct device_attribute *attr,
++				     char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	return scnprintf(buf, PAGE_SIZE, "%s\n", 
++			 bp->performance_mode ? "enabled" : "disabled");
++}
++
++static ssize_t performance_mode_store(struct device *dev,
++				      struct device_attribute *attr,
++				      const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	bool enable;
++	
++	if (kstrtobool(buf, &enable))
++		return -EINVAL;
++	
++	bp->performance_mode = enable;
++	bp->cache.cache_enabled = enable;
++	
++	if (!enable) {
++		/* Disable caching - invalidate all caches */
++		ptp_ocp_invalidate_cache(bp, 0x0F);
++	}
++	
++	return count;
++}
++
++static ssize_t reset_performance_stats_store(struct device *dev,
++					     struct device_attribute *attr,
++					     const char *buf, size_t count)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	
++	/* Reset all performance statistics */
++	memset(&bp->perf_stats, 0, sizeof(bp->perf_stats));
++	
++	/* Reset cache statistics */
++	ptp_ocp_invalidate_cache(bp, 0x0F);
++	
++	return count;
++}
++
++static ssize_t latency_stats_show(struct device *dev,
++				  struct device_attribute *attr,
++				  char *buf)
++{
++	struct ptp_ocp *bp = dev_get_drvdata(dev);
++	struct ptp_ocp_performance_stats *stats = &bp->perf_stats;
++	ssize_t count = 0;
++	
++	count += scnprintf(buf + count, PAGE_SIZE - count,
++			   "=== Latency Statistics ===\n");
++	
++	if (stats->gettime_count > 0) {
++		count += scnprintf(buf + count, PAGE_SIZE - count,
++				   "gettime: %llu ns (avg: %llu ns)\n",
++				   stats->gettime_latency_ns,
++				   stats->gettime_latency_ns / stats->gettime_count);
++	}
++	
++	if (stats->settime_count > 0) {
++		count += scnprintf(buf + count, PAGE_SIZE - count,
++				   "settime: %llu ns (avg: %llu ns)\n",
++				   stats->settime_latency_ns,
++				   stats->settime_latency_ns / stats->settime_count);
++	}
++	
++	if (stats->adjtime_count > 0) {
++		count += scnprintf(buf + count, PAGE_SIZE - count,
++				   "adjtime: %llu ns (avg: %llu ns)\n",
++				   stats->adjtime_latency_ns,
++				   stats->adjtime_latency_ns / stats->adjtime_count);
++	}
++	
++	if (stats->irq_count > 0) {
++		count += scnprintf(buf + count, PAGE_SIZE - count,
++				   "irq: %llu ns (avg: %llu ns)\n",
++				   stats->irq_latency_ns,
++				   stats->irq_latency_ns / stats->irq_count);
++	}
++	
++	return count;
++}
++
++static DEVICE_ATTR_RO(performance_stats);
++static DEVICE_ATTR_RO(cache_stats);
++static DEVICE_ATTR_RW(cache_timeout);
++static DEVICE_ATTR_RW(performance_mode);
++static DEVICE_ATTR_WO(reset_performance_stats);
++static DEVICE_ATTR_RO(latency_stats);
++
+ /*---------------------------------------------------------------------------*/
+ 
+ static const struct attribute_group fb_timecard_groups[] = {
+@@ -6020,6 +6164,12 @@ static const struct attribute_group fb_timecard_groups[] = {
+ 	&dev_attr_ts_window_adjust.attr,
+ 	&dev_attr_clock_status_drift.attr,
+ 	&dev_attr_clock_status_offset.attr,
++	&dev_attr_performance_stats.attr,
++	&dev_attr_cache_stats.attr,
++	&dev_attr_cache_timeout.attr,
++	&dev_attr_performance_mode.attr,
++	&dev_attr_reset_performance_stats.attr,
++	&dev_attr_latency_stats.attr,
+ 	NULL,
+ };
+ 
+@@ -6035,6 +6185,12 @@ static const struct attribute_group art_timecard_groups[] = {
+ 	&dev_attr_ts_window_adjust.attr,
+ 	&dev_attr_clock_status_drift.attr,
+ 	&dev_attr_clock_status_offset.attr,
++	&dev_attr_performance_stats.attr,
++	&dev_attr_cache_stats.attr,
++	&dev_attr_cache_timeout.attr,
++	&dev_attr_performance_mode.attr,
++	&dev_attr_reset_performance_stats.attr,
++	&dev_attr_latency_stats.attr,
+ 	NULL,
+ };
