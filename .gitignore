@@ -1,32 +1,33 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Compiled files
+*.o
+*.ko
+*.mod
+*.mod.c
+*.a
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+*.so.*
 
-# Virtual environments
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
+# Kernel module artifacts
+Module.symvers
+modules.order
+.*.cmd
+.tmp_versions/
+*.order
+*.symvers
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+*.out
 
 # IDE
 .vscode/
@@ -35,33 +36,7 @@ venv.bak/
 *.swo
 *~
 
-# Logs
-*.log
-monitoring.log
-
-# OS
-.DS_Store
-Thumbs.db
-
 # Temporary files
+.DS_Store
 *.tmp
-*.temp
-
-# Linux kernel build artifacts
-*.ko
-*.o
-*.mod.c
-*.mod.o
-Module.symvers
-modules.order
-.*.cmd
-.module-common.o
-
-# Generated metrics files
-*.json
-# Specific metrics files
-led-testing/*_metrics.json
-quantum-pci-monitoring/*_metrics.json
-
-# Monitoring environment
-ptp-monitoring/monitoring-env/
+*.bak
