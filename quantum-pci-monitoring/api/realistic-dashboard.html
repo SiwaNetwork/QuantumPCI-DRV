@@ -579,6 +579,7 @@
                     <div class="metric-unit">mV</div>
                     <div class="metric-label">Shunt Voltage</div>
                     <div class="metric-status" id="ina219-1-status">unknown</div>
+                    <div class="filter-status" id="ina219-1-filter-status" style="font-size: 12px; margin-top: 5px; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.1);"></div>
                 </div>
                 
                 <div class="metric-card">
@@ -590,6 +591,7 @@
                     <div class="metric-unit">mV</div>
                     <div class="metric-label">Shunt Voltage</div>
                     <div class="metric-status" id="ina219-2-status">unknown</div>
+                    <div class="filter-status" id="ina219-2-filter-status" style="font-size: 12px; margin-top: 5px; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.1);"></div>
                 </div>
                 
                 <div class="metric-card">
@@ -601,6 +603,7 @@
                     <div class="metric-unit">mV</div>
                     <div class="metric-label">Shunt Voltage</div>
                     <div class="metric-status" id="ina219-3-status">unknown</div>
+                    <div class="filter-status" id="ina219-3-filter-status" style="font-size: 12px; margin-top: 5px; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.1);"></div>
                 </div>
                 
                 <div class="metric-card">
@@ -1186,6 +1189,16 @@
                             (device1.shunt_voltage.value * 1000).toFixed(2);
                         document.getElementById('ina219-1-status').textContent = 'ok';
                         document.getElementById('ina219-1-status').className = 'metric-status ok';
+                        
+                        // Обновляем статус фильтрации
+                        const filterStatus = device1.bus_voltage.filter_status || 'unknown';
+                        const filterReason = device1.bus_voltage.filter_reason || 'Неизвестно';
+                        const filterElement = document.getElementById('ina219-1-filter-status');
+                        filterElement.textContent = `Фильтр: ${filterStatus}`;
+                        filterElement.style.background = filterStatus === 'ok' ? 'rgba(46, 204, 113, 0.3)' : 
+                                                       filterStatus === 'filtered' ? 'rgba(241, 196, 15, 0.3)' : 
+                                                       'rgba(149, 165, 166, 0.3)';
+                        filterElement.title = filterReason;
                     } else {
                         document.getElementById('ina219-1-bus-voltage').textContent = '--';
                         document.getElementById('ina219-1-shunt-voltage').textContent = '--';
@@ -1202,6 +1215,16 @@
                             (device2.shunt_voltage.value * 1000).toFixed(2);
                         document.getElementById('ina219-2-status').textContent = 'ok';
                         document.getElementById('ina219-2-status').className = 'metric-status ok';
+                        
+                        // Обновляем статус фильтрации
+                        const filterStatus = device2.bus_voltage.filter_status || 'unknown';
+                        const filterReason = device2.bus_voltage.filter_reason || 'Неизвестно';
+                        const filterElement = document.getElementById('ina219-2-filter-status');
+                        filterElement.textContent = `Фильтр: ${filterStatus}`;
+                        filterElement.style.background = filterStatus === 'ok' ? 'rgba(46, 204, 113, 0.3)' : 
+                                                       filterStatus === 'filtered' ? 'rgba(241, 196, 15, 0.3)' : 
+                                                       'rgba(149, 165, 166, 0.3)';
+                        filterElement.title = filterReason;
                     } else {
                         document.getElementById('ina219-2-bus-voltage').textContent = '--';
                         document.getElementById('ina219-2-shunt-voltage').textContent = '--';
@@ -1218,6 +1241,16 @@
                             (device3.shunt_voltage.value * 1000).toFixed(2);
                         document.getElementById('ina219-3-status').textContent = 'ok';
                         document.getElementById('ina219-3-status').className = 'metric-status ok';
+                        
+                        // Обновляем статус фильтрации
+                        const filterStatus = device3.bus_voltage.filter_status || 'unknown';
+                        const filterReason = device3.bus_voltage.filter_reason || 'Неизвестно';
+                        const filterElement = document.getElementById('ina219-3-filter-status');
+                        filterElement.textContent = `Фильтр: ${filterStatus}`;
+                        filterElement.style.background = filterStatus === 'ok' ? 'rgba(46, 204, 113, 0.3)' : 
+                                                       filterStatus === 'filtered' ? 'rgba(241, 196, 15, 0.3)' : 
+                                                       'rgba(149, 165, 166, 0.3)';
+                        filterElement.title = filterReason;
                     } else {
                         document.getElementById('ina219-3-bus-voltage').textContent = '--';
                         document.getElementById('ina219-3-shunt-voltage').textContent = '--';

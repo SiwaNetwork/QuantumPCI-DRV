@@ -352,7 +352,7 @@ monitor = QuantumPCIRealisticMonitor()
 @app.route('/')
 def main_page():
     """Главная страница - красивый дашборд"""
-    return send_from_directory('api', 'realistic-dashboard.html')
+    return send_from_directory('.', 'realistic-dashboard.html')
 
 @app.route('/api/')
 def api_index():
@@ -550,25 +550,10 @@ def api_alerts():
         'timestamp': time.time()
     })
 
-@app.route('/dashboard')
-def dashboard():
-    """Основной дашборд"""
-    return send_from_directory('api', 'dashboard.html')
-
 @app.route('/realistic-dashboard')
 def realistic_dashboard():
     """Реалистичный дашборд с честными возможностями"""
-    return send_from_directory('api', 'realistic-dashboard.html')
-
-@app.route('/test-dashboard')
-def test_dashboard():
-    """Тестовый дашборд для отладки"""
-    return send_from_directory('.', 'test_dashboard.html')
-
-@app.route('/web/<path:filename>')
-def web_files(filename):
-    """Статические веб-файлы"""
-    return send_from_directory('web', filename)
+    return send_from_directory('.', 'realistic-dashboard.html')
 
 @app.route('/health')
 def health():

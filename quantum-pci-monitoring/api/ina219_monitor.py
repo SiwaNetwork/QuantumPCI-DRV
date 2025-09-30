@@ -7,8 +7,46 @@ INA219 Voltage Monitor Module
 import subprocess
 import time
 import json
+import statistics
 from pathlib import Path
 from typing import Dict, Optional, List
+from collections import deque
+
+class INA219Filter:
+    """Фильтр для устранения ложных значений INA219"""
+    
+    def __init__(self, window_size=5, valid_range=(2.5, 4.0)):
+        self.window_size = window_size
+        self.valid_range = valid_range
+        self.voltage_history = deque(maxlen=window_size)
+        self.last_valid_voltage = 3.3
+        
+    def is_valid_voltage(self, voltage):
+        """Проверка валидности напряжения"""
+        return self.valid_range[0] <= voltage <= self.valid_range[1]
+    
+    def filter_voltage(self, voltage, raw_value):
+        """Фильтрация напряжения"""
+        if not self.is_valid_voltage(voltage):
+            return self.last_valid_voltage, False, f"Вне диапазона {self.valid_range[0]}-{self.valid_range[1]}V"
+        
+        self.voltage_history.append(voltage)
+        
+        if len(self.voltage_history) < 3:
+            self.last_valid_voltage = voltage
+            return voltage, True, "Недостаточно данных"
+        
+        # Проверка на выбросы
+        median_voltage = statistics.median(self.voltage_history)
+        deviation = abs(voltage - median_voltage)
+        
+        if deviation > 0.5:
+            return self.last_valid_voltage, False, f"Выброс: отклонение {deviation:.3f}V"
+        
+        filtered_voltage = statistics.mean(self.voltage_history)
+        self.last_valid_voltage = filtered_voltage
+        
+        return filtered_voltage, True, "OK"
 
 class INA219Monitor:
     """
@@ -26,6 +64,13 @@ class INA219Monitor:
         self.last_update = None
         self.error_count = 0
         self.max_errors = 5
+        
+        # Инициализация фильтров для каждого датчика
+        self.filters = {
+            '44': INA219Filter(window_size=5, valid_range=(2.5, 4.0)),  # 3.3V
+            '41': INA219Filter(window_size=5, valid_range=(4.0, 6.0)),  # 5V
+            '40': INA219Filter(window_size=5, valid_range=(10.0, 15.0)) # 12V
+        }
         
     def is_available(self) -> bool:
         """Проверка доступности I2C и INA219 датчиков"""
@@ -131,6 +176,15 @@ class INA219Monitor:
         bus_voltage = self._calculate_voltage(bus_voltage_raw, 'bus', address)
         shunt_voltage = self._calculate_voltage(shunt_voltage_raw, 'shunt')
         
+        # Применяем фильтр для устранения ложных значений
+        if address in self.filters:
+            filtered_voltage, is_valid, filter_reason = self.filters[address].filter_voltage(bus_voltage, bus_voltage_raw)
+            bus_voltage = filtered_voltage
+            filter_status = 'filtered' if not is_valid else 'ok'
+        else:
+            filter_status = 'no_filter'
+            filter_reason = 'Фильтр не настроен'
+        
         return {
             'address': address,
             'name': device_info.get('name', f'INA219 {address}'),
@@ -139,7 +193,9 @@ class INA219Monitor:
             'bus_voltage': {
                 'value': bus_voltage,
                 'unit': 'V',
-                'raw': bus_voltage_raw
+                'raw': bus_voltage_raw,
+                'filter_status': filter_status,
+                'filter_reason': filter_reason
             },
             'shunt_voltage': {
                 'value': shunt_voltage,
