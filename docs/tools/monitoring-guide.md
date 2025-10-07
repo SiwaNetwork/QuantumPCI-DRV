@@ -52,8 +52,8 @@ pip3 install -r requirements.txt
 ### 2. Запуск мониторинга
 
 ```bash
-# Запуск основного скрипта
-python3 quantum-pci-monitor.py
+# Запуск реалистичного API мониторинга
+python3 api/quantum-pci-realistic-api.py
 ```
 
 ### 3. Доступ к интерфейсам
