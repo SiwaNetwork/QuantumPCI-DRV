@@ -40,3 +40,4 @@ build/
 .DS_Store
 *.tmp
 *.bak
+quantum-pci-monitoring/monitoring-env/

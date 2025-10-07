@@ -352,7 +352,9 @@ monitor = QuantumPCIRealisticMonitor()
 @app.route('/')
 def main_page():
     """Главная страница - красивый дашборд"""
-    return send_from_directory('.', 'realistic-dashboard.html')
+    # Получаем абсолютный путь к папке с API
+    api_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(api_dir, 'realistic-dashboard.html')
 
 @app.route('/api/')
 def api_index():
@@ -553,7 +555,9 @@ def api_alerts():
 @app.route('/realistic-dashboard')
 def realistic_dashboard():
     """Реалистичный дашборд с честными возможностями"""
-    return send_from_directory('.', 'realistic-dashboard.html')
+    # Получаем абсолютный путь к папке с API
+    api_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(api_dir, 'realistic-dashboard.html')
 
 @app.route('/health')
 def health():
