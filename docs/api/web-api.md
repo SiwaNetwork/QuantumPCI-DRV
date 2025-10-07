@@ -18,48 +18,45 @@ http://localhost:8080/api/
 
 ### Информация о системе
 
-#### GET `/`
+#### GET `/api/`
 
 Возвращает общую информацию о системе мониторинга.
 
 **Пример запроса:**
 ```bash
-curl http://localhost:8080/
+curl http://localhost:8080/api/
 ```
 
 **Пример ответа:**
 ```json
 {
-  "service": "TimeCard PTP Monitoring API v2.0",
-  "version": "2.0.0",
-  "timestamp": 1753689738.2285047,
-  "devices_count": 1,
-  "features": [
-    "Basic PTP metrics and device status",
-    "GNSS synchronization status",
-    "SMA connector configuration",
-    "Hardware status monitoring",
-    "Real-time updates via WebSocket",
-    "Device health assessment"
-  ],
+  "api_name": "Quantum-PCI Realistic Monitoring API",
+  "version": "2.0.0-realistic",
+  "description": "Мониторинг ТОЛЬКО реальных метрик из ptp_ocp драйвера",
+  "detected_devices": 1,
+  "disclaimer": {
+    "available_metrics": [
+      "PTP offset/drift из clock_status_*",
+      "GNSS sync статус из gnss_sync",
+      "SMA конфигурация из sma1-4",
+      "Источники времени из clock_source",
+      "Серийный номер из serialnum"
+    ],
+    "limitations": [
+      "Нет детального мониторинга температуры",
+      "Нет мониторинга питания и напряжений",
+      "Нет детального GNSS мониторинга",
+      "Нет мониторинга LED индикаторов и FPGA состояния"
+    ]
+  },
   "endpoints": {
     "devices": "/api/devices",
-    "device_status": "/api/device/<id>/status",
-    "extended_metrics": "/api/metrics/extended",
-    "basic_metrics": "/api/metrics",
+    "device_status": "/api/device/<device_id>/status",
+    "real_metrics": "/api/metrics/real",
     "alerts": "/api/alerts",
-    "alert_history": "/api/alerts/history",
-    "metrics_history": "/api/metrics/history/<device_id>",
-    "config": "/api/config",
-    "logs": "/api/logs/export",
-    "restart": "/api/restart/<service>"
+    "roadmap": "/api/roadmap"
   },
-  "device_capabilities": {
-    "clock_sources": ["GNSS", "MAC", "IRIG-B", "external", "RTC", "DCF"],
-    "sma_signals": ["10MHz", "PPS", "GNSS", "IRIG", "DCF", "GEN1"],
-    "interfaces": ["PTP", "UART", "I2C", "SPI"],
-    "disciplining_sources": ["GNSS", "External", "Freerun"]
-  }
+  "timestamp": 1759817253.8174174
 }
 ```
 
@@ -114,62 +111,53 @@ curl http://localhost:8080/api/devices
 }
 ```
 
-### Базовые метрики
+### Реальные метрики
 
-#### GET `/api/metrics`
+#### GET `/api/metrics/real`
 
-Возвращает базовые PTP метрики устройства.
+Возвращает реальные метрики всех устройств из ptp_ocp драйвера.
 
 **Пример запроса:**
 ```bash
-curl http://localhost:8080/api/metrics
+curl http://localhost:8080/api/metrics/real
 ```
 
 **Пример ответа:**
 ```json
 {
-  "driver_status": 1,
-  "frequency": -10.781329410528244,
-  "offset": 132,
-  "path_delay": 2522,
-  "port_state": 8,
-  "timestamp": 1753689108.2276976
-}
-```
-
-### Расширенные метрики
-
-#### GET `/api/metrics/extended`
-
-Возвращает полные расширенные метрики для всех подсистем.
-
-**Пример запроса:**
-```bash
-curl http://localhost:8080/api/metrics/extended
-```
-
-**Пример ответа:**
-```json
-{
-  "timecard0": {
-    "driver_status": 1,
-    "frequency": -6.298,
-    "offset": 174,
-    "path_delay": 2433,
-    "port_state": 8,
-    "timestamp": 1753689147.988943,
-    "gnss": {
-      "sync_status": "locked",
-        "satellites_used": 14,
-      "fix_type": "3D"
+  "metrics": {
+    "ocp0": {
+      "ptp": {
+        "offset_ns": 0,
+        "drift_ppb": 0,
+        "clock_source": "PPS",
+        "status": "ok"
+      },
+      "gnss": {
+        "sync_status": "LOST @ 2025-10-06T05:45:11",
+        "available": true,
+        "status": "critical"
+      },
+      "sma": {
+        "sma1": {"config": "10Mhz", "available": true},
+        "sma2": {"config": "PPS", "available": true}
+      },
+      "timestamp": 1759817295.224438
     },
-    "clock_source": "GNSS",
-    "sma1": "10MHz",
-    "sma2": "PPS",
-    "sma3": "disable",
-    "sma4": "disable"
-
-  }
+    "bmp280": {
+      "temperature_c": 24.5,
+      "pressure_hpa": 1013.25,
+      "available": true
+    },
+    "ina219": {
+      "voltage_v": 12.01,
+      "current_ma": 245.3,
+      "power_mw": 2945.0,
+      "available": true
+    }
+  },
+  "note": "Реальные метрики из ptp_ocp драйвера + датчики",
+  "timestamp": 1759817295.224438
 }
 ```
 
@@ -226,58 +214,86 @@ curl http://localhost:8080/api/alerts
 }
 ```
 
-#### GET `/api/alerts/history`
+### Дорожная карта
 
-Возвращает историю алертов.
+#### GET `/api/roadmap`
+
+Возвращает дорожную карту развития проекта.
 
 **Пример запроса:**
 ```bash
-curl http://localhost:8080/api/alerts/history
+curl http://localhost:8080/api/roadmap
 ```
 
-### История метрик
+### Дополнительные датчики
 
-#### GET `/api/metrics/history/{device_id}`
+#### GET `/api/bno055`
 
-Возвращает историю метрик для конкретного устройства.
+Возвращает данные акселерометра и гироскопа BNO055.
 
 **Пример запроса:**
 ```bash
-curl http://localhost:8080/api/metrics/history/timecard0
+curl http://localhost:8080/api/bno055
 ```
 
-### Конфигурация
+#### GET `/api/ina219`
 
-#### GET `/api/config`
-
-Возвращает текущую конфигурацию системы.
+Возвращает данные мониторинга питания INA219.
 
 **Пример запроса:**
 ```bash
-curl http://localhost:8080/api/config
+curl http://localhost:8080/api/ina219
 ```
 
-### Экспорт логов
+#### GET `/api/bmp280`
 
-#### GET `/api/logs/export`
-
-Экспортирует логи системы.
+Возвращает данные температуры и давления BMP280.
 
 **Пример запроса:**
 ```bash
-curl http://localhost:8080/api/logs/export
+curl http://localhost:8080/api/bmp280
 ```
 
-### Перезапуск сервисов
+### PTP Network мониторинг
 
-#### POST `/api/restart/{service}`
+#### GET `/api/ptp-network`
 
-Перезапускает указанный сервис.
+Возвращает метрики сетевых карт с PTP.
 
 **Пример запроса:**
 ```bash
-curl -X POST http://localhost:8080/api/restart/ptp4l
-curl -X POST http://localhost:8080/api/restart/chronyd
+curl http://localhost:8080/api/ptp-network
+```
+
+#### GET `/api/ptp-network/health`
+
+Возвращает статус здоровья PTP сетевых карт.
+
+**Пример запроса:**
+```bash
+curl http://localhost:8080/api/ptp-network/health
+```
+
+### Логи
+
+#### GET `/api/logs`
+
+Возвращает последние 100 строк логов системы.
+
+**Пример запроса:**
+```bash
+curl http://localhost:8080/api/logs
+```
+
+### Экспорт данных
+
+#### GET `/api/export`
+
+Экспортирует все данные системы.
+
+**Пример запроса:**
+```bash
+curl http://localhost:8080/api/export
 ```
 
 ## WebSocket API
@@ -391,8 +407,8 @@ socket.emit('request_device_update', {
 import requests
 import json
 
-# Получение расширенных метрик
-response = requests.get('http://localhost:8080/api/metrics/extended')
+# Получение реальных метрик
+response = requests.get('http://localhost:8080/api/metrics/real')
 metrics = response.json()
 
 # Получение списка устройств
@@ -402,16 +418,31 @@ devices = response.json()
 # Проверка алертов
 response = requests.get('http://localhost:8080/api/alerts')
 alerts = response.json()
+
+# Получение данных датчиков
+response = requests.get('http://localhost:8080/api/bno055')
+bno055_data = response.json()
+
+# Мониторинг питания
+response = requests.get('http://localhost:8080/api/ina219')
+ina219_data = response.json()
 ```
 
 ### JavaScript
 
 ```javascript
 // Получение метрик
-fetch('http://localhost:8080/api/metrics/extended')
+fetch('http://localhost:8080/api/metrics/real')
   .then(response => response.json())
   .then(data => {
     console.log('Metrics:', data);
+  });
+
+// Получение данных датчиков
+fetch('http://localhost:8080/api/bno055')
+  .then(response => response.json())
+  .then(data => {
+    console.log('BNO055:', data);
   });
 
 // WebSocket подключение
@@ -425,16 +456,24 @@ socket.on('device_update', (data) => {
 
 ```bash
 # Получение информации о системе
-curl http://localhost:8080/
+curl http://localhost:8080/api/
 
-# Получение метрик
-curl http://localhost:8080/api/metrics/extended
+# Получение реальных метрик
+curl http://localhost:8080/api/metrics/real
 
 # Проверка алертов
 curl http://localhost:8080/api/alerts
 
-# Экспорт логов
-curl http://localhost:8080/api/logs/export > timecard-logs.txt
+# Получение дорожной карты
+curl http://localhost:8080/api/roadmap
+
+# Данные датчиков
+curl http://localhost:8080/api/bno055
+curl http://localhost:8080/api/ina219
+curl http://localhost:8080/api/bmp280
+
+# Экспорт данных
+curl http://localhost:8080/api/export > quantum-export.json
 ```
 
 ## Версионирование
