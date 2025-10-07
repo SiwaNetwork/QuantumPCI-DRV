@@ -175,14 +175,19 @@ cgps -s
 ### Chrony конфигурация
 
 ```bash
+# Для автономного хранения времени (карты БЕЗ GNSS)
+# См. autonomous-timekeeper/README.md для полной настройки
+sudo cp autonomous-timekeeper/configs/chrony-holdover.conf /etc/chrony/chrony.conf
+
+# Или базовая конфигурация с GNSS:
 # /etc/chrony/chrony.conf
-refclock PHC /dev/ptp0 poll 0 dpoll -2 offset 0 stratum 1
-refclock PPS /dev/pps0 lock PHC poll 0 dpoll -2 offset 0 prefer trust
+refclock PHC /dev/ptp1 poll 3 dpoll -2 offset 0 stratum 1 prefer
 
 # Перезапуск
 sudo systemctl restart chrony
 
 # Проверка
+chronyc tracking
 chronyc sources -v
 ```
 
@@ -213,12 +218,13 @@ cd quantum-pci-monitoring
 pip3 install -r requirements.txt
 
 # Запуск мониторинга
-python3 quantum-pci-monitor.py
+python3 api/quantum-pci-realistic-api.py
 ```
 
 Доступ к интерфейсам:
 - 📊 **Dashboard**: http://localhost:8080/realistic-dashboard
 - 🔧 **API**: http://localhost:8080/api/
+- 🗺️ **Roadmap**: http://localhost:8080/api/roadmap
 
 ### ⚠️ Ограничения мониторинга
 
@@ -254,6 +260,10 @@ python3 quantum-pci-monitor.py
 - 🛠️ [CLI инструменты](docs/tools/cli-tools.md)
 - 📊 [Руководство по мониторингу](docs/tools/monitoring-guide.md)
 
+### Специальные модули
+
+- 🕐 [**Автономное хранение времени**](autonomous-timekeeper/README.md) - Quantum-PCI как хранитель времени (для карт без GNSS)
+
 ### API документация
 
 - [Kernel API](docs/api/kernel-api.md)
@@ -270,6 +280,12 @@ QuantumPCI-DRV/
 │   ├── Makefile           # Сборка драйвера
 │   ├── README.md          # Инструкции по драйверу
 │   └── *.md               # Техническая документация драйвера
+├── autonomous-timekeeper/  # 🕐 Автономное хранение времени (БЕЗ GNSS)
+│   ├── docs/              # Полное руководство и быстрый старт
+│   ├── scripts/           # Автоматическая настройка и анализ
+│   ├── configs/           # Конфигурация Chrony
+│   ├── reports/           # Отчеты о тестировании и точности
+│   └── README.md          # Обзор модуля
 ├── docs/                   # Комплексная документация
 │   ├── guides/            # Руководства пользователя
 │   ├── api/               # API документация
@@ -301,9 +317,6 @@ cd ДРАЙВЕРА
 
 # Проверка типа прошивки
 ./check_firmware_type.sh firmware.bin
-
-# Конвертация прошивки
-./convert_firmware.sh input.rpd output.bin
 
 # Программирование через JTAG
 ./flash_programmer.sh firmware.bin
