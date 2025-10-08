@@ -41,3 +41,7 @@ build/
 *.tmp
 *.bak
 quantum-pci-monitoring/monitoring-env/
+
+# Firmware files (should not be committed)
+*.bin
+*firmware*
