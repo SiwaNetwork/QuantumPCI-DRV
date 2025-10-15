@@ -14,7 +14,7 @@ git clone https://github.com/SiwaNetwork/QuantumPCI-DRV.git
 cd QuantumPCI-DRV
 
 # Запуск автоматической настройки
-sudo ./scripts/setup-quantum-timekeeper.sh
+sudo ./autonomous-timekeeper/scripts/setup-quantum-timekeeper.sh
 ```
 
 ### 2. Ручная настройка
@@ -141,8 +141,8 @@ ntpdate -q 0.pool.ntp.org
 
 ## 📚 Дополнительная документация
 
-- **Полное руководство**: `docs/guides/quantum-pci-timekeeper-guide.md`
-- **Веб-мониторинг**: `quantum-pci-monitoring/`
+- **Полное руководство**: [quantum-pci-timekeeper-guide.md](quantum-pci-timekeeper-guide.md)
+- **Веб-мониторинг**: [../../quantum-pci-monitoring/README.md](../../quantum-pci-monitoring/README.md)
 - **API документация**: http://localhost:8080/api/
 
 ## 🎯 Сценарий работы

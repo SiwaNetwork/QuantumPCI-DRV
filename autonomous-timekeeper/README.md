@@ -94,8 +94,8 @@ autonomous-timekeeper/
 ### 1. Автоматическая настройка (рекомендуется)
 
 ```bash
-# Переход в папку проекта
-cd autonomous-timekeeper
+# Из корня проекта QuantumPCI-DRV
+cd QuantumPCI-DRV/autonomous-timekeeper
 
 # Запуск автоматической настройки
 sudo ./scripts/setup-quantum-timekeeper.sh
@@ -189,9 +189,9 @@ chronyc sources -v
 ### Веб-мониторинг:
 
 ```bash
-# Запуск веб-интерфейса
-cd ../quantum-pci-monitoring
-python3 api/quantum-pci-realistic-api.py
+# Запуск веб-интерфейса (из корня проекта)
+cd quantum-pci-monitoring
+python3 quantum-pci-monitor.py
 
 # Доступ к интерфейсу
 # http://localhost:8080

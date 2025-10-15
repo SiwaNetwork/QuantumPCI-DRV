@@ -198,13 +198,13 @@ echo "GNSS1" > /sys/class/timecard/ocp0/sma4
 
 > 📖 **Детальные инструкции см. в отдельных руководствах:**
 > 
-> - [Установка драйвера](installation.md) - полная инструкция по установке
-> - [Конфигурация](configuration.md) - настройка системы
-> - [Быстрый старт](quick-start.md) - базовая настройка за 10 минут
-> - [Настройка Chrony](chrony-guide.md) - интеграция с NTP
-> - [Настройка LinuxPTP](linuxptp-guide.md) - интеграция с PTP
-> - [Интеграция систем](integration.md) - Kubernetes, Docker, Ansible
-> - [Автономное хранение времени](../autonomous-timekeeper/README.md) - работа без GNSS
+> - [Установка драйвера](guides/installation.md) - полная инструкция по установке
+> - [Конфигурация](guides/configuration.md) - настройка системы
+> - [Быстрый старт](guides/quick-start.md) - базовая настройка за 10 минут
+> - [Настройка Chrony](guides/chrony-guide.md) - интеграция с NTP
+> - [Настройка LinuxPTP](guides/linuxptp-guide.md) - интеграция с PTP
+> - [Интеграция систем](guides/integration.md) - Kubernetes, Docker, Ansible
+> - [Автономное хранение времени](../../autonomous-timekeeper/README.md) - работа без GNSS
 
 **Минимальные системные требования:**
 - Ядро Linux ≥ 5.4 (рекомендуется 6.1+)
@@ -325,10 +325,8 @@ chronyc sources -v
 
 > 📖 **Дополнительные руководства:**
 > 
-> - [Настройка сетевых карт](network-cards-testing.md) - Intel I210/I350/X710
-> - [Профессиональное тестирование](professional-testing.md) - измерение джиттера, фазового шума
-> - [Оптимизация производительности](performance-optimization.md) - настройка ядра, параметров PTP
-> - [Мониторинг](../tools/monitoring-guide.md) - веб-интерфейс, метрики, алерты
+> - [Настройка сетевых карт Intel](guides/intel-network-cards-testing.md) - Intel I210/I225/I226
+> - [Мониторинг](tools/monitoring-guide.md) - веб-интерфейс, метрики, алерты
 
 ---
 
@@ -351,7 +349,7 @@ chronyc sources -v
 | Большой PTP offset | offset >1ms | Проблемы с сетью | Проверить сеть, кабели |
 | Нестабильность | Высокий джиттер | Температура, питание | Стабилизировать условия |
 
-> 📖 **Полная диагностика:** см. [Troubleshooting Guide](troubleshooting.md)
+> 📖 **Полная диагностика:** см. [Troubleshooting Guide](guides/troubleshooting.md)
 
 ---
 
@@ -499,27 +497,27 @@ chronyc sources -v
 
 ### Руководства
 
-- [Руководство по установке](../guides/installation.md)
-- [Руководство по конфигурации](../guides/configuration.md)
-- [Быстрый старт](../guides/quick-start.md)
-- [Chrony Guide](../guides/chrony-guide.md)
-- [LinuxPTP Guide](../guides/linuxptp-guide.md)
-- [Troubleshooting](../guides/troubleshooting.md)
-- [Интеграция систем](../guides/integration.md)
+- [Руководство по установке](guides/installation.md)
+- [Руководство по конфигурации](guides/configuration.md)
+- [Быстрый старт](guides/quick-start.md)
+- [Chrony Guide](guides/chrony-guide.md)
+- [LinuxPTP Guide](guides/linuxptp-guide.md)
+- [Troubleshooting](guides/troubleshooting.md)
+- [Интеграция систем](guides/integration.md)
 
 ### API и инструменты
 
-- [Kernel API](../api/kernel-api.md)
-- [Userspace API](../api/userspace-api.md)
-- [Web API](../api/web-api.md)
-- [CLI Tools](../tools/cli-tools.md)
-- [Web Monitoring](../tools/web-monitoring.md)
+- [Kernel API](api/kernel-api.md)
+- [Userspace API](api/userspace-api.md)
+- [Web API](api/web-api.md)
+- [CLI Tools](tools/cli-tools.md)
+- [Web Monitoring](tools/web-monitoring.md)
 
 ### Специализированные модули
 
-- [Автономное хранение времени](../../autonomous-timekeeper/README.md) - для карт без GNSS
-- [Мониторинг системы](../tools/monitoring-guide.md) - веб-интерфейс
-- [Тестирование сетевых карт](../guides/intel-network-cards-testing.md) - Intel I210/X710
+- [Автономное хранение времени](../autonomous-timekeeper/README.md) - для карт без GNSS
+- [Мониторинг системы](tools/monitoring-guide.md) - веб-интерфейс
+- [Тестирование сетевых карт](guides/intel-network-cards-testing.md) - Intel I210/I225/I226
 
 ---
 

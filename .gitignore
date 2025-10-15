@@ -1,47 +1,58 @@
-# Compiled files
-*.o
-*.ko
-*.mod
-*.mod.c
-*.a
-*.so
-*.so.*
+# Временные файлы процессов
+*.pid
+*.log
+monitoring.pid
 
-# Kernel module artifacts
-Module.symvers
-modules.order
-.*.cmd
-.tmp_versions/
-*.order
-*.symvers
-
-# Python cache
+# Python виртуальное окружение
+venv/
+*/venv/
+env/
+*/env/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-*.egg-info/
-dist/
-build/
 
-# Logs
-*.log
-*.out
+# Временные файлы тестов
+/tmp/
+*.tmp
 
-# IDE
+# Внутренние документы (для разработчиков)
+.internal-docs/
+
+# Логи мониторинга
+quantum-pci-monitoring/monitoring.log
+quantum-pci-monitoring/*.log
+
+# Логи holdover тестов
+/tmp/holdover-test-*.log
+
+# IDE файлы
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# Temporary files
 .DS_Store
-*.tmp
-*.bak
-quantum-pci-monitoring/monitoring-env/
 
-# Firmware files (should not be committed)
-*.bin
-*firmware*
+# Compiled files
+*.o
+*.ko
+*.mod.c
+*.mod
+*.order
+*.symvers
+modules.builtin
+
+# Kernel module files
+ДРАЙВЕРА/*.o
+ДРАЙВЕРА/*.ko
+ДРАЙВЕРА/.tmp_versions/
+ДРАЙВЕРА/Module.symvers
+ДРАЙВЕРА/modules.order
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
